@@ -34,7 +34,7 @@
     "datatables.net-dt": "^2.3.1",
     "datatables.net-responsive": "^3.0.4",
     "datatables.net-responsive-dt": "^3.0.4",
-    "date-fns": "^4.1.0",
+    "date-fns": "^2.30.0",
     "file-saver": "^2.0.5",
     "mui-datatables": "^4.3.0",
     "react": "^19.1.0",
