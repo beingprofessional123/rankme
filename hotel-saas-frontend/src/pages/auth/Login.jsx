@@ -1,0 +1,164 @@
+// src/pages/auth/Login.jsx
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom'; // Import Link
+import axios from 'axios';
+import Input from '../../components/forms/Input';
+import Button from '../../components/forms/Button';
+import AuthLayout from '../../layouts/AuthLayout';
+import logo from '../../assets/images/logo.png';
+import eyeHide from '../../assets/images/eye-hide.svg';
+import eyeShow from '../../assets/images/eye-show.svg';
+
+const Login = () => {
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false); // State for password visibility
+
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  // Add/remove 'loginbg' class to the body
+  useEffect(() => {
+    document.body.classList.add('loginbg');
+    return () => {
+      document.body.classList.remove('loginbg');
+    };
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const { email, password } = formData;
+    const newErrors = {};
+
+    // Field validation
+    if (!email) newErrors.email = 'Please enter an email';
+    if (!password) newErrors.password = 'Please enter a password';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({}); // Clear previous errors
+
+    try {
+      const response = await axios.post(`${process.env.REACT_APP_API_BASE_URL}/api/login`, {
+        email,
+        password,
+      });
+
+      const data = response.data;
+
+      localStorage.setItem('token', data.token);
+      const userWithCompanyId = {
+        ...data.user,
+        company_id: data.user.company?.id || null // optional chaining in case company is undefined
+      };
+      localStorage.setItem('user', JSON.stringify(userWithCompanyId));
+
+      // Redirect based on user role
+      switch (data.user.role) {
+        case 'super_admin':
+          window.location.href = '/super-admin';
+          break;
+        case 'company_admin':
+          window.location.href = '/subscription';
+          break;
+        case 'revenue_manager':
+          window.location.href = '/revenue';
+          break;
+        case 'general_manager':
+          window.location.href = '/gm';
+          break;
+        case 'analyst':
+          window.location.href = '/reports';
+          break;
+        default:
+          window.location.href = '/';
+      }
+    } catch (error) {
+      console.error(error);
+      const message = error.response?.data?.message || 'Login failed';
+      setErrors({ general: message });
+    }
+  };
+
+  return (
+    // AuthLayout will now just provide a wrapper, not the background styles.
+    // The 'loginbg' class on the body will handle the main background.
+    <AuthLayout>
+      <div className="loginmain"> {/* This wraps the entire login content */}
+        <div className="logo">
+          <a href="#">
+            <img src={logo} className="img-fluid" alt="RankMeOne Logo" />
+          </a>
+        </div>
+        <div className="loginbg-w"> {/* This is the white background box */}
+          <h1>Log in to your account</h1> {/* Changed h2 to h1 as per HTML */}
+          {errors.general && (
+            <div className="text-danger small text-center mt-3">{errors.general}</div>
+          )}
+          <div className="form-design">
+            <form onSubmit={handleSubmit}>
+              {/* Email Input */}
+              <Input
+                label="Email Address" // Changed label to match HTML
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Email Address" // Changed placeholder to match HTML
+                error={errors.email}
+              />
+
+              {/* Password Input with eye icon */}
+              <div className="form-group"> {/* Outer div for the group, Input component handles the inner form-group */}
+                <label className="form-label">Password</label>
+                <div className="password-icon">
+                  <Input
+                    // We don't pass the label prop here as we rendered it above
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Password" // Changed placeholder to match HTML
+                    className="" // Ensure no extra classes are passed from here to avoid conflict
+                    error={errors.password}
+                  />
+                  <img
+                    src={showPassword ? eyeShow : eyeHide}
+                    className="img-fluid"
+                    alt="Toggle Password Visibility"
+                    onClick={togglePasswordVisibility}
+                    style={{ cursor: 'pointer' }} // Add a style for better UX
+                  />
+                </div>
+              </div>
+
+              {/* Forgot Password Link */}
+              <div className="form-group forgotpassword">
+                <Link to="/forgot-password">Forgot Password ?</Link>
+              </div>
+
+              {/* Login Button */}
+              <div className="login-btn">
+                <Button type="submit" className="btn btn-info"> {/* Apply Bootstrap classes */}
+                  Log In
+                </Button>
+              </div>
+            </form>
+            <h5>
+              Don't have an account ? <Link to="/signup">Sign Up</Link>
+            </h5>
+          </div>
+        </div>
+      </div>
+    </AuthLayout>
+  );
+};
+
+export default Login;
