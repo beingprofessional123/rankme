@@ -6,6 +6,8 @@ require('dotenv').config();
 const basename = path.basename(__filename);
 const db = {};
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const sequelize = new Sequelize(
   process.env.DB_NAME,
   process.env.DB_USER,
@@ -14,6 +16,14 @@ const sequelize = new Sequelize(
     host: process.env.DB_HOST,
     dialect: 'postgres',
     logging: false,
+    dialectOptions: isProduction
+      ? {
+          ssl: {
+            require: true,
+            rejectUnauthorized: false, // Accept self-signed or non-strict certs
+          },
+        }
+      : {},
   }
 );
 
