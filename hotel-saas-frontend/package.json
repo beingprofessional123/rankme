@@ -16,7 +16,7 @@
     "@fullcalendar/timegrid": "^6.1.17",
     "@headlessui/react": "^2.2.4",
     "@material-table/core": "^6.4.4",
-    "@mui/icons-material": "^7.1.1",
+    "@mui/icons-material": "^5.11.16",
     "@mui/lab": "^5.0.0-alpha.125",
     "@mui/material": "^5.17.1",
     "@mui/styles": "^6.4.12",
