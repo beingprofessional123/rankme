@@ -18,7 +18,7 @@
     "@material-table/core": "^6.4.4",
     "@mui/icons-material": "^7.1.1",
     "@mui/lab": "^5.0.0-alpha.125",
-    "@mui/material": "^7.1.1",
+    "@mui/material": "^5.17.1",
     "@mui/styles": "^6.4.12",
     "@popperjs/core": "^2.11.8",
     "@stripe/stripe-js": "^7.3.0",
