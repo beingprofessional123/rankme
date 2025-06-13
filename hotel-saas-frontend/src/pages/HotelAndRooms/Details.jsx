@@ -1,15 +1,16 @@
 // src/pages/HotelAndRooms/details.js
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom'; // Import useParams to get ID from URL
+import { useParams, Link } from 'react-router-dom';          // ← added Link
 import DashboardLayout from '../../components/DashboardLayout';
-import { toast } from 'react-toastify'; // For notifications
+import { toast } from 'react-toastify';
 
 const HotelAndRoomDetails = () => {
-  const { id } = useParams(); // Get the hotel ID from the URL parameter
-  const [hotelDetails, setHotelDetails] = useState(null); // Will store fetched details
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { id } = useParams();
+  const [hotelDetails, setHotelDetails] = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [error,   setError]     = useState(null);
 
+  /* ----------------------- Fetch hotel by ID ----------------------- */
   const fetchHotelDetails = useCallback(async () => {
     if (!id) {
       setError('Hotel ID is missing from the URL.');
@@ -17,140 +18,113 @@ const HotelAndRoomDetails = () => {
       return;
     }
 
-    setLoading(true);
-    setError(null);
-
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Authentication token not found. Please log in.');
-      }
+      if (!token) throw new Error('Authentication token not found. Please log in.');
 
-      const apiUrl = `${process.env.REACT_APP_API_BASE_URL}/api/hotels/${id}`; // API call with ID
-
+      const apiUrl   = `${process.env.REACT_APP_API_BASE_URL}/api/hotels/${id}`;
       const response = await fetch(apiUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`, // Include the bearer token
-          'Content-Type': 'application/json',
-        },
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch hotel details.');
+        const { message } = await response.json();
+        throw new Error(message || 'Failed to fetch hotel details.');
       }
 
       const data = await response.json();
-      setHotelDetails(data.hotel); // Assuming your API returns { message: '...', hotel: { ... } }
-      toast.success(data.message || 'Hotel details loaded successfully!');
+      setHotelDetails(data.hotel);          // { hotel: { … } }
+      toast.success(data.message || 'Hotel details loaded!');
     } catch (err) {
-      console.error('Error fetching hotel details:', err);
       setError(err.message);
       toast.error(err.message || 'Failed to load hotel details.');
     } finally {
       setLoading(false);
     }
-  }, [id]); // Re-run if ID changes
+  }, [id]);
 
-  useEffect(() => {
-    fetchHotelDetails();
-  }, [fetchHotelDetails]);
+  useEffect(() => { fetchHotelDetails(); }, [fetchHotelDetails]);
 
+  /* ---------------------- Render helpers ---------------------- */
+  const listOrNA = (arr, prop) =>
+    Array.isArray(arr) && arr.length
+      ? arr.map((item) => item[prop] ?? item).join(', ')
+      : 'N/A';
 
-  // Helper function to format keys for display (e.g., hotelName -> Hotel Name)
-  const formatKey = (key) => {
-    return key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-  };
-
+  /* -------------------------- JSX ----------------------------- */
   return (
     <DashboardLayout>
-      <div className="p-6 bg-gray-100 min-h-screen">
-        {/* Breadcrumb */}
-        <div className="text-sm text-gray-500 mb-4">
-          <span className="font-medium text-gray-500">Home</span>
-          <span className="mx-2">/</span>
-          <span className="font-semibold text-gray-800">Hotel & Room Details</span>
+      <div className="mainbody">
+        <div className="container-fluid">
+
+          {/* ── Breadcrumb ───────────────────────────── */}
+          <div className="row breadcrumbrow">
+            <div className="col-md-12">
+              <div className="breadcrumb-sec">
+                <h2>Hotel &amp; Room Details</h2>
+                <nav aria-label="breadcrumb">
+                  <ol className="breadcrumb">
+                    <li className="breadcrumb-item"><Link to="/">Home</Link></li>
+                    <li className="breadcrumb-item active" aria-current="page">
+                      Hotel &amp; Room Details
+                    </li>
+                  </ol>
+                </nav>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Content ──────────────────────────────── */}
+          {loading ? (
+            <div className="text-center py-5">Loading hotel details…</div>
+          ) : error ? (
+            <div className="alert alert-danger text-center my-4" role="alert">
+              {error}
+            </div>
+          ) : hotelDetails ? (
+            <div className="white-bg">
+              <div className="hotel-details">
+                <ul>
+                  <li>
+                    <strong>Hotel Name</strong>
+                    <span>{hotelDetails.name || 'N/A'}</span>
+                  </li>
+                  <li>
+                    <strong>Location</strong>
+                    <span>{hotelDetails.location || 'N/A'}</span>
+                  </li>
+                  <li>
+                    <strong>Hotel Type</strong>
+                    <span>{hotelDetails.hotel_type || 'N/A'}</span>
+                  </li>
+                  <li>
+                    <strong>Categories</strong>
+                    <span>{listOrNA(hotelDetails.categories, 'name')}</span>
+                  </li>
+                  <li>
+                    <strong>Room Name</strong>
+                    <span>{listOrNA(hotelDetails.rooms, 'name')}</span>
+                  </li>
+                  <li>
+                    <strong>Capacity</strong>
+                    <span>
+                      {listOrNA(
+                        hotelDetails.rooms?.map(r => `${r.name} (${r.capacity})`)
+                      )}
+                    </span>
+                  </li>
+                  <li>
+                    <strong>Rate Category</strong>
+                    <span>{listOrNA(hotelDetails.rateCategories, 'name')}</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-5">No hotel details available.</div>
+          )}
+
         </div>
-
-        {/* Header */}
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Hotel & Room Details</h1>
-
-        {/* Loading, Error, or Details Card */}
-        {loading ? (
-          <div className="text-center py-8">Loading hotel details...</div>
-        ) : error ? (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative max-w-3xl mx-auto" role="alert">
-            <strong className="font-bold">Error:</strong>
-            <span className="block sm:inline ml-2">{error}</span>
-          </div>
-        ) : hotelDetails ? (
-          <div className="bg-white p-8 rounded-lg shadow-md max-w-3xl mx-auto">
-            <dl className="divide-y divide-gray-200">
-              {/* Hotel Name */}
-              <div className="py-4 flex flex-col sm:flex-row sm:items-center">
-                <dt className="w-48 text-sm font-medium text-gray-700 capitalize sm:mb-0 mb-2">Hotel Name</dt>
-                <dd className="flex-1 text-sm text-gray-900 sm:mt-0 sm:ml-4">{hotelDetails.name}</dd>
-              </div>
-
-              {/* Location */}
-              <div className="py-4 flex flex-col sm:flex-row sm:items-center">
-                <dt className="w-48 text-sm font-medium text-gray-700 capitalize sm:mb-0 mb-2">Location</dt>
-                <dd className="flex-1 text-sm text-gray-900 sm:mt-0 sm:ml-4">{hotelDetails.location}</dd>
-              </div>
-
-              {/* Hotel Type */}
-              <div className="py-4 flex flex-col sm:flex-row sm:items-center">
-                <dt className="w-48 text-sm font-medium text-gray-700 capitalize sm:mb-0 mb-2">Hotel Type</dt>
-                <dd className="flex-1 text-sm text-gray-900 sm:mt-0 sm:ml-4">{hotelDetails.hotel_type}</dd>
-              </div>
-
-              {/* Room Categories/Names (from RoomType) */}
-              <div className="py-4 flex flex-col sm:flex-row sm:items-start"> {/* Use items-start if content can be long */}
-                <dt className="w-48 text-sm font-medium text-gray-700 capitalize sm:mb-0 mb-2">Room Name</dt>
-                <dd className="flex-1 text-sm text-gray-900 sm:mt-0 sm:ml-4">
-                  {hotelDetails.rooms && hotelDetails.rooms.length > 0 ? (
-                    <ul className="list-disc pl-5 space-y-1">
-                      {hotelDetails.rooms.map(room => (
-                        <li key={room.id}>{room.name} (Capacity: {room.capacity})</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    'No room types available.'
-                  )}
-                </dd>
-              </div>
-
-              {/* Capacity (can be aggregated or per room type) */}
-              {/* If "Capacity" from the screenshot is a single aggregated value,
-                  you'll need to calculate it here or have the backend provide it.
-                  If it refers to individual room capacities, it's covered above.
-                  For now, I'm displaying individual room capacities under "Room Name".
-                  If you want a separate "Capacity" field like in the screenshot,
-                  you'll need to define what that means (e.g., total capacity, or first room's capacity)
-                  and fetch/calculate it.
-              */}
-               <div className="py-4 flex flex-col sm:flex-row sm:items-start">
-                <dt className="w-48 text-sm font-medium text-gray-700 capitalize sm:mb-0 mb-2">Rate Categories</dt>
-                <dd className="flex-1 text-sm text-gray-900 sm:mt-0 sm:ml-4">
-                  {hotelDetails.rateCategories && hotelDetails.rateCategories.length > 0 ? (
-                    <ul className="list-disc pl-5 space-y-1">
-                      {hotelDetails.rateCategories.map(rate => (
-                        <li key={rate.id}>
-                          <strong>{rate.name}</strong>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    'No rate categories available.'
-                  )}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500">No hotel details available.</div>
-        )}
       </div>
     </DashboardLayout>
   );

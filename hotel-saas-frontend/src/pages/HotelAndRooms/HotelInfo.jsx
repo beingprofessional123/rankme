@@ -1,9 +1,8 @@
-// src/pages/SetupWizard/HotelInfo.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-const HotelInfo = ({ onHotelCreated }) => {
+const HotelInfo = ({ onHotelCreated, editInitialData }) => {
   const [hotelID, setHotelID] = useState('');
   const [hotelName, setHotelName] = useState('');
   const [location, setLocation] = useState('');
@@ -12,18 +11,25 @@ const HotelInfo = ({ onHotelCreated }) => {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    const savedHotelData = JSON.parse(localStorage.getItem('hotel_info'));
-    if (savedHotelData) {
-      setHotelID(savedHotelData.hotel_id || '');
-      setHotelName(savedHotelData.name || '');
-      setLocation(savedHotelData.location || '');
-      setHotelType(savedHotelData.hotel_type || '');
+    if (editInitialData) {
+      setHotelID(editInitialData.id || '');
+      setHotelName(editInitialData.name || '');
+      setLocation(editInitialData.location || '');
+      setHotelType(editInitialData.hotel_type || '');
+    } else {
+      const savedHotelData = JSON.parse(localStorage.getItem('hotel_info'));
+      if (savedHotelData) {
+        setHotelID(savedHotelData.hotel_id || '');
+        setHotelName(savedHotelData.name || '');
+        setLocation(savedHotelData.location || '');
+        setHotelType(savedHotelData.hotel_type || '');
+      }
     }
-  }, []);
+  }, [editInitialData]);
 
   const handleCreateHotel = async () => {
     setLoading(true);
-    setErrors({}); // Clear previous errors
+    setErrors({});
     const newErrors = {};
 
     if (!hotelName.trim()) newErrors.name = 'Please enter a hotel name.';
@@ -54,7 +60,7 @@ const HotelInfo = ({ onHotelCreated }) => {
           location,
           hotel_type: hotelType,
           company_id,
-          hotel_id: hotelID, // This might be null for new hotels, but included for consistency
+          hotel_id: hotelID,
         },
         {
           headers: {
@@ -62,6 +68,8 @@ const HotelInfo = ({ onHotelCreated }) => {
           },
         }
       );
+
+      // Save to localStorage for persistence
       localStorage.setItem(
         'hotel_info',
         JSON.stringify({
@@ -71,7 +79,8 @@ const HotelInfo = ({ onHotelCreated }) => {
           hotel_type: hotelType,
         })
       );
-      onHotelCreated(response.data); // Proceed to next step
+
+      onHotelCreated(response.data);
     } catch (error) {
       console.error('Error creating hotel:', error);
       if (error.response?.status === 400 || error.response?.status === 422) {
@@ -85,7 +94,7 @@ const HotelInfo = ({ onHotelCreated }) => {
   };
 
   return (
-    <fieldset> {/* This fieldset aligns with the HTML structure for each step */}
+    <fieldset>
       <div className="form-design">
         <div className="form-group">
           <label className="form-label">Hotel Name</label>
@@ -98,6 +107,7 @@ const HotelInfo = ({ onHotelCreated }) => {
           />
           {errors.name && <div className="invalid-feedback">{errors.name}</div>}
         </div>
+
         <div className="form-group">
           <label className="form-label">Location</label>
           <input
@@ -109,6 +119,7 @@ const HotelInfo = ({ onHotelCreated }) => {
           />
           {errors.location && <div className="invalid-feedback">{errors.location}</div>}
         </div>
+
         <div className="form-group">
           <label className="form-label">Hotel Type</label>
           <select
@@ -125,6 +136,7 @@ const HotelInfo = ({ onHotelCreated }) => {
           {errors.hotel_type && <div className="invalid-feedback">{errors.hotel_type}</div>}
         </div>
       </div>
+
       <input
         type="button"
         name="next"

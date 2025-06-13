@@ -18,7 +18,8 @@ import Billing from '../pages/Billing/Billing';
 import UploadData from '../pages/UploadData/UploadData';
 import HotelsAndRoomsList from '../pages/HotelAndRooms/List';
 import HotelAndRoomDetails from '../pages/HotelAndRooms/Details';
-import HotelAndRoomCreate from '../pages/HotelAndRooms/SetupWizard';
+import HotelAndRoomCreate from '../pages/HotelAndRooms/Create';
+import HotelAndRoomEdit from '../pages/HotelAndRooms/Edit';
 import ForecastPage from '../pages/Forecast/ForecastPage';
 import ReportPage from '../pages/Reports/ReportPage';
 import CompetitorRatesPage from '../pages/CompetitorRates/CompetitorRatesPage';
@@ -30,8 +31,6 @@ import SupportTicketAddPage from '../pages/SupportTicket/SupportTicketAddPage';
 import SupportTicketEditPage from '../pages/SupportTicket/SupportTicketEditPage';
 import SupportTicketViewPage from '../pages/SupportTicket/SupportTicketViewPage';
 import SettingsPage from '../pages/Settings/SettingsPage';
-
-
 
 
 const AppRoutes = () => {
@@ -58,6 +57,7 @@ const AppRoutes = () => {
         <Route path="/hotels-and-rooms" element={<ProtectedRoute><HotelsAndRoomsList /></ProtectedRoute>} /> 
         <Route path="/hotels-and-rooms/add" element={<ProtectedRoute><HotelAndRoomCreate /></ProtectedRoute>} /> 
         <Route path="/hotels-and-rooms/:id" element={<ProtectedRoute><HotelAndRoomDetails /></ProtectedRoute>} /> 
+        <Route path="/hotels-and-rooms/edit/:id" element={<ProtectedRoute><HotelAndRoomEdit /></ProtectedRoute>} /> 
         <Route path="/forecast" element={<ProtectedRoute><ForecastPage /></ProtectedRoute>} /> 
         <Route path="/reports" element={<ProtectedRoute><ReportPage /></ProtectedRoute>} /> 
         <Route path="/competitor-rate" element={<ProtectedRoute><CompetitorRatesPage /></ProtectedRoute>} /> 

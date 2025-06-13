@@ -32,6 +32,4 @@ coverage/
 
 # Environment files
 hotel-saas-frontend/.env
-hotel-saas-frontend/.env.*
 hotel-saas-backend/.env
-hotel-saas-backend/.env.*
