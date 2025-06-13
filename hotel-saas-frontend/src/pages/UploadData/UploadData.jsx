@@ -12,6 +12,7 @@ import { faTimesCircle } from '@fortawesome/free-solid-svg-icons';
 // Import SweetAlert2
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
+import { Link } from 'react-router-dom';
 
 const MySwal = withReactContent(Swal);
 
@@ -198,8 +199,8 @@ const UploadData = () => {
                 <h2>Upload Data</h2>
                 <nav aria-label="breadcrumb">
                   <ol className="breadcrumb">
-                    <li className="breadcrumb-item"><a href="#">Home</a></li>
-                    <li className="breadcrumb-item active" aria-current="page">Upload Data</li>
+                    <li className="breadcrumb-item"><Link href="#">Home</Link></li>
+                    <li className="breadcrumb-item active" aria-current="page">{activeTab}</li>
                   </ol>
                 </nav>
               </div>
@@ -210,6 +211,206 @@ const UploadData = () => {
 
             <div className="tab-content">
               <div id="home1" className="tab-pane active">
+                <form action="">
+                  <div className="form-design">
+                    <FileUploadSection
+                      onFileExtracted={handleFileExtracted}
+                      setLoading={setLoading}
+                      setError={setError}
+                      fileName={fileName}
+                      fileType={getFileTypeForApi(activeTab)}
+                    />
+                    {error && (
+                      <div className="alert alert-danger alert-dismissible fade show d-flex justify-content-between align-items-center" role="alert">
+                        <div>
+                          <strong>Error!</strong> {error}
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-link text-white p-0"
+                          onClick={() => setError(null)}
+                          style={{ fontSize: '1.2rem' }}
+                          aria-label="Close"
+                        >
+                          <FontAwesomeIcon icon={faTimesCircle} />
+                        </button>
+                      </div>
+
+                    )}
+
+                    {loading && <div className="text-center text-primary mb-4">Processing file...</div>}
+
+                    {extractedData.length > 0 && (
+                      <>
+                        <div className="row">
+                          <div className="col-md-4">
+                            <div className="form-group">
+                              <label htmlFor="dataSourceName" className="form-label">Data Source Name</label>
+                              <input
+                                type="text"
+                                className="form-control"
+                                id="dataSourceName"
+                                placeholder="Data Source Name"
+                                value={dataSourceName}
+                                onChange={(e) => setDataSourceName(e.target.value)}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="col-md-4">
+                            <div className="form-group">
+                              <label htmlFor="hotelProperty" className="form-label">Hotel Property</label>
+                              <select
+                                className="form-select form-control"
+                                id="hotelProperty"
+                                value={hotelPropertyId}
+                                onChange={(e) => setHotelPropertyId(e.target.value)}
+                              >
+                                <option value="">Select Hotel Property</option>
+                                {hotelProperties.map((prop) => (
+                                  <option key={prop.id} value={prop.id}>{prop.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="col-md-4">
+                            <div className="form-group">
+                              <label htmlFor="dateRangeFrom" className="form-label">Date Range</label>
+                              <div className="daterange">
+                                <input
+                                  type="date"
+                                  className="form-control"
+                                  id="dateRangeFrom"
+                                  value={dateRangeFrom}
+                                  onChange={(e) => setDateRangeFrom(e.target.value)}
+                                />
+                                <span>-</span>
+                                <input
+                                  type="date"
+                                  className="form-control"
+                                  id="dateRangeTo"
+                                  value={dateRangeTo}
+                                  onChange={(e) => setDateRangeTo(e.target.value)}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        {/* REMOVED: Download Template button is no longer here */}
+                        <DataTable
+                          data={extractedData}
+                          title={getTableTitle(activeTab)}
+                          onConfirm={handleConfirmUpload}
+                          onCancel={handleCancel}
+                          activeTab={activeTab} // Pass activeTab to DataTable for template download logic
+                        />
+                      </>
+                    )}
+                  </div>
+                </form>
+              </div>
+              <div id="home2" className="tab-pane">
+                <form action="">
+                  <div className="form-design">
+                    <FileUploadSection
+                      onFileExtracted={handleFileExtracted}
+                      setLoading={setLoading}
+                      setError={setError}
+                      fileName={fileName}
+                      fileType={getFileTypeForApi(activeTab)}
+                    />
+                    {error && (
+                      <div className="alert alert-danger alert-dismissible fade show d-flex justify-content-between align-items-center" role="alert">
+                        <div>
+                          <strong>Error!</strong> {error}
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-link text-white p-0"
+                          onClick={() => setError(null)}
+                          style={{ fontSize: '1.2rem' }}
+                          aria-label="Close"
+                        >
+                          <FontAwesomeIcon icon={faTimesCircle} />
+                        </button>
+                      </div>
+
+                    )}
+
+                    {loading && <div className="text-center text-primary mb-4">Processing file...</div>}
+
+                    {extractedData.length > 0 && (
+                      <>
+                        <div className="row">
+                          <div className="col-md-4">
+                            <div className="form-group">
+                              <label htmlFor="dataSourceName" className="form-label">Data Source Name</label>
+                              <input
+                                type="text"
+                                className="form-control"
+                                id="dataSourceName"
+                                placeholder="Data Source Name"
+                                value={dataSourceName}
+                                onChange={(e) => setDataSourceName(e.target.value)}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="col-md-4">
+                            <div className="form-group">
+                              <label htmlFor="hotelProperty" className="form-label">Hotel Property</label>
+                              <select
+                                className="form-select form-control"
+                                id="hotelProperty"
+                                value={hotelPropertyId}
+                                onChange={(e) => setHotelPropertyId(e.target.value)}
+                              >
+                                <option value="">Select Hotel Property</option>
+                                {hotelProperties.map((prop) => (
+                                  <option key={prop.id} value={prop.id}>{prop.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="col-md-4">
+                            <div className="form-group">
+                              <label htmlFor="dateRangeFrom" className="form-label">Date Range</label>
+                              <div className="daterange">
+                                <input
+                                  type="date"
+                                  className="form-control"
+                                  id="dateRangeFrom"
+                                  value={dateRangeFrom}
+                                  onChange={(e) => setDateRangeFrom(e.target.value)}
+                                />
+                                <span>-</span>
+                                <input
+                                  type="date"
+                                  className="form-control"
+                                  id="dateRangeTo"
+                                  value={dateRangeTo}
+                                  onChange={(e) => setDateRangeTo(e.target.value)}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        {/* REMOVED: Download Template button is no longer here */}
+                        <DataTable
+                          data={extractedData}
+                          title={getTableTitle(activeTab)}
+                          onConfirm={handleConfirmUpload}
+                          onCancel={handleCancel}
+                          activeTab={activeTab} // Pass activeTab to DataTable for template download logic
+                        />
+                      </>
+                    )}
+                  </div>
+                </form>
+              </div>
+              <div id="home3" className="tab-pane">
                 <form action="">
                   <div className="form-design">
                     <FileUploadSection
