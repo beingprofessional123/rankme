@@ -1,18 +1,27 @@
 // controllers/authController.js
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const db = require('../models');
+const db = require('../models'); // Ensure your db object has User, Company, and Role models
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 const getForgotPasswordEmail = require('../emailTemplate/ForgetPassword');
 
+// Helper to get role ID by name
+const getRoleId = async (roleName) => {
+  const role = await db.Role.findOne({ where: { name: roleName } });
+  if (!role) {
+    throw new Error(`Role "${roleName}" not found. Please ensure it exists in the Roles table.`);
+  }
+  return role.id;
+};
+
 
 // USER SIGNUP
 exports.signup = async (req, res) => {
   try {
-    const { name, email, phone, password, companyName, role } = req.body;
+    const { name, email, phone, password, companyName, role } = req.body; // 'role' here is the roleName string
 
     // Check if user already exists
     const existingUser = await db.User.findOne({ where: { email } });
@@ -30,13 +39,16 @@ exports.signup = async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Get the role_id based on the provided role name
+    const roleIdToAssign = await getRoleId(role || 'company_admin'); // Default to 'company_admin'
+
     // Create user
     const newUser = await db.User.create({
       name: name,
       email,
       phone: phone,
       password: hashedPassword,
-      role: role || 'company_admin',
+      role_id: roleIdToAssign, // Assign the role_id
       company_id: company.id,
       is_active: true,
     });
@@ -46,7 +58,7 @@ exports.signup = async (req, res) => {
       {
         id: newUser.id,
         email: newUser.email,
-        role: newUser.role,
+        role_id: newUser.role_id, // IMPORTANT: Store role_id in the token, not the role name
         company_id: newUser.company_id,
       },
       JWT_SECRET,
@@ -61,7 +73,7 @@ exports.signup = async (req, res) => {
         name: newUser.name,
         email: newUser.email,
         phone: newUser.phone,
-        role: newUser.role,
+        role_id: newUser.role_id, // Also return role_id, or fetch the role name here if needed
         company_id: newUser.company_id,
       },
     });
@@ -76,8 +88,15 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user by email
-    const user = await db.User.findOne({ where: { email }, include: db.Company });
+    // Find user by email, and include their Role and Company
+    const user = await db.User.findOne({
+      where: { email },
+      include: [
+        { model: db.Company },
+        { model: db.Role, attributes: ['name'] } // Include Role to get the name
+      ]
+    });
+
     if (!user) {
       return res.status(404).json({ message: 'Incorrect email or password. Please try again.' });
     }
@@ -93,7 +112,7 @@ exports.login = async (req, res) => {
       {
         id: user.id,
         email: user.email,
-        role: user.role,
+        role_id: user.role_id, // IMPORTANT: Store role_id in the token
         company_id: user.company_id,
       },
       JWT_SECRET,
@@ -107,8 +126,9 @@ exports.login = async (req, res) => {
         id: user.id,
         email: user.email,
         name: user.name,
-        phone:user.phone,
-        role: user.role,
+        phone: user.phone,
+        // Now you can expose the role name
+        role: user.Role ? user.Role.name : null, // Access the role name from the included Role object
         company: user.Company ? user.Company : null,
       },
     });
@@ -118,7 +138,7 @@ exports.login = async (req, res) => {
   }
 };
 
-// FORGOT PASSWORD
+// FORGOT PASSWORD (No changes needed here as it doesn't rely on role name)
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
 
@@ -163,7 +183,7 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-// Reset PASSWORD
+// Reset PASSWORD (No changes needed here)
 exports.resetPassword = async (req, res) => {
   const { token, password } = req.body;
 
