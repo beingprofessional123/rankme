@@ -8,6 +8,10 @@ import UserManagementIndex from '../pages/UserManagement/Index';
 import UserManagementCreate from '../pages/UserManagement/create';
 import UserManagementEdit from '../pages/UserManagement/edit';
 import UserManagementView from '../pages/UserManagement/view';
+import PlanManagementIndex from '../pages/PlanManagement/Index';
+import PlanManagementCreate from '../pages/PlanManagement/create';
+import PlanManagementEdit from '../pages/PlanManagement/edit';
+import PlanManagementView from '../pages/PlanManagement/view';
 import Script from '../layouts/Script';
 
 
@@ -25,12 +29,19 @@ const AdminAppRoutes = () => {
         <Route path="/admin/login" element={<GuestRoute> <Login /> </GuestRoute>}/>
         <Route path="/admin" element={<GuestRoute> <Login /> </GuestRoute> }/>
 
-        {/* Protected Admin Routes */}
+        {/* Protected Admin Routes Dashborad */}
         <Route path="/admin/dashboard" element={<ProtectedRoute><AdminLayout><Dashboard /></AdminLayout></ProtectedRoute> }/>
+        {/* User Management */}
         <Route path="/admin/user-management" element={<ProtectedRoute><AdminLayout><UserManagementIndex /></AdminLayout></ProtectedRoute> }/>
         <Route path="/admin/user-management/create" element={<ProtectedRoute><AdminLayout><UserManagementCreate /></AdminLayout></ProtectedRoute> }/>
         <Route path="/admin/user-management/:id/edit" element={<ProtectedRoute><AdminLayout><UserManagementEdit /></AdminLayout></ProtectedRoute> }/>
         <Route path="/admin/user-management/:id" element={<ProtectedRoute><AdminLayout><UserManagementView /></AdminLayout></ProtectedRoute> }/>
+         {/* Plan Management */}
+        <Route path="/admin/plan-management" element={<ProtectedRoute><AdminLayout><PlanManagementIndex /></AdminLayout></ProtectedRoute> }/>
+        <Route path="/admin/plan-management/create" element={<ProtectedRoute><AdminLayout><PlanManagementCreate /></AdminLayout></ProtectedRoute> }/>
+        <Route path="/admin/plan-management/:id/edit" element={<ProtectedRoute><AdminLayout><PlanManagementEdit /></AdminLayout></ProtectedRoute> }/>
+        <Route path="/admin/plan-management/:id" element={<ProtectedRoute><AdminLayout><PlanManagementView /></AdminLayout></ProtectedRoute> }/>
+     
       </Routes>
     </Router>
   );

@@ -93,12 +93,6 @@ const UserManagementView = () => {
                   </ul>
                 </div>
 
-                <div className="mt-4">
-                  <button onClick={() => navigate('/admin/user-management')} className="btn btn-secondary">
-                    Back to List
-                  </button>
-                </div>
-
               </div>
             </div>
           </div>

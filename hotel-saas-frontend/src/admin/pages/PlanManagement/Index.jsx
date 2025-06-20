@@ -7,41 +7,41 @@ import { Visibility, Edit, Delete } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
 
-const UserManagementIndex = () => {
-    const [users, setUsers] = useState([]);
+
+const PlanManagementIndex = () => {
+    const [plans, setPlans] = useState([]);
     const [successMessage, setSuccessMessage] = useState('');
 
     useEffect(() => {
-        fetchUsers();
+        fetchPlans();
     }, []);
 
-    const fetchUsers = async () => {
+    const fetchPlans = async () => {
         try {
             const token = localStorage.getItem('admin_token');
-
             const response = await axios.get(
-                `${process.env.REACT_APP_API_BASE_URL}/api/admin/user-management-list`,
+                `${process.env.REACT_APP_API_BASE_URL}/api/admin/plan-management-list`,
                 {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
+                    headers: { Authorization: `Bearer ${token}` },
                 }
             );
 
-            setUsers(response.data.results || []);
             if (response.data.status_code === 200) {
+                setPlans(response.data.results || []);
                 toast.success(response.data.message);
+            } else {
+                toast.error(response.data.message || 'Failed to fetch plans');
             }
         } catch (error) {
-            console.error('Error fetching users:', error);
-            toast.error('Failed to fetch users');
+            console.error('Error fetching plans:', error);
+            toast.error('Failed to fetch plans');
         }
     };
 
-    const deleteUser = async (id) => {
+    const deletePlan = async (id) => {
         const confirm = await Swal.fire({
             title: 'Are you sure?',
-            text: 'This action will permanently delete the user.',
+            text: 'This action will permanently delete the plan.',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
@@ -53,25 +53,22 @@ const UserManagementIndex = () => {
             try {
                 const token = localStorage.getItem('admin_token');
                 const response = await axios.delete(
-                    `${process.env.REACT_APP_API_BASE_URL}/api/admin/user-management/${id}`,
+                    `${process.env.REACT_APP_API_BASE_URL}/api/admin/plan-management/${id}`,
                     {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
+                        headers: { Authorization: `Bearer ${token}` },
                     }
                 );
 
                 if (response.data.status_code === 200) {
                     toast.success(response.data.message);
-                    fetchUsers(); // refresh list only after successful deletion
+                    fetchPlans(); // refresh list
                 } else {
                     toast.error(response.data.message || 'Something went wrong.');
                 }
             } catch (error) {
-                console.error('Error deleting user:', error);
+                console.error('Error deleting plan:', error);
                 const message =
-                    error?.response?.data?.message ||
-                    'An unexpected error occurred while deleting the user.';
+                    error?.response?.data?.message || 'Unexpected error occurred.';
                 toast.error(message);
             }
         }
@@ -83,54 +80,32 @@ const UserManagementIndex = () => {
             name: 'name',
             label: 'Name',
             options: {
+                customBodyRenderLite: (dataIndex) => plans[dataIndex].name,
+            },
+        },
+        {
+            name: 'price',
+            label: 'Price',
+            options: {
+                customBodyRenderLite: (dataIndex) => `₹${plans[dataIndex].price}`,
+            },
+        },
+        {
+            name: 'billing_period',
+            label: 'Billing Period',
+            options: {
                 customBodyRenderLite: (dataIndex) => {
-                    const user = users[dataIndex];
-                    return (
-                        <div className="d-flex align-items-center">
-                            <img
-                                width="40"
-                                height="40"
-                                className="rounded-circle me-2"
-                                src={user.profile ? `${user.profile}` : '/admin/assets/img/90x90.jpg'}
-                                alt="avatar"
-                            />
-                            <div className='m-1'>
-                                <div><b>{user.first_name} {user.last_name}</b></div>
-                                <div className="text-muted" style={{ fontSize: '0.875rem' }}>{user.email}</div>
-                            </div>
-                        </div>
-
-                    );
+                    const period = plans[dataIndex].billing_period;
+                    return period.charAt(0).toUpperCase() + period.slice(1);
                 },
             },
         },
         {
-            name: 'Phone',
-            label: 'Phone',
-            options: {
-                customBodyRenderLite: (dataIndex) => users[dataIndex].phone,
-            },
-        },
-        {
-            name: 'status',
-            label: 'Status',
-            options: {
-                customBodyRenderLite: (dataIndex) => {
-                    const status = users[dataIndex].status;
-                    return (
-                        <span className={`badge ${status === '1' ? 'bg-success' : 'bg-danger'}`}>
-                            {status === '1' ? 'Active' : 'Inactive'}
-                        </span>
-                    );
-                },
-            },
-        },
-        {
-            name: 'created_at',
-            label: 'Created',
+            name: 'createdAt',
+            label: 'Created At',
             options: {
                 customBodyRenderLite: (dataIndex) =>
-                    new Date(users[dataIndex].created_at).toLocaleDateString(),
+                    new Date(plans[dataIndex].createdAt).toLocaleDateString(),
             },
         },
         {
@@ -138,13 +113,13 @@ const UserManagementIndex = () => {
             label: 'Actions',
             options: {
                 customBodyRenderLite: (dataIndex) => {
-                    const user = users[dataIndex];
+                    const plan = plans[dataIndex];
                     return (
                         <>
                             <Tooltip title="View">
                                 <IconButton
                                     component={Link}
-                                    to={`/admin/user-management/${user.id}`}
+                                    to={`/admin/plan-management/${plan.id}`}
                                     size="small"
                                     color="primary"
                                 >
@@ -154,7 +129,7 @@ const UserManagementIndex = () => {
                             <Tooltip title="Edit">
                                 <IconButton
                                     component={Link}
-                                    to={`/admin/user-management/${user.id}/edit`}
+                                    to={`/admin/plan-management/${plan.id}/edit`}
                                     size="small"
                                     color="warning"
                                 >
@@ -165,7 +140,7 @@ const UserManagementIndex = () => {
                                 <IconButton
                                     size="small"
                                     color="error"
-                                    onClick={() => deleteUser(user.id)}
+                                    onClick={() => deletePlan(plan.id)}
                                 >
                                     <Delete />
                                 </IconButton>
@@ -195,10 +170,10 @@ const UserManagementIndex = () => {
             <div className="layout-px-spacing">
                 <div className="page-header d-flex justify-content-between">
                     <div className="page-title">
-                        <h3>User Management</h3>
+                        <h3>Plan Management</h3>
                     </div>
                     <div className="page-title page-btn">
-                        <Link className="btn btn-primary" to="/admin/user-management/create">Create</Link>
+                        {/* <Link className="btn btn-primary" to="/admin/plan-management/create">Create Plan</Link> */}
                     </div>
                 </div>
                 {successMessage && (
@@ -211,8 +186,8 @@ const UserManagementIndex = () => {
                         <div className="widget-content widget-content-area br-6">
                             <div className="table-responsive mb-4">
                                 <MUIDataTable
-                                    title="User List"
-                                    data={users}
+                                    title="Plan List"
+                                    data={plans}
                                     columns={columns}
                                     options={options}
                                 />
@@ -225,4 +200,4 @@ const UserManagementIndex = () => {
     );
 };
 
-export default UserManagementIndex;
+export default PlanManagementIndex;
