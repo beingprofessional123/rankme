@@ -2,8 +2,12 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../models');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
+const getForgotPasswordEmail = require('../emailTemplate/ForgetPassword');
+
 
 // USER SIGNUP
 exports.signup = async (req, res) => {
@@ -111,5 +115,88 @@ exports.login = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Login failed', error: err.message });
+  }
+};
+
+// FORGOT PASSWORD
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await db.User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ message: 'No account found with that email.' });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = Date.now() + 60 * 60 * 1000;
+
+    user.reset_password_token = resetToken;
+    user.reset_password_expires = new Date(resetTokenExpiry);
+    await user.save();
+
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.MAIL_HOST,
+      port: parseInt(process.env.MAIL_PORT),
+      secure: (process.env.MAIL_ENCRYPTION || '').toLowerCase() === 'ssl',
+      auth: {
+        user: process.env.MAIL_USERNAME,
+        pass: process.env.MAIL_PASSWORD,
+      },
+    });
+
+    const { subject, html } = getForgotPasswordEmail(user.name, resetLink);
+
+    await transporter.sendMail({
+      from: process.env.MAIL_USERNAME,
+      to: user.email,
+      subject,
+      html,
+    });
+    return res.json({ message: 'A password reset link has been sent to your email.' });
+
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    return res.status(500).json({ message: 'Error sending reset link', error: err.message });
+  }
+};
+
+// Reset PASSWORD
+exports.resetPassword = async (req, res) => {
+  const { token, password } = req.body;
+
+  if (!token || !password) {
+    return res.status(400).json({ message: 'Token and new password are required.' });
+  }
+
+  try {
+    // 1. Find user with matching token and check expiry
+    const user = await db.User.findOne({
+      where: {
+        reset_password_token: token,
+        reset_password_expires: { [db.Sequelize.Op.gt]: new Date() }, // not expired
+      },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired token.' });
+    }
+
+    // 2. Hash new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 3. Update user password and clear token
+    user.password = hashedPassword;
+    user.reset_password_token = null;
+    user.reset_password_expires = null;
+
+    await user.save();
+
+    return res.status(200).json({ message: 'Password reset successful' });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    return res.status(500).json({ message: 'Failed to reset password.', error: err.message });
   }
 };

@@ -6,6 +6,9 @@ const paymentRoutes = require('./routes/paymentRoutes');
 const setupWizard = require('./routes/setupWizard');
 const uploadDataRoutes = require('./routes/uploadDataRoutes');
 const hotelNRooms = require('./routes/hotelNRooms');
+const adminUserRoutes = require('./routes/admin/userRoutes'); // ✅ Correct path
+const path = require('path');
+
 require('dotenv').config();
 
 const app = express();
@@ -22,7 +25,10 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api', setupWizard); 
 app.use('/api/upload', uploadDataRoutes);
 app.use('/api', hotelNRooms);
+app.use('/api/admin', adminUserRoutes);
 
+// Import the images
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Import the new error handler
 const errorHandler = require('./middlewares/errorHandler'); // Adjust path as needed
 app.use(errorHandler);

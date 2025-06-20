@@ -20,7 +20,28 @@ module.exports = (sequelize, DataTypes) => {
     is_active: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
+    },
+    reset_password_token: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    reset_password_expires: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    company_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'Companies',
+        key: 'id',
+      },
+    },
+    profile: {
+      type: DataTypes.STRING,
+      allowNull: true
     }
+
   });
 
   User.associate = (models) => {
