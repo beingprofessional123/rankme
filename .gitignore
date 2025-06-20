@@ -29,6 +29,4 @@ coverage/
 *.old
 *.orig
 
-# ENV file
-hotel-saas-frontend/.env
-hotel-saas-backend/.env
+
