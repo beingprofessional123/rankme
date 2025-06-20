@@ -7,7 +7,10 @@ const setupWizard = require('./routes/setupWizard');
 const uploadDataRoutes = require('./routes/uploadDataRoutes');
 const hotelNRooms = require('./routes/hotelNRooms');
 const userRoleRoutes = require('./routes/userRoleRoutes');
-const adminUserRoutes = require('./routes/admin/userRoutes');
+
+const adminUserRoutes = require('./routes/admin/userRoutes'); // ✅ Correct path
+const adminPlanRoutes = require('./routes/admin/planRoutes');
+
 const path = require('path');
 
 require('dotenv').config();
@@ -30,6 +33,7 @@ app.use('/api', userRoleRoutes);
 
 // Admin Routes
 app.use('/api/admin', adminUserRoutes);
+app.use('/api/admin', adminPlanRoutes);
 
 // Import the images
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

@@ -72,6 +72,19 @@ const Sidebar = () => {
                   User Management
                 </Link>
               </li>
+               {/* Plan Management Link */}
+              <li className={isActive('/admin/plan-management') ? 'active' : ''}>
+                <Link to="/admin/plan-management" className="text-white">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                    className="feather feather-briefcase">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                    <path d="M16 3h-4a2 2 0 0 0-2 2v2h8V5a2 2 0 0 0-2-2z" />
+                  </svg>
+                  Plan Management
+                </Link>
+              </li>
+
 
             </ul>
           </div>
