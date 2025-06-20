@@ -98,10 +98,6 @@ const HotelAndRoomDetails = () => {
                     <span>{hotelDetails.hotel_type || 'N/A'}</span>
                   </li>
                   <li>
-                    <strong>Categories</strong>
-                    <span>{listOrNA(hotelDetails.categories, 'name')}</span>
-                  </li>
-                  <li>
                     <strong>Room Name</strong>
                     <span>{listOrNA(hotelDetails.rooms, 'name')}</span>
                   </li>
