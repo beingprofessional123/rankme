@@ -175,7 +175,6 @@ const UserRoleManagementAddPage = () => {
 
     return (
         <DashboardLayout>
-            <ToastContainer /> {/* Toast notifications container */}
             <div className="mainbody">
                 <div className="container-fluid">
 
