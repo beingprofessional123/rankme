@@ -5,6 +5,7 @@ const Tabs = ({ activeTab, setActiveTab }) => {
     { name: 'Booking Data', id: 'home1' },
     { name: 'Competitor Data', id: 'home2' },
     { name: 'STR/OCR Reports', id: 'home3' },
+    { name: 'Property Price', id: 'home4' }, // This is the new tab you added
   ];
 
   return (

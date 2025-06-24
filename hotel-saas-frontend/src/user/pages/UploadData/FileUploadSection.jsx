@@ -12,6 +12,7 @@ const FileUploadSection = ({ onFileExtracted, setLoading, setError, fileName, fi
         booking: ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'], // CSV, XLS, XLSX
         competitor: ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'], // CSV, XLS, XLSX
         str_ocr_report: ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+        property_price_data: ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'], // Added for Property Price
     };
 
     const handleUpload = async (file) => {
@@ -20,20 +21,18 @@ const FileUploadSection = ({ onFileExtracted, setLoading, setError, fileName, fi
             return;
         }
 
-        const currentAllowedTypes = allowedMimeTypes[fileType] || [];
-        const isValidMimeType = currentAllowedTypes.includes(file.type); // Renamed for clarity
+        const currentAllowedMimeTypes = allowedMimeTypes[fileType] || [];
+        const isValidMimeType = currentAllowedMimeTypes.includes(file.type); // Renamed for clarity
 
         // Also check file extension as a fallback, especially for CSVs that might have generic MIME types
         const fileExtension = file.name.split('.').pop().toLowerCase();
-        const isExtensionValid = (
-            (fileType === 'booking' || fileType === 'competitor') && ['csv', 'xls', 'xlsx'].includes(fileExtension)
-        ) || (
-            fileType === 'str_ocr_report' && ['csv', 'xls', 'xlsx'].includes(fileExtension) 
-        );
+        // Simplified extension check as all your types allow the same extensions
+        const isExtensionValid = ['csv', 'xls', 'xlsx'].includes(fileExtension);
 
         // Check for both MIME type and extension validity
         if (!isValidMimeType && !isExtensionValid) {
-            const msg = `Invalid file type for ${fileType.replace('_', ' ')}. Please upload a supported file type (e.g., ${getAcceptedFileTypes(fileType)}).`;
+            const acceptedTypesDisplay = getAcceptedFileTypes(fileType).split(', ').map(ext => ext.replace('.', '').toUpperCase()).join('/');
+            const msg = `Invalid file type. Please upload a ${acceptedTypesDisplay} file for ${fileType.replace(/_/g, ' ')}.`;
             setError(msg); // Set specific error for invalid type
             return;
         }
@@ -108,16 +107,9 @@ const FileUploadSection = ({ onFileExtracted, setLoading, setError, fileName, fi
         if (files && files[0]) {
             handleUpload(files[0]);
         } else {
-            // This else block is less likely to be hit if file input is triggered by label,
-            // but kept for robustness if direct input interaction happens.
             setShowCannotUploadMessage(true);
         }
     };
-
-    // REMOVE THIS FUNCTION: It's causing the double click
-    // const handleClickBrowse = () => {
-    //     fileInputRef.current.click();
-    // };
 
     const handleCancelAlert = () => {
         setShowCannotUploadMessage(false);
@@ -136,8 +128,8 @@ const FileUploadSection = ({ onFileExtracted, setLoading, setError, fileName, fi
         switch (type) {
             case 'booking':
             case 'competitor':
-                return '.csv, .xls, .xlsx';
             case 'str_ocr_report':
+            case 'property_price_data': // Added for the new tab
                 return '.csv, .xls, .xlsx';
             default:
                 return '*/*'; // Allow all by default if type is unknown
@@ -159,7 +151,7 @@ const FileUploadSection = ({ onFileExtracted, setLoading, setError, fileName, fi
                         <img src={`/user/images/uploadicon.svg`} className="img-fluid" alt="Upload Icon" />
                     </span>
                     {/* Updated message to be more accurate based on fileType */}
-                    <h3 className="dynamic-message">Drag and drop your {fileType === 'str_ocr_report' ? 'CSV/Excel' : 'CSV/Excel'} file here, or</h3>
+                    <h3 className="dynamic-message">Drag and drop your CSV/Excel file here, or</h3>
                     <label className="label">
                         {/* The input is inside the label. Clicking the span inside the label
                             will now naturally trigger the input without programmatic click. */}

@@ -37,7 +37,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
     },
     fileType: { // booking, competitor, str/ocr report
-      type: DataTypes.ENUM('booking', 'competitor', 'str_ocr_report'),
+      type: DataTypes.ENUM('booking', 'competitor', 'str_ocr_report', 'property_price_data'),
       allowNull: false,
     },
     status: { // e.g., 'uploaded', 'processing', 'extracted', 'saved', 'failed'

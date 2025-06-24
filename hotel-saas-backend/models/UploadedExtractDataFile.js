@@ -87,6 +87,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
     },
+     // New column for 'platform'
+    platform: {
+      type: DataTypes.STRING,
+      allowNull: true, // Assuming it can be null if not present in all data types
+    },
     // Field to track if this row had validation issues
     isValid: {
       type: DataTypes.BOOLEAN,
