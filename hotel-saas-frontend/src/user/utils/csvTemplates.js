@@ -25,6 +25,12 @@ const csvTemplates = {
     "ADR (USD)", // Use the exact header you provided in your CSV
     "RevPAR (USD)", // Use the exact header you provided in your CSV
   ],
+  property_price_data: [ // ADD THIS NEW ENTRY
+    'Date',
+    'room_type',
+    'price',
+    'platform',
+  ],
 };
 
 export default csvTemplates;

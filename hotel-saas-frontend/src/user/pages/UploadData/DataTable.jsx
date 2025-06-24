@@ -1,37 +1,91 @@
+// DataTable.js
 import React, { useMemo } from 'react';
 import MUIDataTable from 'mui-datatables';
 import { saveAs } from 'file-saver';
 import { toast } from 'react-toastify';
 import csvTemplates from '../../utils/csvTemplates';
 
-
 const DataTable = ({ data, title = 'Data Preview', onConfirm, onCancel, activeTab }) => {
-    const allHeaders = data.length > 0 ? Object.keys(data[0]) : [];
 
-    const displayHeaders = allHeaders.filter(key =>
-        !['id', 'metaUploadDataId', 'uploadDataId', 'userId', 'createdAt', 'updatedAt', 'isValid', 'validationErrors'].includes(key)
-    );
+    // Helper map for activeTab to API fileType (moved up for use in getDisplayHeadersForTab)
+    const activeTabToFileType = {
+        'Booking Data': 'booking',
+        'Competitor Data': 'competitor',
+        'STR/OCR Reports': 'str_ocr_report',
+        'Property Price': 'property_price_data'
+    };
+
+    // Define the specific display headers for each activeTab
+    const getDisplayHeadersForTab = (tab) => {
+        const apiFileType = activeTabToFileType[tab] || null;
+
+        if (apiFileType && csvTemplates[apiFileType]) {
+            // These are the *display* headers from the template
+            return csvTemplates[apiFileType].map(header => {
+                // Map template header to the actual backend field name if it differs
+                if (apiFileType === 'property_price_data' && header.toLowerCase() === 'price') {
+                    return 'rate'; // The 'price' column in the template corresponds to the 'rate' field in the data
+                }
+                if (header === 'ADR (USD)') return 'adrUsd';
+                if (header === 'RevPAR (USD)') return 'revParUsd';
+                // Convert spaces to camelCase for general headers (e.g., "Room Type" -> "roomType")
+                return header.replace(/([ (])-([a-zA-Z])/g, (match, p1, p2) => p2.toUpperCase())
+                             .replace(/[^a-zA-Z0-9]+(.)?/g, (match, chr) => chr ? chr.toUpperCase() : '')
+                             .replace(/^./, (str) => str.toLowerCase());
+            });
+        }
+        // Fallback: If no specific template, try to derive from data
+        return data.length > 0 ? Object.keys(data[0]).filter(key =>
+            !['id', 'metaUploadDataId', 'uploadDataId', 'userId', 'createdAt', 'updatedAt', 'isValid', 'validationErrors'].includes(key)
+        ) : [];
+    };
+
+    const displayHeaders = useMemo(() => getDisplayHeadersForTab(activeTab), [activeTab, data]);
 
     const formatHeader = (header) => {
+        // These are labels shown to the user, based on the `name` (data key)
         if (header === 'adrUsd') return 'ADR (USD)';
         if (header === 'revParUsd') return 'RevPAR (USD)';
+        if (header === 'roomType') return 'Room Type';
+        if (header === 'rate' && activeTab === 'Property Price') return 'Price'; // Specific for Property Price
+        if (header === 'platform') return 'Platform';
+
+        // General camelCase to Title Case formatting
         return header.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
     };
 
     const columns = useMemo(() => displayHeaders.map(header => ({
-        name: header,
-        label: formatHeader(header),
+        name: header, // This is the key in your data object (e.g., 'rate', 'date', 'platform')
+        label: formatHeader(header), // This is what the user sees (e.g., 'Price', 'Date', 'Platform')
         options: {
             customBodyRenderLite: (dataIndex) => {
                 const row = data[dataIndex];
-                const cellData = row[header];
+                const cellData = row[header]; // This will now correctly access row.rate for the 'price' column
 
                 const hasError = row.validationErrors &&
-                    row.validationErrors.some(err => err.field.toLowerCase() === header.toLowerCase());
+                    row.validationErrors.some(err => {
+                        // The error 'field' name from backend should match the *original template header* or the *display label*
+                        const originalTemplateHeader = csvTemplates[activeTabToFileType[activeTab] || 'unknown']?.find(
+                            templateH => formatHeader(header).toLowerCase() === templateH.toLowerCase() ||
+                                         header.toLowerCase() === templateH.toLowerCase()
+                        );
+
+                        return err.field.toLowerCase() === formatHeader(header).toLowerCase() ||
+                               err.field.toLowerCase() === header.toLowerCase() ||
+                               (originalTemplateHeader && err.field.toLowerCase() === originalTemplateHeader.toLowerCase());
+                    });
 
                 const errorMessage = hasError
                     ? row.validationErrors
-                        .filter(err => err.field.toLowerCase() === header.toLowerCase())
+                        .filter(err => {
+                            const originalTemplateHeader = csvTemplates[activeTabToFileType[activeTab] || 'unknown']?.find(
+                                templateH => formatHeader(header).toLowerCase() === templateH.toLowerCase() ||
+                                             header.toLowerCase() === templateH.toLowerCase()
+                            );
+                            return err.field.toLowerCase() === formatHeader(header).toLowerCase() ||
+                                   err.field.toLowerCase() === header.toLowerCase() ||
+                                   (originalTemplateHeader && err.field.toLowerCase() === originalTemplateHeader.toLowerCase());
+                        })
                         .map(err => err.message)
                         .join(', ')
                     : '';
@@ -46,12 +100,12 @@ const DataTable = ({ data, title = 'Data Preview', onConfirm, onCancel, activeTa
                 );
             }
         }
-    })), [data]);
+    })), [data, displayHeaders, activeTab]);
 
     const options = {
         selectableRows: 'none',
         search: true,
-        download: false, // we manage template download separately
+        download: false,
         print: false,
         viewColumns: true,
         filter: true,
@@ -67,14 +121,13 @@ const DataTable = ({ data, title = 'Data Preview', onConfirm, onCancel, activeTa
     };
 
     const handleDownloadTemplate = () => {
-        const apiFileType = {
-            'Booking Data': 'booking',
-            'Competitor Data': 'competitor',
-            'STR/OCR Reports': 'str_ocr_report'
-        }[activeTab] || 'unknown';
+        const apiFileType = activeTabToFileType[activeTab] || 'unknown';
 
         const headers = csvTemplates[apiFileType];
-        if (!headers || headers.length === 0) return toast.error('No template defined.');
+        if (!headers || headers.length === 0) {
+            toast.error('No template defined for this data type.');
+            return;
+        }
 
         const csvString = headers.map(h => `"${h}"`).join(',') + '\n';
         const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
@@ -95,7 +148,7 @@ const DataTable = ({ data, title = 'Data Preview', onConfirm, onCancel, activeTa
                     </div>
                     <div className="tabledesign">
                         <div className="alert alert-info text-center py-4" role="alert">
-                            No data available for preview. Please upload a file.
+                            No data available for preview. Please upload a file for {activeTab}.
                         </div>
                     </div>
                 </div>
