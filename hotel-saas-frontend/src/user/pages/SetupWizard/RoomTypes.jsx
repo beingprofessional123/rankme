@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import Swal from 'sweetalert2';
 
 const RoomTypes = ({ hotelId }) => {
   const [rooms, setRooms] = useState([{ name: '', capacity: '', rateCategoryId: '', roomTypeId: null }]);
@@ -96,8 +97,18 @@ const RoomTypes = ({ hotelId }) => {
 
   // Remove a room
   const handleRemoveRoom = async (index, id) => {
-    const confirmDelete = window.confirm('Are you sure you want to delete this room type?');
-    if (!confirmDelete) return;
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'Do you really want to delete this room type?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel',
+    });
+
+    if (!result.isConfirmed) return;
 
     setLoading(true);
     const isUUID = typeof id === 'string' && /^[0-9a-fA-F-]{36}$/.test(id);
@@ -108,7 +119,7 @@ const RoomTypes = ({ hotelId }) => {
           `${process.env.REACT_APP_API_BASE_URL}/api/delete-room-types`,
           {
             hotel_id: hotelId,
-            room_type_id: [id], // array format as required by backend
+            room_type_id: [id], // must be array
           },
           {
             headers: {
@@ -116,9 +127,10 @@ const RoomTypes = ({ hotelId }) => {
             },
           }
         );
+        Swal.fire('Deleted!', 'Room type has been deleted.', 'success');
       } catch (error) {
         console.error('Failed to delete room type:', error);
-        toast.error('Failed to delete room type. Please try again.');
+        Swal.fire('Error', 'Failed to delete room type. Please try again.', 'error');
         setLoading(false);
         return;
       }
@@ -185,19 +197,19 @@ const RoomTypes = ({ hotelId }) => {
     } catch (error) {
       console.error('Room submission failed:', error);
       if (error.response?.data?.errors) {
-          const apiValidationErrors = error.response.data.errors;
-          const newErrorsState = rooms.map((room, index) => {
-              const currentRoomErrors = {};
-              // Assuming API errors might be structured like { "rooms.0.name": ["error message"] }
-              for (const key in apiValidationErrors) {
-                  if (key.startsWith(`rooms.${index}.`)) {
-                      const field = key.split('.')[2];
-                      currentRoomErrors[field] = apiValidationErrors[key][0];
-                  }
-              }
-              return currentRoomErrors;
-          });
-          setErrors(newErrorsState);
+        const apiValidationErrors = error.response.data.errors;
+        const newErrorsState = rooms.map((room, index) => {
+          const currentRoomErrors = {};
+          // Assuming API errors might be structured like { "rooms.0.name": ["error message"] }
+          for (const key in apiValidationErrors) {
+            if (key.startsWith(`rooms.${index}.`)) {
+              const field = key.split('.')[2];
+              currentRoomErrors[field] = apiValidationErrors[key][0];
+            }
+          }
+          return currentRoomErrors;
+        });
+        setErrors(newErrorsState);
       } else {
         toast.error('Failed to save room types. Please try again.');
       }
@@ -278,14 +290,14 @@ const RoomTypes = ({ hotelId }) => {
                 )}
                 {/* Add button should only be on the last item, or if it's the only item */}
                 {(index === rooms.length - 1 || rooms.length === 0) && (
-                    <button
-                        type="button"
-                        className="btn btn-add"
-                        onClick={addRoom}
-                        title="Add New Room Type"
-                    >
-                        <img src={`/user/images/add.svg`} className="img-fluid" alt="Add" />
-                    </button>
+                  <button
+                    type="button"
+                    className="btn btn-add"
+                    onClick={addRoom}
+                    title="Add New Room Type"
+                  >
+                    <img src={`/user/images/add.svg`} className="img-fluid" alt="Add" />
+                  </button>
                 )}
               </div>
               {errors[index]?.rateCategoryId && (

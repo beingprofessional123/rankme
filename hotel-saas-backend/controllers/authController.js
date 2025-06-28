@@ -21,7 +21,7 @@ const getRoleId = async (roleName) => {
 // USER SIGNUP
 exports.signup = async (req, res) => {
   try {
-    const { name, email, phone, password, companyName, role } = req.body; // 'role' here is the roleName string
+    const { name, email, phone, password, companyName, role, countryCodeid } = req.body; // 'role' here is the roleName string
 
     // Check if user already exists
     const existingUser = await db.User.findOne({ where: { email } });
@@ -51,6 +51,7 @@ exports.signup = async (req, res) => {
       role_id: roleIdToAssign, // Assign the role_id
       company_id: company.id,
       is_active: true,
+      countryCodeid: countryCodeid,
     });
 
     // Generate JWT
@@ -218,5 +219,32 @@ exports.resetPassword = async (req, res) => {
   } catch (err) {
     console.error('Reset password error:', err);
     return res.status(500).json({ message: 'Failed to reset password.', error: err.message });
+  }
+};
+
+// Get All country
+exports.getAllCountries = async (req, res) => {
+  try {
+    const countries = await db.Country.findAll({
+      attributes: ['id', 'short_name', 'name', 'phonecode'],
+      order: [['name', 'ASC']],
+    });
+
+    res.status(200).json({
+      status: 'success',
+      status_code: 200,
+      status_message: 'OK',
+      message: 'Country list fetched successfully',
+      results: countries,
+    });
+  } catch (err) {
+    console.error('Error fetching countries:', err);
+    res.status(500).json({
+      status: 'error',
+      status_code: 500,
+      status_message: 'Internal Server Error',
+      message: 'Failed to fetch countries',
+      error: err.message,
+    });
   }
 };

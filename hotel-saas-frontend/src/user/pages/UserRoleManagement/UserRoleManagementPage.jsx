@@ -38,13 +38,6 @@ const UserRoleManagementPage = () => {
 
             setTableData(response.data.users);
 
-            if (response.data.message && (!tableData || tableData.length === 0)) {
-                toast.success(response.data.message || "Users loaded successfully!", {
-                    toastId: 'loadSuccess',
-                    onClick: () => toast.dismiss('loadSuccess')
-                });
-            }
-
         } catch (err) {
             console.error('Error fetching users:', err);
             const errorMessage = err.response?.data?.message || 'Failed to fetch users. Please try again later.';

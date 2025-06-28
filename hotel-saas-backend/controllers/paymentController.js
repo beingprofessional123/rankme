@@ -7,6 +7,8 @@ exports.createPayment = async (req, res) => {
   try {
     const { subscription_id, amount, currency, gateway } = req.body;
     const user_id = req.user.id;
+    const customerEmail = req.user.email;
+
 
     if (!subscription_id || !amount || !gateway) {
       return res.status(400).json({ message: 'Missing required fields.' });
@@ -48,8 +50,8 @@ exports.createPayment = async (req, res) => {
           user_id,
           subscription_id,
         },
+        customer_email: customerEmail,
       });
-
       // ✅ Save payment with Stripe session ID
       payment = await Payment.create({
         user_id,
@@ -68,6 +70,7 @@ exports.createPayment = async (req, res) => {
         started_at: null,
         expires_at: null,
       });
+      
       return res.status(201).json({
         message: 'Stripe payment initialized',
         sessionId: session.id,

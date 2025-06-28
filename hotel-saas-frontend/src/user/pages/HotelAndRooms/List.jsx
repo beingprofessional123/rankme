@@ -37,7 +37,7 @@ const HotelsAndRoomsList = () => {
 
       const data = await response.json();
       setHotels(data.hotels || []);
-      toast.success(data.message || 'Hotels loaded successfully!');
+      // toast.success(data.message || 'Hotels loaded successfully!');
     } catch (err) {
       console.error('Error:', err);
       setError(err.message);
@@ -92,7 +92,15 @@ const HotelsAndRoomsList = () => {
   };
 
   const columns = [
-    { name: 'id', label: 'ID', options: { filter: false, sort: true } },
+      {
+    name: 'S.No.',
+    label: 'S.No.',
+    options: {
+        filter: false,
+        sort: false,
+        customBodyRenderLite: (dataIndex) => dataIndex + 1, // Serial number starts from 1
+      },
+    },
     { name: 'name', label: 'Hotel', options: { filter: false, sort: true } },
     {
       name: 'Rooms',
