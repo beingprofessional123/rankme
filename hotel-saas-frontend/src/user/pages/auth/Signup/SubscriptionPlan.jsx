@@ -11,11 +11,11 @@ import { closeButtonSVG } from '../../../utils/svgIcons';
 
 
 const SubscriptionPlan = () => {
-  const baseUrl = process.env.REACT_APP_BASE_URL;
   const navigate = useNavigate();
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
 
   // Modal related state
   const [showModal, setShowModal] = useState(false);
@@ -26,45 +26,90 @@ const SubscriptionPlan = () => {
   const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLIC_KEY);
 
   useEffect(() => {
+    fetchUserSubscription();
     document.body.classList.add('loginbg');
     return () => {
       document.body.classList.remove('loginbg');
     };
   }, []);
 
-  useEffect(() => {
-    const fetchPlans = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          navigate('/login');
-          return;
-        }
-
-        const response = await axios.get(
-          `${process.env.REACT_APP_API_BASE_URL}/api/company/subscriptions`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        setPlans(response.data);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching subscription plans:', err);
-        if (err.response?.status === 401) {
-          localStorage.removeItem('token');
-          navigate('/login');
-        } else {
-          setError('Failed to load subscription plans.');
-        }
-        setLoading(false);
+  const fetchPlans = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
       }
-    };
 
-    fetchPlans();
-  }, [navigate]);
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_BASE_URL}/api/company/subscriptions`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      setPlans(response.data);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching subscription plans:', err);
+      if (err.response?.status === 401) {
+        localStorage.removeItem('token');
+        navigate('/login');
+      } else {
+        setError('Failed to load subscription plans.');
+      }
+      setLoading(false);
+    }
+  };
+
+  const fetchUserSubscription = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_BASE_URL}/api/company/subscriptions-by-user`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const { results: subscription, hotelExists } = response.data;
+
+      const isSubscriptionActive = subscription?.status === 'active' && new Date(subscription?.expires_at) > new Date();
+
+      if (isSubscriptionActive) {
+        if (hotelExists) {
+          navigate('/dashboard');
+        } else {
+          navigate('/setup/setup-wizard');
+        }
+      } else {
+        fetchPlans();
+      }
+
+
+
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching user subscription:', err);
+      if (err.response?.status === 401) {
+        localStorage.removeItem('token');
+        navigate('/login');
+      } else {
+        setError('Failed to load your subscription plan.');
+      }
+      setLoading(false);
+    }
+  };
+
+
 
   const handleSelectPlan = (plan) => {
     setSelectedPlan(plan);

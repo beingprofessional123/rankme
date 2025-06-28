@@ -1,14 +1,16 @@
 const express = require('express');
 const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
-const companyRoutes = require('./routes/companyRoutes');
+const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const setupWizard = require('./routes/setupWizard');
 const uploadDataRoutes = require('./routes/uploadDataRoutes');
 const hotelNRooms = require('./routes/hotelNRooms');
 const userRoleRoutes = require('./routes/userRoleRoutes');
+const PricingCalendarRoutes = require('./routes/PricingCalendarRoutes');
 
-const adminUserRoutes = require('./routes/admin/userRoutes'); // ✅ Correct path
+
+const adminUserRoutes = require('./routes/admin/userRoutes');
 const adminPlanRoutes = require('./routes/admin/planRoutes');
 
 const path = require('path');
@@ -24,12 +26,13 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api', authRoutes);
-app.use('/api/company', companyRoutes); 
+app.use('/api/company', subscriptionRoutes); 
 app.use('/api/payments', paymentRoutes); 
 app.use('/api', setupWizard); 
 app.use('/api/upload', uploadDataRoutes);
 app.use('/api', hotelNRooms);
 app.use('/api', userRoleRoutes);
+app.use('/api/pricing-calendar', PricingCalendarRoutes);
 
 // Admin Routes
 app.use('/api/admin', adminUserRoutes);

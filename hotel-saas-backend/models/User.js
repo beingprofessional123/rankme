@@ -12,9 +12,11 @@ module.exports = (sequelize, DataTypes) => {
       unique: true,
     },
     phone: DataTypes.STRING,
+    countryCodeid: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     password: DataTypes.STRING,
-    // Removed the 'role' ENUM field
-
     is_active: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,

@@ -1,12 +1,13 @@
 // src/pages/auth/Login.jsx
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom'; // Import Link
+import { Link, useNavigate } from 'react-router-dom'; // Import Link
 import axios from 'axios';
 import Input from '../../components/forms/Input';
 import Button from '../../components/forms/Button';
 import AuthLayout from '../../layouts/AuthLayout';
 
 const Login = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false); // State for password visibility
@@ -16,6 +17,53 @@ const Login = () => {
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
+
+  useEffect(() => {
+    const checkLoginAndRedirect = async () => {
+      const token = localStorage.getItem('token');
+      const user = localStorage.getItem('user');
+
+      if (!token || !user) {
+        navigate('/login');
+        return;
+      }
+
+      try {
+        const response = await axios.get(
+          `${process.env.REACT_APP_API_BASE_URL}/api/company/subscriptions-by-user`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const { results: subscription, hotelExists } = response.data;
+
+        const isSubscriptionActive =
+          subscription?.status === 'active' &&
+          new Date(subscription?.expires_at) > new Date();
+
+        if (isSubscriptionActive) {
+          if (hotelExists) {
+            navigate('/dashboard');
+          } else {
+            navigate('/setup/setup-wizard');
+          }
+        } else {
+          navigate('/subscription');
+        }
+      } catch (error) {
+        console.error('Error fetching subscription:', error);
+        navigate('/login');
+      }
+    };
+
+    checkLoginAndRedirect();
+  }, []);
+
+
+
 
   // Add/remove 'loginbg' class to the body
   useEffect(() => {
@@ -91,11 +139,11 @@ const Login = () => {
       <div className="loginmain"> {/* This wraps the entire login content */}
         <div className="logo">
           <a href="#">
-             <img
-                src={`/user/images/logo.png`}
-                className="img-fluid"
-                alt="RankMeOne Logo"
-              />
+            <img
+              src={`/user/images/logo.png`}
+              className="img-fluid"
+              alt="RankMeOne Logo"
+            />
           </a>
         </div>
         <div className="loginbg-w"> {/* This is the white background box */}
