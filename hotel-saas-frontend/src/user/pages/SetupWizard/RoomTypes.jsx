@@ -252,6 +252,7 @@ const RoomTypes = ({ hotelId }) => {
                   <label className="form-label">Capacity</label>
                   <input
                     type="number"
+                    min={0}
                     className={`form-control ${errors[index]?.capacity ? 'is-invalid' : ''}`}
                     value={room.capacity}
                     onChange={(e) => handleChange(index, 'capacity', e.target.value)}

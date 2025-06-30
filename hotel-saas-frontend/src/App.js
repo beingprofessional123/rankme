@@ -5,6 +5,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const App = () => {
+
   const isAdmin = window.location.pathname.startsWith('/admin');
 
   return isAdmin ? (

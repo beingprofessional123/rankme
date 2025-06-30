@@ -13,8 +13,12 @@ module.exports = (sequelize, DataTypes) => {
     },
     phone: DataTypes.STRING,
     countryCodeid: {
-      type: DataTypes.STRING,
-      allowNull: true
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'country', // 👈 matches Country's tableName
+        key: 'id',
+      },
     },
     password: DataTypes.STRING,
     is_active: {
@@ -54,8 +58,12 @@ module.exports = (sequelize, DataTypes) => {
 
   User.associate = (models) => {
     User.belongsTo(models.Company, { foreignKey: 'company_id' });
-    // New: User belongs to a Role
     User.belongsTo(models.Role, { foreignKey: 'role_id' });
+    User.belongsTo(models.Country, { foreignKey: 'countryCodeid', as: 'Country' });
+
+
+
+
   };
 
   return User;
