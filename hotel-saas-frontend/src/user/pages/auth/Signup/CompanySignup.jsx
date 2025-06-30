@@ -7,7 +7,7 @@ import AuthLayout from '../../../layouts/AuthLayout';
 import { useNavigate } from 'react-router-dom';
 
 const CompanySignup = () => {
-  const [countryList, setCountryList] = useState(['+91']);
+  const [countryList, setCountryList] = useState([]);
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     companyName: '',
@@ -15,7 +15,7 @@ const CompanySignup = () => {
     email: '',
     phone: '',
     password: '',
-    countryCodeid: '+91',
+    countryCodeid: '',
   });
 
   const [errors, setErrors] = useState({});
@@ -222,7 +222,7 @@ const CompanySignup = () => {
                         className="form-select form-control"
                       >
                         {countryList.map((country) => (
-                          <option key={country.id} value={country.phonecode}>
+                          <option key={country.id} value={country.id}>
                             {country.phonecode}
                           </option>
                         ))}
