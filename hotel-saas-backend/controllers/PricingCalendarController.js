@@ -127,4 +127,3 @@ exports.getBookingData = async (req, res) => {
     });
   }
 };
-

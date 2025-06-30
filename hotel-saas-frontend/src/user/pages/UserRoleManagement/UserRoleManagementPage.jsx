@@ -105,7 +105,23 @@ const UserRoleManagementPage = () => {
     const columns = [
         { name: 'name', label: 'Name' },
         { name: 'email', label: 'Email Address' },
-        { name: 'phone', label: 'Phone', options: { customBodyRender: (value) => value || 'N/A' } },
+        {
+            name: 'phone',
+            label: 'Phone',
+            options: {
+                customBodyRender: (value, tableMeta) => {
+                    const phonecode = tableMeta.rowData[columns.findIndex(c => c.name === 'phonecode')];
+                    return phonecode ? `${phonecode} ${value}` : value || 'N/A';
+                }
+            }
+        },
+        {
+            name: 'phonecode',
+            options: {
+                display: false // hide column, used for rendering only
+            }
+        },
+
         {
             name: 'role_name',
             label: 'Role',
@@ -173,7 +189,7 @@ const UserRoleManagementPage = () => {
     return (
         <DashboardLayout>
             <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} newestOnTop={false}
-                            closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
+                closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
 
             <div className="mainbody">
                 <div className="container-fluid">

@@ -1,28 +1,38 @@
-// models/Country.js
 module.exports = (sequelize, DataTypes) => {
   const Country = sequelize.define('Country', {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
-      primaryKey: true
+      primaryKey: true,
     },
     short_name: {
       type: DataTypes.STRING(5),
       allowNull: false,
-      unique: true
+      unique: true,
+      validate: {
+        len: [2, 5],
+      },
     },
     name: {
       type: DataTypes.STRING(100),
-      allowNull: false
+      allowNull: false,
     },
     phonecode: {
       type: DataTypes.STRING(20),
-      allowNull: true
-    }
+      allowNull: true,
+    },
   }, {
-    tableName: 'country',
-    timestamps: false
+    tableName: 'country', // 👈 Ensures Sequelize uses lowercase table name
+    timestamps: false,
+    underscored: true, // Optional: if you're using snake_case column names
   });
+
+  Country.associate = (models) => {
+    Country.hasMany(models.User, {
+      foreignKey: 'countryCodeid',
+      as: 'User',
+    });
+  };
 
   return Country;
 };
