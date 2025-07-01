@@ -118,10 +118,9 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   UploadedExtractDataFile.associate = (models) => {
-    UploadedExtractDataFile.belongsTo(models.UploadData, { foreignKey: 'uploadDataId', as: 'UploadData' });
+    UploadedExtractDataFile.belongsTo(models.UploadData, { foreignKey: 'uploadDataId' });
     UploadedExtractDataFile.belongsTo(models.User, { foreignKey: 'userId' });
-    UploadedExtractDataFile.belongsTo(models.MetaUploadData, { foreignKey: 'uploadDataId', as: 'MetaUploadData',
-  });
+    UploadedExtractDataFile.belongsTo(models.MetaUploadData, { foreignKey: 'uploadDataId', as: 'MetaUploadData'});
   };
 
   return UploadedExtractDataFile;

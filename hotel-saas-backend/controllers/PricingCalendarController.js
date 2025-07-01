@@ -9,34 +9,43 @@ const {
 
 exports.getPropertyPrice = async (req, res) => {
   try {
-    const { user_id: userId, company_id: companyId } = req.query;
+    const { user_id: userId, company_id: companyId, hotel_id: hotelId } = req.query;
     const fileType = 'property_price_data';
 
     // ✅ Validate query parameters
-    if (!userId || !companyId) {
+    if (!userId || !companyId || !hotelId) {
       return res.status(400).json({
         status: 'error',
         status_code: 400,
         status_message: 'BAD_REQUEST',
-        message: 'Missing user_id or company_id',
+        message: 'Missing user_id, company_id, or hotel_id',
         results: null,
       });
     }
 
-    // ✅ Fetch data
-    const data = await UploadedExtractDataFile.findAll({
-      where: { userId },
-      attributes: ['uploadDataId', 'date', 'roomType', 'rate', 'platform', 'remarks'],
+    const data = await UploadData.findAll({
+      where: {
+        companyId,
+        userId,
+        fileType: 'property_price_data',
+      },
+      include: [
+        {
+          model: MetaUploadData,
+          as: 'metaData',
+          required: true,
+          where: { hotelPropertyId: hotelId },
+          attributes: ['hotelPropertyId', 'fromDate', 'toDate'],
+        },
+        {
+          model: UploadedExtractDataFile,
+          as: 'extractedFiles',
+          required: false, // Optional: skip Uploads with no extracted data
+          attributes: ['date', 'roomType', 'rate', 'platform', 'remarks'],
+        },
+      ],
+      order: [['createdAt', 'DESC']],
     });
-
-    // ✅ Format result
-    const formattedResults = data.map(item => ({
-      date: item.date,
-      room_type: item.roomType,
-      price: item.rate,
-      platform: item.platform,
-      remarks: item.remarks,
-    }));
 
     // ✅ Response with count
     res.status(200).json({
@@ -44,8 +53,8 @@ exports.getPropertyPrice = async (req, res) => {
       status_code: 200,
       status_message: 'OK',
       message: 'Property price data fetched successfully',
-      count: formattedResults.length,
-      results: formattedResults,
+      count: data.length,
+      results: data
     });
 
   } catch (error) {
@@ -64,64 +73,62 @@ exports.getPropertyPrice = async (req, res) => {
 
 exports.getBookingData = async (req, res) => {
   try {
-    const { user_id: userId, company_id: companyId } = req.query;
-    const fileType = 'booking'; // 🎯 change fileType here
+    const { user_id: userId, company_id: companyId, hotel_id: hotelId } = req.query;
+    const fileType = 'booking';
 
-    if (!userId || !companyId) {
+    // ✅ Validate query parameters
+    if (!userId || !companyId || !hotelId) {
       return res.status(400).json({
         status: 'error',
         status_code: 400,
         status_message: 'BAD_REQUEST',
-        message: 'Missing user_id or company_id',
+        message: 'Missing user_id, company_id, or hotel_id',
         results: null,
       });
     }
 
-    // Filter booking data only
-    const data = await UploadedExtractDataFile.findAll({
-      where: { userId },
+    const data = await UploadData.findAll({
+      where: {
+        companyId,
+        userId,
+         fileType,
+      },
       include: [
         {
-          model: UploadData,
-          as: 'UploadData', // make sure the alias matches your association
-          where: {
-            companyId,
-            fileType,
-          },
+          model: MetaUploadData,
+          as: 'metaData',
           required: true,
-          attributes: [],
+          where: { hotelPropertyId: hotelId },
+          attributes: ['hotelPropertyId', 'fromDate', 'toDate'],
+        },
+        {
+          model: UploadedExtractDataFile,
+          as: 'extractedFiles',
+          required: false, // Optional: skip Uploads with no extracted data
+           attributes: ['checkIn', 'checkOut', 'roomType', 'rate', 'source', 'remarks'],
         },
       ],
-      attributes: ['uploadDataId', 'checkIn', 'checkOut', 'roomType', 'rate', 'source', 'remarks'],
-      order: [['uploadDataId', 'ASC']],
+      order: [['createdAt', 'DESC']],
     });
 
-    const formattedResults = data.map(item => ({
-      check_in: item.checkIn,
-      check_out: item.checkOut,
-      room_type: item.roomType,
-      price: item.rate,
-      source: item.source,
-      remarks: item.remarks,
-    }));
-
+    // ✅ Response with count
     res.status(200).json({
       status: 'success',
       status_code: 200,
       status_message: 'OK',
       message: 'Booking data fetched successfully',
-      count: formattedResults.length,
-      results: formattedResults,
+      count: data.length,
+      results: data
     });
 
   } catch (error) {
-    console.error('Error fetching booking data:', error);
+    console.error('Error fetching Bookings:', error);
 
     res.status(500).json({
       status: 'error',
       status_code: 500,
       status_message: 'INTERNAL_SERVER_ERROR',
-      message: 'Failed to fetch booking data',
+      message: 'Failed to fetch Booking data',
       error: error.message || 'Unknown error',
       results: null,
     });
