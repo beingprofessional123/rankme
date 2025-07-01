@@ -12,6 +12,9 @@ router.use(authorizeRoles('company_admin', 'revenue_manager'));
 router.get('/hotels/list', hotelRoomsController.getHotels);
 router.get('/hotels/:id', hotelRoomsController.getHotelDetails); // :id will be the hotel ID
 router.delete('/hotels/delete/:id', hotelRoomsController.deleteHotelDetails); // :id will be the hotel ID
+router.get('/hotels/scraped-hotel-detail/:id', hotelRoomsController.getScrapedHotelDetails); // :id will be the hotel ID
+router.post('/scrape-source-hotels/save', hotelRoomsController.saveScrapeSourceHotel);
+
 
 
 module.exports = router;
