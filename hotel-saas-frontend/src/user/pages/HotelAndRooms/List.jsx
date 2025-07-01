@@ -273,7 +273,7 @@ const HotelsAndRoomsList = () => {
 
       <Modal show={showScrapeModal} onHide={() => setShowScrapeModal(false)} size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>Scrape Results for {currentHotelForScrape?.name}</Modal.Title>
+          <Modal.Title>Scrape Results</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {scrapingLoading && <p>Loading scraped data...</p>}
@@ -301,7 +301,7 @@ const HotelsAndRoomsList = () => {
                         <Button 
                             variant="primary" 
                             onClick={() => handleSelectScrapedHotel(item)}
-                            className="w-100"
+                            className="btn btn-info"
                         >
                             Select
                         </Button>
@@ -313,9 +313,9 @@ const HotelsAndRoomsList = () => {
           </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowScrapeModal(false)}>
+          {/* <Button variant="secondary" onClick={() => setShowScrapeModal(false)}>
             Close
-          </Button>
+          </Button> */}
         </Modal.Footer>
       </Modal>
     </DashboardLayout>
