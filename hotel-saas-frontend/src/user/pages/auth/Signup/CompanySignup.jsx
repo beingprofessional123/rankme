@@ -7,6 +7,7 @@ import AuthLayout from '../../../layouts/AuthLayout';
 import { useNavigate } from 'react-router-dom';
 
 const CompanySignup = () => {
+  const [countryList, setCountryList] = useState([]);
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     companyName: '',
@@ -14,6 +15,7 @@ const CompanySignup = () => {
     email: '',
     phone: '',
     password: '',
+    countryCodeid: '',
   });
 
   const [errors, setErrors] = useState({});
@@ -21,6 +23,7 @@ const CompanySignup = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
+    fetchCountryList();
     document.body.classList.add('loginbg');
     return () => {
       document.body.classList.remove('loginbg');
@@ -60,11 +63,23 @@ const CompanySignup = () => {
     ) {
       newErrors.email = 'Please enter a valid email address.';
     }
-    if (!formData.phone) {
+    if (!formData.countryCodeid) {
+      newErrors.phone = 'Please select a country code.';
+    } else if (!formData.phone) {
       newErrors.phone = 'Please enter a phone number.';
-    } else if (!/^\d{10,15}$/.test(formData.phone)) {
-      newErrors.phone = 'Phone number must be 10-15 digits.';
+    } else {
+      const digitsOnly = formData.phone.replace(/\D/g, ''); // Remove all non-digit characters
+      if (!/^[0-9\s\-()]+$/.test(formData.phone)) {
+        newErrors.phone = 'Phone number must contain only numbers, spaces, dashes, or brackets.';
+      } else if (digitsOnly.length < 8 || digitsOnly.length > 15) {
+        newErrors.phone = 'Phone number must be between 8 and 15 digits long.';
+      }
     }
+
+
+
+
+
     if (!formData.password) {
       newErrors.password = 'Please enter a password.';
     } else if (formData.password.length < 6) {
@@ -97,6 +112,7 @@ const CompanySignup = () => {
           email: formData.email,
           phone: formData.phone,
           password: formData.password,
+          countryCodeid: formData.countryCodeid,
           role: 'company_admin',
         }),
       });
@@ -127,6 +143,19 @@ const CompanySignup = () => {
       console.error(error);
     }
   };
+
+  const fetchCountryList = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/country-list`);
+      const data = await response.json();
+      if (data.status === 'success') {
+        setCountryList(data.results); // use "results" instead of "data"
+      }
+    } catch (err) {
+      console.error('Failed to fetch countries:', err);
+    }
+  };
+
 
   return (
     <AuthLayout>
@@ -183,20 +212,25 @@ const CompanySignup = () => {
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
-                    placeholder="e.g., 9876543210"
+                    placeholder="9876543210"
                     error={errors.phone} // This is correctly passed now
+                    leftAddon={
+                      <select
+                        name="countryCodeid"
+                        value={formData.countryCodeid}
+                        onChange={handleChange}
+                        className="form-select form-control"
+                      >
+                        {countryList.map((country) => (
+                          <option key={country.id} value={country.id}>
+                            {country.phonecode}
+                          </option>
+                        ))}
+                      </select>
+                    }
                   />
-                  {/* REMOVE THIS LINE: The error is now handled by the Input component itself */}
-                  {/* {errors.phone && (<div className="text-red-600 text-sm mt-1">{errors.phone}</div>)} */}
                 </div>
               </div>
-
-              {/* Password field requires special handling because of the eye icon */}
-              {/* You have two options here: */}
-              {/* OPTION 1 (Recommended): Adjust your Input component to accept children or an icon prop */}
-              {/* OPTION 2 (Current approach, with correction): Keep the input and icon separate, but render the error outside */}
-              {/* For now, we will go with Option 2 and just correct the error rendering. */}
-
               <div className="form-group">
                 <label className="form-label">Password</label>
                 <div className="password-icon">

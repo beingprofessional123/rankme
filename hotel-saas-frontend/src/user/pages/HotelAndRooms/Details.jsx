@@ -34,7 +34,6 @@ const HotelAndRoomDetails = () => {
 
       const data = await response.json();
       setHotelDetails(data.hotel);          // { hotel: { … } }
-      toast.success(data.message || 'Hotel details loaded!');
     } catch (err) {
       setError(err.message);
       toast.error(err.message || 'Failed to load hotel details.');

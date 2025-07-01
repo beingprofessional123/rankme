@@ -1,39 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
-import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate
-import axios from 'axios'; // Import axios
-import { ToastContainer, toast } from 'react-toastify'; // Import toast notifications
-import 'react-toastify/dist/ReactToastify.css'; // Import toast CSS
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const UserRoleManagementAddPage = () => {
-    const navigate = useNavigate(); // Hook for programmatic navigation
+    const [countryList, setCountryList] = useState(['+91']);
+    const navigate = useNavigate();
     const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
-    // State for form inputs
     const [formData, setFormData] = useState({
         fullName: '',
         email: '',
-        phone: '', // Phone is optional
+        phone: '',
         role_id: '',
-        is_active: true, // Default to active
-        // company_id: '' // Might be needed if super_admin can assign to different companies
+        is_active: true,
+        countryCodeid: '+91',
     });
 
-    // State for dropdown roles
     const [roles, setRoles] = useState([]);
-    // State for validation errors
     const [formErrors, setFormErrors] = useState({});
-    // State for loading indicators
     const [loading, setLoading] = useState(false);
-    // State to prevent multiple submissions
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Helper function to get the auth token
     const getAuthToken = () => {
         return localStorage.getItem('token');
     };
 
-    // --- Fetch Roles for Dropdown ---
     useEffect(() => {
         const fetchRoles = async () => {
             setLoading(true);
@@ -41,7 +35,6 @@ const UserRoleManagementAddPage = () => {
                 const token = getAuthToken();
                 if (!token) {
                     toast.error('Authentication token not found. Please log in.');
-                    setLoading(false);
                     return;
                 }
                 const response = await axios.get(`${API_BASE_URL}/api/roles/list`, {
@@ -51,7 +44,6 @@ const UserRoleManagementAddPage = () => {
                 });
                 setRoles(response.data.roles);
             } catch (error) {
-                console.error('Error fetching roles:', error);
                 const errorMessage = error.response?.data?.message || 'Failed to load roles for the dropdown.';
                 toast.error(errorMessage);
             } finally {
@@ -59,23 +51,33 @@ const UserRoleManagementAddPage = () => {
             }
         };
 
+        const fetchCountryList = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/country-list`);
+                const data = await response.json();
+                if (data.status === 'success') {
+                    setCountryList(data.results);
+                }
+            } catch (err) {
+                console.error('Failed to fetch countries:', err);
+            }
+        };
+
         fetchRoles();
+        fetchCountryList();
     }, [API_BASE_URL]);
 
-    // --- Input Change Handler ---
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFormData(prev => ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value
         }));
-        // Clear error for the field being changed
         if (formErrors[name]) {
             setFormErrors(prev => ({ ...prev, [name]: '' }));
         }
     };
 
-    // --- Client-Side Validation ---
     const validateForm = () => {
         const errors = {};
         if (!formData.fullName.trim()) {
@@ -83,26 +85,32 @@ const UserRoleManagementAddPage = () => {
         } else if (formData.fullName.trim().length < 2) {
             errors.fullName = 'Full Name must be at least 2 characters.';
         }
+
         if (!formData.email.trim()) {
             errors.email = 'Email Address is required.';
         } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
             errors.email = 'Please enter a valid email address.';
         }
+
         if (!formData.role_id) {
             errors.role_id = 'Role is required.';
         }
-        // Optional: Phone number validation (e.g., regex for digits)
-        if (formData.phone && !/^\d{10,15}$/.test(formData.phone)) { // Example: 10-15 digits
-            errors.phone = 'Please enter a valid phone number (10-15 digits).';
+
+        if (formData.phone) {
+            const digitsOnly = formData.phone.replace(/\D/g, '');
+            if (!/^[0-9\s\-()]+$/.test(formData.phone)) {
+                errors.phone = 'Phone number must contain only numbers, spaces, dashes, or brackets.';
+            } else if (digitsOnly.length < 8 || digitsOnly.length > 15) {
+                errors.phone = 'Phone number must be between 8 and 15 digits long.';
+            }
         }
 
         setFormErrors(errors);
-        return Object.keys(errors).length === 0; // Return true if no errors
+        return Object.keys(errors).length === 0;
     };
 
-    // --- Form Submission Handler ---
     const handleSubmit = async (e) => {
-        e.preventDefault(); // Prevent default form submission
+        e.preventDefault();
 
         if (!validateForm()) {
             toast.error('Please correct the validation errors.');
@@ -121,11 +129,10 @@ const UserRoleManagementAddPage = () => {
             const payload = {
                 fullName: formData.fullName,
                 email: formData.email,
-                phone: formData.phone || null, // Send null if empty
+                phone: formData.phone || null,
                 role_id: formData.role_id,
                 is_active: formData.is_active,
-                // If the backend expects company_id from frontend (e.g., for super_admin creating users)
-                // company_id: formData.company_id || null,
+                countryCodeid: formData.countryCodeid,
             };
 
             const response = await axios.post(`${API_BASE_URL}/api/users/create`, payload, {
@@ -136,29 +143,28 @@ const UserRoleManagementAddPage = () => {
             });
 
             toast.success(response.data.message || 'User created successfully!');
-            // Optionally clear form or redirect
             setFormData({
                 fullName: '',
                 email: '',
                 phone: '',
                 role_id: '',
                 is_active: true,
+                countryCodeid: '+91',
             });
-            navigate('/user-role-management'); // Redirect to user list page
+            navigate('/user-role-management');
         } catch (error) {
             console.error('Error creating user:', error);
-            const serverErrors = error.response?.data?.errors; // For specific validation errors from backend
+            const serverErrors = error.response?.data?.errors;
             const errorMessage = error.response?.data?.message || 'Failed to create user. Please try again.';
 
             if (serverErrors) {
-                // If backend returns detailed validation errors
                 const newErrors = {};
-                if (Array.isArray(serverErrors)) { // If errors are in an array (e.g., from express-validator)
+                if (Array.isArray(serverErrors)) {
                     serverErrors.forEach(err => {
-                        if (err.path) newErrors[err.path] = err.msg; // Map to form field name
-                        else newErrors.general = err.msg; // General error
+                        if (err.path) newErrors[err.path] = err.msg;
+                        else newErrors.general = err.msg;
                     });
-                } else if (typeof serverErrors === 'object') { // If errors are in an object (as returned by your controller for validation)
+                } else if (typeof serverErrors === 'object') {
                     Object.keys(serverErrors).forEach(key => {
                         newErrors[key] = serverErrors[key];
                     });
@@ -191,6 +197,7 @@ const UserRoleManagementAddPage = () => {
                             </div>
                         </div>
                     </div>
+
                     <div className="white-bg">
                         <div className="form-design">
                             <form onSubmit={handleSubmit}>
@@ -209,6 +216,7 @@ const UserRoleManagementAddPage = () => {
                                             {formErrors.fullName && <div className="invalid-feedback">{formErrors.fullName}</div>}
                                         </div>
                                     </div>
+
                                     <div className="col-md-6">
                                         <div className="form-group">
                                             <label className="form-label">Email Address <span className="text-danger">*</span></label>
@@ -223,25 +231,50 @@ const UserRoleManagementAddPage = () => {
                                             {formErrors.email && <div className="invalid-feedback">{formErrors.email}</div>}
                                         </div>
                                     </div>
+
                                     <div className="col-md-6">
-                                        <div className="form-group">
-                                            <label className="form-label">Phone Number (Optional)</label>
-                                            <input
-                                                type="text"
-                                                className={`form-control ${formErrors.phone ? 'is-invalid' : ''}`}
-                                                name="phone"
-                                                placeholder="Phone Number"
-                                                value={formData.phone}
-                                                onChange={handleChange}
-                                            />
-                                            {formErrors.phone && <div className="invalid-feedback">{formErrors.phone}</div>}
+                                        <div className="row">
+                                            <div className="col-3">
+                                                <div className="form-group">
+                                                    <label className="form-label">Code</label>
+                                                    <select
+                                                        name="countryCodeid"
+                                                        value={formData.countryCodeid}
+                                                        onChange={handleChange}
+                                                        className="form-control"
+                                                    >
+                                                        {countryList.map((country) => (
+                                                            <option key={country.id || country.phonecode} value={country.id}>
+                                                                {country.phonecode}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div className="col-9">
+                                                <div className="form-group">
+                                                    <label className="form-label">Phone Number (Optional)</label>
+                                                    <input
+                                                        type="text"
+                                                        className={`form-control ${formErrors.phone ? 'is-invalid' : ''}`}
+                                                        name="phone"
+                                                        placeholder="Phone Number"
+                                                        value={formData.phone}
+                                                        onChange={handleChange}
+                                                    />
+                                                    {formErrors.phone && (
+                                                        <div className="invalid-feedback">{formErrors.phone}</div>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
+
                                     <div className="col-md-6">
                                         <div className="form-group">
                                             <label className="form-label">Select Role <span className="text-danger">*</span></label>
                                             <select
-                                                className={`form-select form-control ${formErrors.role_id ? 'is-invalid' : ''}`}
+                                                className={`form-control ${formErrors.role_id ? 'is-invalid' : ''}`}
                                                 name="role_id"
                                                 value={formData.role_id}
                                                 onChange={handleChange}
@@ -249,13 +282,16 @@ const UserRoleManagementAddPage = () => {
                                                 <option value="">{loading ? 'Loading Roles...' : 'Select Role'}</option>
                                                 {roles.map(role => (
                                                     <option key={role.id} value={role.id}>
-                                                        {role.name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
+                                                        {role.name
+                                                            .replace(/_/g, ' ')
+                                                            .replace(/\b\w/g, char => char.toUpperCase())}
                                                     </option>
                                                 ))}
                                             </select>
                                             {formErrors.role_id && <div className="invalid-feedback">{formErrors.role_id}</div>}
                                         </div>
                                     </div>
+
                                     <div className="col-md-12">
                                         <div className="form-group form-check mt-3">
                                             <input
@@ -271,16 +307,17 @@ const UserRoleManagementAddPage = () => {
                                     </div>
                                 </div>
 
-                                <div className="addentry-btn">
+                                <div className="addentry-btn mt-4">
                                     <button
                                         type="submit"
                                         className="btn btn-info"
-                                        disabled={isSubmitting} // Disable button while submitting
+                                        disabled={isSubmitting}
                                     >
                                         {isSubmitting ? 'Submitting...' : 'Submit'}
                                     </button>
                                 </div>
                             </form>
+                            <ToastContainer />
                         </div>
                     </div>
                 </div>

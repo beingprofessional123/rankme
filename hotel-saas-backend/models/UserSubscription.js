@@ -34,9 +34,8 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   UserSubscription.associate = function(models) {
-    UserSubscription.belongsTo(models.User, { foreignKey: 'user_id' });
-    UserSubscription.belongsTo(models.SubscriptionPlan, { foreignKey: 'subscription_id' });
+    UserSubscription.belongsTo(models.User, { foreignKey: 'user_id', as: 'user'});
+    UserSubscription.belongsTo(models.SubscriptionPlan, { foreignKey: 'subscription_id',as: 'subscriptionPlan' });
   };
-
   return UserSubscription;
 };

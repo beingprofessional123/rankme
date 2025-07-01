@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import Swal from 'sweetalert2';
 
 const RateCategories = ({ hotelId }) => {
   const [categories, setCategories] = useState([]);
@@ -48,9 +49,20 @@ const RateCategories = ({ hotelId }) => {
     setCategories([...categories, { id: Date.now(), name: '' }]);
   };
 
+
   const handleRemove = async (id) => {
-    const confirmDelete = window.confirm('Are you sure you want to delete this category?');
-    if (!confirmDelete) return;
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'Do you really want to delete this category?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel',
+    });
+
+    if (!result.isConfirmed) return;
 
     const isUUID = typeof id === 'string' && /^[0-9a-fA-F-]{36}$/.test(id);
 
@@ -68,10 +80,12 @@ const RateCategories = ({ hotelId }) => {
             },
           }
         );
+
         setCategories((prev) => prev.filter((cat) => cat.id !== id));
+        Swal.fire('Deleted!', 'Category has been deleted.', 'success');
       } catch (error) {
         console.error('Failed to delete rate category:', error);
-        toast.error('Failed to delete category. Please try again.');
+        Swal.fire('Error', 'Failed to delete category. Please try again.', 'error');
       }
     } else {
       setCategories((prev) => prev.filter((cat) => cat.id !== id));
@@ -120,8 +134,8 @@ const RateCategories = ({ hotelId }) => {
       const payload = {
         hotel_id: hotelId,
         categories: categories.map(cat => ({
-            id: typeof cat.id === 'string' && /^[0-9a-fA-F-]{36}$/.test(cat.id) ? cat.id : null, // Send existing ID or null for new
-            name: cat.name
+          id: typeof cat.id === 'string' && /^[0-9a-fA-F-]{36}$/.test(cat.id) ? cat.id : null, // Send existing ID or null for new
+          name: cat.name
         })),
       };
 
@@ -144,15 +158,15 @@ const RateCategories = ({ hotelId }) => {
         const validationErrors = error.response.data.errors;
         const newApiErrors = {};
         Object.keys(validationErrors).forEach(key => {
-            if (key.startsWith('categories.')) {
-                const index = parseInt(key.split('.')[1]);
-                if (!isNaN(index) && categories[index]) {
-                    newApiErrors[categories[index].id] = validationErrors[key][0];
-                }
-            } else {
-                // Handle general errors if any
-                toast.warning(validationErrors[key][0]);
+          if (key.startsWith('categories.')) {
+            const index = parseInt(key.split('.')[1]);
+            if (!isNaN(index) && categories[index]) {
+              newApiErrors[categories[index].id] = validationErrors[key][0];
             }
+          } else {
+            // Handle general errors if any
+            toast.warning(validationErrors[key][0]);
+          }
         });
         setApiErrors(newApiErrors);
       } else {
@@ -189,14 +203,14 @@ const RateCategories = ({ hotelId }) => {
               )}
               {/* Only show add button on the last item if there's more than one, or if it's the only item */}
               {(index === categories.length - 1 || categories.length === 0) && (
-                  <button
-                      type="button"
-                      className="btn btn-add"
-                      onClick={handleAdd}
-                      title="Add New Category"
-                  >
-                      <img src={`/user/images/add.svg`} className="img-fluid" alt="Add" />
-                  </button>
+                <button
+                  type="button"
+                  className="btn btn-add"
+                  onClick={handleAdd}
+                  title="Add New Category"
+                >
+                  <img src={`/user/images/add.svg`} className="img-fluid" alt="Add" />
+                </button>
               )}
             </div>
             {apiErrors[category.id] && (

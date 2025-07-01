@@ -92,6 +92,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true, // Assuming it can be null if not present in all data types
     },
+    remarks: {
+      type: DataTypes.STRING,
+      allowNull: true, // Assuming it can be null if not present in all data types
+    },
     // Field to track if this row had validation issues
     isValid: {
       type: DataTypes.BOOLEAN,
@@ -114,8 +118,10 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   UploadedExtractDataFile.associate = (models) => {
-    UploadedExtractDataFile.belongsTo(models.UploadData, { foreignKey: 'uploadDataId' });
+    UploadedExtractDataFile.belongsTo(models.UploadData, { foreignKey: 'uploadDataId', as: 'UploadData' });
     UploadedExtractDataFile.belongsTo(models.User, { foreignKey: 'userId' });
+    UploadedExtractDataFile.belongsTo(models.MetaUploadData, { foreignKey: 'uploadDataId', as: 'MetaUploadData',
+  });
   };
 
   return UploadedExtractDataFile;

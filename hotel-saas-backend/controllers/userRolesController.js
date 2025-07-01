@@ -80,22 +80,33 @@ exports.getUsersByRoleExclusion = async (req, res) => {
         role_id: {
           [Op.notIn]: excludedRoleIds,
         },
-        // If you want to filter by company_id based on the logged-in user's company_id
-        // company_id: req.user.company_id, // Uncomment if relevant for company_admin
+        // Optional company-level filtering
+        // company_id: req.user.company_id,
       },
-      attributes: { exclude: ['password', 'reset_password_token', 'reset_password_expires'] }, // Exclude sensitive info
+      attributes: {
+        exclude: ['password', 'reset_password_token', 'reset_password_expires'],
+      },
       include: [
         {
-          model: db.Role, // Include the Role to show role name
+          model: db.Role,
           attributes: ['name'],
         },
         {
-          model: db.Company, // Include Company if company name is needed
+          model: db.Company,
           attributes: ['name'],
-        }
+        },
+        {
+          model: db.Country,
+          as: 'Country', // must match the alias in the User.associate
+          required: false, // this makes it a LEFT JOIN
+          attributes: ['phonecode'],
+        },
       ],
-      order: [['createdAt', 'DESC']], // Order by creation date, newest first
+      order: [['createdAt', 'DESC']],
     });
+
+
+
 
     // Format the response to flatten role and company names
     const formattedUsers = users.map(user => ({
@@ -109,6 +120,7 @@ exports.getUsersByRoleExclusion = async (req, res) => {
       role_id: user.role_id,
       role_name: user.Role ? user.Role.name : null, // Flatten role name
       company_name: user.Company ? user.Company.name : null, // Flatten company name
+      phonecode: user.Country?.phonecode || null,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     }));
@@ -127,7 +139,7 @@ exports.getUsersByRoleExclusion = async (req, res) => {
 // API 3: Create a new user
 exports.createUser = async (req, res) => {
   try {
-    const { fullName, email, phone, role_id, company_id, is_active } = req.body;
+    const { fullName, email, phone, role_id, company_id, is_active, countryCodeid } = req.body;
 
     // --- Input Validation ---
     const errors = {};
@@ -164,13 +176,13 @@ exports.createUser = async (req, res) => {
     // If it's a super_admin, they might provide a company_id, or it could be null.
     let finalCompanyId = null;
     if (req.user.company_id) { // If the admin creating the user belongs to a company
-        finalCompanyId = req.user.company_id;
+      finalCompanyId = req.user.company_id;
     } else if (company_id) { // If super_admin provides a company_id
-        const companyExists = await db.Company.findByPk(company_id);
-        if (!companyExists) {
-            return res.status(400).json({ message: 'Provided company ID is invalid.' });
-        }
-        finalCompanyId = company_id;
+      const companyExists = await db.Company.findByPk(company_id);
+      if (!companyExists) {
+        return res.status(400).json({ message: 'Provided company ID is invalid.' });
+      }
+      finalCompanyId = company_id;
     }
 
 
@@ -186,6 +198,7 @@ exports.createUser = async (req, res) => {
       role_id,
       company_id: finalCompanyId,
       is_active: typeof is_active === 'boolean' ? is_active : true, // Default to true
+      countryCodeid: countryCodeid || null,
     });
 
     // --- Send Email with Temporary Password ---
@@ -217,6 +230,7 @@ exports.createUser = async (req, res) => {
         role_id: newUser.role_id,
         company_id: newUser.company_id,
         is_active: newUser.is_active,
+        countryCodeid: newUser.countryCodeid,
       },
     });
   } catch (error) {
@@ -264,6 +278,7 @@ exports.getUserById = async (req, res) => {
       is_active: user.is_active,
       profile: user.profile,
       company_id: user.company_id,
+      countryCodeid: user.countryCodeid,
       role_id: user.role_id,
       role_name: user.Role ? user.Role.name : null,
       company_name: user.Company ? user.Company.name : null,
@@ -285,34 +300,34 @@ exports.getUserById = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fullName, email, phone, role_id, company_id, is_active } = req.body;
+    const { fullName, email, phone, role_id, company_id, is_active, countryCodeid } = req.body;
 
     const user = await db.User.findByPk(id, {
-        // Add company_id filter for company_admin
-        where: req.user.company_id ? { company_id: req.user.company_id } : {},
-        include: [{ model: db.Role, attributes: ['name'] }] // Include role to check for admin roles
+      // Add company_id filter for company_admin
+      where: req.user.company_id ? { company_id: req.user.company_id } : {},
+      include: [{ model: db.Role, attributes: ['name'] }] // Include role to check for admin roles
     });
 
     // Important: Also check if the user found belongs to the same company if applicable
     if (!user || (req.user.company_id && user.company_id !== req.user.company_id)) {
-        return res.status(404).json({ message: 'User not found or you do not have permission to update this user.' });
+      return res.status(404).json({ message: 'User not found or you do not have permission to update this user.' });
     }
 
     // Prevent updating super_admin or company_admin roles of *other* users unless you are a super_admin.
     // A company_admin cannot change another company_admin or super_admin.
     if (user.Role && (user.Role.name === 'super_admin' || user.Role.name === 'company_admin')) {
-        if (req.user.Role.name !== 'super_admin' && req.user.id !== user.id) { // Allow self-update or super_admin to update
-            return res.status(403).json({ message: 'Forbidden: Cannot update other super_admin or company_admin users.' });
-        }
+      if (req.user.Role.name !== 'super_admin' && req.user.id !== user.id) { // Allow self-update or super_admin to update
+        return res.status(403).json({ message: 'Forbidden: Cannot update other super_admin or company_admin users.' });
+      }
     }
     // Prevent changing a user's role to super_admin or company_admin unless you are a super_admin.
     if (role_id) {
-        const newRole = await db.Role.findByPk(role_id);
-        if (newRole && (newRole.name === 'super_admin' || newRole.name === 'company_admin')) {
-            if (req.user.Role.name !== 'super_admin') {
-                return res.status(403).json({ message: 'Forbidden: You cannot assign this role.' });
-            }
+      const newRole = await db.Role.findByPk(role_id);
+      if (newRole && (newRole.name === 'super_admin' || newRole.name === 'company_admin')) {
+        if (req.user.Role.name !== 'super_admin') {
+          return res.status(403).json({ message: 'Forbidden: You cannot assign this role.' });
         }
+      }
     }
 
 
@@ -331,10 +346,10 @@ exports.updateUser = async (req, res) => {
       }
     }
     if (company_id !== undefined && company_id !== null) { // If company_id is provided and not null
-        const companyExists = await db.Company.findByPk(company_id);
-        if (!companyExists) {
-            errors.company_id = 'Invalid company ID provided.';
-        }
+      const companyExists = await db.Company.findByPk(company_id);
+      if (!companyExists) {
+        errors.company_id = 'Invalid company ID provided.';
+      }
     }
     // Add more validation for other fields if necessary
 
@@ -356,6 +371,7 @@ exports.updateUser = async (req, res) => {
     user.name = fullName !== undefined ? fullName.trim() : user.name;
     user.email = email !== undefined ? email.toLowerCase() : user.email;
     user.phone = phone !== undefined ? phone : user.phone; // Allow null to be set explicitly
+    user.countryCodeid = countryCodeid !== undefined ? countryCodeid : user.countryCodeid;
     user.role_id = role_id !== undefined ? role_id : user.role_id;
     user.company_id = company_id !== undefined ? company_id : user.company_id; // Allow null to be set explicitly
     user.is_active = typeof is_active === 'boolean' ? is_active : user.is_active;
@@ -372,6 +388,7 @@ exports.updateUser = async (req, res) => {
         role_id: user.role_id,
         company_id: user.company_id,
         is_active: user.is_active,
+        countryCodeid: user.countryCodeid,
       },
     });
   } catch (error) {
@@ -390,8 +407,8 @@ exports.deleteUser = async (req, res) => {
 
     // Fetch user with role to apply specific deletion rules
     const userToDelete = await db.User.findByPk(id, {
-        attributes: ['id', 'company_id'], // Need ID and company_id
-        include: { model: db.Role, attributes: ['name'] } // Need role name
+      attributes: ['id', 'company_id'], // Need ID and company_id
+      include: { model: db.Role, attributes: ['name'] } // Need role name
     });
 
     // Check if user exists
@@ -406,7 +423,7 @@ exports.deleteUser = async (req, res) => {
 
     // Rule 1: Company Admin trying to delete user outside their company
     if (req.user.company_id && userToDelete.company_id !== req.user.company_id) {
-        return res.status(403).json({ message: 'Forbidden: You do not have permission to delete this user.' });
+      return res.status(403).json({ message: 'Forbidden: You do not have permission to delete this user.' });
     }
 
     // Rule 2: Prevent deletion of super_admin or company_admin by non-super_admin
@@ -418,7 +435,7 @@ exports.deleteUser = async (req, res) => {
 
     // Rule 3 (Optional): Prevent self-deletion
     if (req.user.id === userToDelete.id) {
-        return res.status(403).json({ message: 'Forbidden: You cannot delete your own account through this API.' });
+      return res.status(403).json({ message: 'Forbidden: You cannot delete your own account through this API.' });
     }
 
 
