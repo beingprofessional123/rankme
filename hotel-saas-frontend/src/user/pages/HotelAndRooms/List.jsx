@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import MUIDataTable from 'mui-datatables';
-import { Modal, Button } from 'react-bootstrap';
+// Removed: import { Modal, Button } from 'react-bootstrap';
 
 const HotelsAndRoomsList = () => {
   const [hotels, setHotels] = useState([]);
@@ -13,11 +13,34 @@ const HotelsAndRoomsList = () => {
   const navigate = useNavigate();
 
   // State for the scrape modal
-  const [showScrapeModal, setShowScrapeModal] = useState(false);
+  const [showScrapeModal, setShowScrapeModal] = useState(false); // Still needed to trigger manual show/hide
   const [currentHotelForScrape, setCurrentHotelForScrape] = useState(null); // Stores the hotel object being scraped
   const [scrapedResults, setScrapedResults] = useState([]);
   const [scrapingLoading, setScrapingLoading] = useState(false);
   const [scrapingError, setScrapingError] = useState(null);
+
+  // Ref for the Bootstrap modal instance
+  const scrapeModalRef = useRef(null);
+
+  // Effect to manage Bootstrap modal visibility manually
+  useEffect(() => {
+    // Dynamically import Bootstrap's JavaScript for modal functionality
+    // This is safer to ensure Bootstrap's JS is loaded when needed
+    const loadBootstrapModal = async () => {
+      if (typeof window !== 'undefined') {
+        const bootstrap = await import('bootstrap');
+        if (scrapeModalRef.current) {
+          const modalInstance = bootstrap.Modal.getInstance(scrapeModalRef.current) || new bootstrap.Modal(scrapeModalRef.current);
+          if (showScrapeModal) {
+            modalInstance.show();
+          } else {
+            modalInstance.hide();
+          }
+        }
+      }
+    };
+    loadBootstrapModal();
+  }, [showScrapeModal]); // Re-run when showScrapeModal changes
 
   const fetchHotels = useCallback(async () => {
     setLoading(true);
@@ -30,7 +53,6 @@ const HotelsAndRoomsList = () => {
       const companyId = user?.company_id;
       if (!companyId) throw new Error('Company ID not found in user data.');
 
-      // Ensure your backend endpoint for listing hotels is correct
       const apiUrl = `${process.env.REACT_APP_API_BASE_URL}/api/hotels/list?company_id=${companyId}`;
       const response = await fetch(apiUrl, {
         headers: {
@@ -45,9 +67,7 @@ const HotelsAndRoomsList = () => {
       }
 
       const data = await response.json();
-      // data.hotels now contains the isScrapedConnected flag
       setHotels(data.hotels || []);
-      // toast.success(data.message || 'Hotels loaded successfully!');
     } catch (err) {
       console.error('Error:', err);
       setError(err.message);
@@ -103,7 +123,7 @@ const HotelsAndRoomsList = () => {
 
   const handleConnect = async (hotel) => {
     setCurrentHotelForScrape(hotel);
-    setShowScrapeModal(true);
+    setShowScrapeModal(true); // This will trigger the useEffect to show the Bootstrap modal
     setScrapingLoading(true);
     setScrapedResults([]);
     setScrapingError(null);
@@ -158,7 +178,6 @@ const HotelsAndRoomsList = () => {
         body: JSON.stringify({
           hotel_id: currentHotelForScrape.id,
           source_hotel_id: scrapedHotelData.dest_id,
-          // source_type is now hardcoded to 'booking.com' in the backend, so we don't send it here.
         }),
       });
 
@@ -168,7 +187,7 @@ const HotelsAndRoomsList = () => {
       }
 
       toast.success('Scraped hotel linked successfully!');
-      setShowScrapeModal(false);
+      setShowScrapeModal(false); // This will trigger the useEffect to hide the Bootstrap modal
       fetchHotels(); // Refresh the list to reflect the new connection status
     } catch (err) {
       console.error('Error saving scraped hotel:', err);
@@ -177,10 +196,10 @@ const HotelsAndRoomsList = () => {
   };
 
   const columns = [
-      {
-    name: 'S.No.',
-    label: 'S.No.',
-    options: {
+    {
+      name: 'S.No.',
+      label: 'S.No.',
+      options: {
         filter: false,
         sort: false,
         customBodyRenderLite: (dataIndex) => dataIndex + 1, // Serial number starts from 1
@@ -196,7 +215,15 @@ const HotelsAndRoomsList = () => {
       name: 'Rooms',
       label: 'Rooms',
       options: {
-        customBodyRender: (value) => (value && value.length > 0 ? value.join(', ') : 'N/A'),
+        customBodyRender: (value) => {
+          if (Array.isArray(value) && value.length > 0) {
+            if (typeof value[0] === 'object' && value[0] !== null && 'name' in value[0]) {
+              return value.map(room => room.name).join(', ');
+            }
+            return value.join(', ');
+          }
+          return 'N/A';
+        },
       },
     },
     {
@@ -209,13 +236,12 @@ const HotelsAndRoomsList = () => {
           const hotel = hotels[dataIndex];
           return (
             <>
-              <a href="#" onClick={() => handleView(hotel.id)}><img src={`/user/images/view.svg`} alt="View" className="mx-1" /></a>
-              <a href="#" onClick={() => handleEdit(hotel.id)}><img src={`/user/images/edit.svg`} alt="Edit" className="mx-1" /></a>
-              <a href="#" onClick={() => handleDelete(hotel.id)}><img src={`/user/images/deletetd.svg`} alt="Delete" className="mx-1" /></a>
+              <a href="#" onClick={() => handleView(hotel.id)} className="action-icon" title="View Details"><img src={`/user/images/view.svg`} alt="View" className="mx-1" /></a>
+              <a href="#" onClick={() => handleEdit(hotel.id)} className="action-icon" title="Edit Hotel"><img src={`/user/images/edit.svg`} alt="Edit" className="mx-1" /></a>
+              <a href="#" onClick={() => handleDelete(hotel.id)} className="action-icon" title="Delete Hotel"><img src={`/user/images/deletetd.svg`} alt="Delete" className="mx-1" /></a>
               
-              {/* Conditional rendering for the Connect Action */}
-              {!hotel.isScrapedConnected && ( // <--- This is the key change!
-                <a href="#" onClick={() => handleConnect(hotel)} title="Connect to Scrape Source">
+              {!hotel.isScrapedConnected && (
+                <a href="#" onClick={() => handleConnect(hotel)} className="action-icon" title="Connect to Scrape Source">
                   <img src="/user/images/link.svg" alt="Connect" className="mx-1" style={{ width: '20px', height: '20px' }} />
                 </a>
               )}
@@ -261,63 +287,85 @@ const HotelsAndRoomsList = () => {
           </div>
 
           <div className="">
-            <MUIDataTable
-              title="Hotels List"
-              data={hotels}
-              columns={columns}
-              options={options}
-            />
+            {loading ? (
+              <p>Loading hotels...</p>
+            ) : error ? (
+              <p className="text-danger">Error: {error}</p>
+            ) : (
+              <MUIDataTable
+                title="Hotels List"
+                data={hotels}
+                columns={columns}
+                options={options}
+              />
+            )}
           </div>
         </div>
       </div>
 
-      <Modal show={showScrapeModal} onHide={() => setShowScrapeModal(false)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>Scrape Results</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {scrapingLoading && <p>Loading scraped data...</p>}
-          {scrapingError && <p className="text-danger">Error: {scrapingError}</p>}
-          
-          {!scrapingLoading && scrapedResults.length === 0 && !scrapingError && (
-            <p>No matching hotels found from the scrape source.</p>
-          )}
-
-          <div className="row">
-            {scrapedResults.map((item, index) => (
-              <div key={index} className="col-md-4 mb-4">
-                <div className="card h-100">
-                  <img 
-                    src={item.image_url || 'https://via.placeholder.com/150'}
-                    className="card-img-top" 
-                    alt={item.hotel_name || 'Scraped Hotel Image'}
-                    style={{ height: '150px', objectFit: 'cover' }} 
-                  />
-                  <div className="card-body d-flex flex-column">
-                    <h5 className="card-title">{item.hotel_name || 'N/A'}</h5>
-                    <p className="card-text">City: {item.city_name || 'N/A'}</p>
-                    <p className="card-text">Source ID: {item.dest_id || 'N/A'}</p>
-                    <div className="mt-auto">
-                        <Button 
-                            variant="primary" 
-                            onClick={() => handleSelectScrapedHotel(item)}
-                            className="btn btn-info"
-                        >
-                            Select
-                        </Button>
+      {/* Bootstrap 5 Modal for Scrape Results */}
+      <div 
+        className="modal fade modaldesign" 
+        id="scrapeResultsModal" 
+        tabIndex="-1" 
+        aria-labelledby="scrapeResultsModalLabel" 
+        aria-hidden="true"
+        ref={scrapeModalRef} // Attach ref to the modal div
+      >
+        <div className="modal-dialog modal-lg modal-dialog-centered"> {/* Added modal-dialog-centered */}
+          <div className="modal-content">
+            <div className="modal-header">
+              <h4 className="modal-title" id="scrapeResultsModalLabel">
+                Scrape Results
+              </h4>
+              {/* Bootstrap 5 close button */}
+              <button 
+                type="button" 
+                className="btn-close" 
+                data-bs-dismiss="modal" 
+                aria-label="Close"
+                onClick={() => setShowScrapeModal(false)} // Update state when closed via button
+              >&times;</button>
+            </div>
+            <div className="modal-body">
+              {scrapingLoading && <p>Loading scraped data...</p>}
+              {scrapingError && <p className="text-danger">Error: {scrapingError}</p>}
+              
+              {!scrapingLoading && scrapedResults.length === 0 && !scrapingError && (
+                <p>No matching hotels found from the scrape source.</p>
+              )}
+              <div className="row">
+                {scrapedResults.map((item, index) => (
+                  <div key={index} className="col-md-4">
+                    <div className="card hotel_result">
+                      <img 
+                        src={item.image_url || 'https://via.placeholder.com/150'}
+                        className="card-img-top" 
+                        alt={item.hotel_name || 'Scraped Hotel Image'}
+                        style={{ height: '150px', objectFit: 'cover' }} 
+                      />
+                      <div className="card-body">
+                        <h5 className="card-title">{item.hotel_name || 'N/A'}</h5>
+                        <p className="card-text"><strong>City:</strong> <span>{item.city_name || 'N/A'}</span></p>
+                        <p className="card-text"><strong>Source ID:</strong> <span>{item.dest_id || 'N/A'}</span></p>
+                        <div className="mt-auto">
+                            <button // Changed from React Bootstrap Button to a regular button
+                                type="button"
+                                className="btn btn-info w-100" // Applied Bootstrap classes directly
+                                onClick={() => handleSelectScrapedHotel(item)}
+                            >
+                                Select
+                            </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
-        </Modal.Body>
-        <Modal.Footer>
-          {/* <Button variant="secondary" onClick={() => setShowScrapeModal(false)}>
-            Close
-          </Button> */}
-        </Modal.Footer>
-      </Modal>
+        </div>
+      </div>
     </DashboardLayout>
   );
 };
