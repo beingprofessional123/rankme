@@ -9,19 +9,23 @@ module.exports = (sequelize, DataTypes) => {
     name: DataTypes.STRING,
     location: DataTypes.STRING,
     hotel_type: DataTypes.STRING,
-    // It's good practice to also define foreign keys as columns in the model,
-    // even if they are defined in associations. Make sure this matches your DB schema.
     company_id: {
       type: DataTypes.UUID,
-      allowNull: true, // or false if always required
+      allowNull: true,
     },
   });
 
   Hotel.associate = (models) => {
-    // Add 'as' aliases here
-    Hotel.belongsTo(models.Company, { foreignKey: 'company_id', as: 'Company' }); // Added 'as'
-    Hotel.hasMany(models.RoomType, { foreignKey: 'hotel_id', as: 'RoomTypes' }); // ADDED 'as'
-    Hotel.hasMany(models.RateCategory, { foreignKey: 'hotel_id', as: 'RateCategories' }); // ADDED 'as'
+    Hotel.belongsTo(models.Company, { foreignKey: 'company_id', as: 'Company' });
+    Hotel.hasMany(models.RoomType, { foreignKey: 'hotel_id', as: 'RoomTypes' });
+    Hotel.hasMany(models.RateCategory, { foreignKey: 'hotel_id', as: 'RateCategories' });
+    
+    // CHANGE THIS LINE for the ScrapeSourceHotel association (hasMany -> hasOne)
+    Hotel.hasOne(models.ScrapeSourceHotel, {
+      foreignKey: 'hotel_id',
+      as: 'ScrapeSourceHotel', // Use singular alias for hasOne relationships
+      onDelete: 'CASCADE', // Optional: If the Hotel is deleted, also delete its associated ScrapeSourceHotel
+    });
   };
 
   return Hotel;
