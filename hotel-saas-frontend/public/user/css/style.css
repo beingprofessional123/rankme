@@ -1760,3 +1760,44 @@ label.fileupload-label {
 }
 
 /* --- Dashboard Content Specific Styles (Focus on these) --- */
+
+
+
+.card.hotel_result {
+    margin-bottom: 20px;
+}
+.hotel_result h5.card-title {
+    font-weight: 500;
+    font-size: 16px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    color: #333;
+    margin-bottom: 11px;
+}
+.hotel_result .card-text {
+    margin: 0px 0px 2px 0px;
+    font-size: 14px;
+    font-weight: 400;
+    color: #000;
+    display: flex;
+    justify-content: space-between;
+}
+.hotel_result .card-text strong {
+    font-weight: 500;
+}
+.hotel_result .card-text span {
+    color: #575757;
+    font-weight: 300;
+}
+.hotel_result .mt-auto {
+    margin-top: 15px !important;
+}
+.hotel_result .mt-auto .btn.btn-info {
+    padding: 8px 18px;
+    min-height: auto;
+}
+ 
