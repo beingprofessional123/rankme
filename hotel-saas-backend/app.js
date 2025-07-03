@@ -14,7 +14,10 @@ const adminUserRoutes = require('./routes/admin/userRoutes');
 const adminPlanRoutes = require('./routes/admin/planRoutes');
 
 const path = require('path');
-
+app.use(cors({
+  origin: 'https://rankme-frontend.onrender.com',
+  credentials: true, // If you're using cookies or authorization headers
+}));
 require('dotenv').config();
 
 const app = express();
