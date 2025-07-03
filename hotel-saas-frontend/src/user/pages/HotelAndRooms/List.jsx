@@ -238,13 +238,12 @@ const HotelsAndRoomsList = () => {
             <>
               <a href="#" onClick={() => handleView(hotel.id)} className="action-icon" title="View Details"><img src={`/user/images/view.svg`} alt="View" className="mx-1" /></a>
               <a href="#" onClick={() => handleEdit(hotel.id)} className="action-icon" title="Edit Hotel"><img src={`/user/images/edit.svg`} alt="Edit" className="mx-1" /></a>
-              <a href="#" onClick={() => handleDelete(hotel.id)} className="action-icon" title="Delete Hotel"><img src={`/user/images/deletetd.svg`} alt="Delete" className="mx-1" /></a>
-              
               {!hotel.isScrapedConnected && (
                 <a href="#" onClick={() => handleConnect(hotel)} className="action-icon" title="Connect to Scrape Source">
                   <img src="/user/images/link.svg" alt="Connect" className="mx-1" style={{ width: '20px', height: '20px' }} />
                 </a>
               )}
+              <a href="#" onClick={() => handleDelete(hotel.id)} className="action-icon" title="Delete Hotel"><img src={`/user/images/deletetd.svg`} alt="Delete" className="mx-1" /></a>
             </>
           );
         },
@@ -285,20 +284,25 @@ const HotelsAndRoomsList = () => {
               </a>
             </div>
           </div>
-
-          <div className="">
-            {loading ? (
-              <p>Loading hotels...</p>
-            ) : error ? (
-              <p className="text-danger">Error: {error}</p>
-            ) : (
-              <MUIDataTable
-                title="Hotels List"
-                data={hotels}
-                columns={columns}
-                options={options}
-              />
-            )}
+          <div className="white-bg">
+            <div className="tabledesign">
+              <div className="table-responsive">
+                <div className="">
+                  {loading ? (
+                    <p>Loading hotels...</p>
+                  ) : error ? (
+                    <p className="text-danger">Error: {error}</p>
+                  ) : (
+                    <MUIDataTable
+                      title="Hotels List"
+                      data={hotels}
+                      columns={columns}
+                      options={options}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
