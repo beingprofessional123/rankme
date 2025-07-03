@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const scrapedHotelRoomDetailController = require('../controllers/scrapedHotelRoomDetailController');
 const { authenticate } = require('../middlewares/auth');
 const { authorizeRoles } = require('../middlewares/authorize');
 const { signupValidation, loginValidation } = require('../validators/authValidator');
@@ -29,13 +30,12 @@ router.get('/test', (req, res) => {
   res.send('API is working');
 });
 
-
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password', authController.resetPassword);
 router.get('/country-list', authController.getAllCountries);
 
-
-
+// Script
+router.get('/scraped-hotel-room-details', scrapedHotelRoomDetailController.getScrapedHotelDetail);
 
 
 // // SuperAdmin Routes

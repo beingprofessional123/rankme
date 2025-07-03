@@ -2076,3 +2076,24 @@ table .badge-success, table .badge-primary, table .badge-warning, table .badge-d
 
 .position-relative {
   position: relative; }
+
+.tabledesign .MuiPaper-root {
+  background: none !important;
+  box-shadow: none !important;
+  border-radius: 0px !important;
+}
+.tabledesign .MuiToolbar-root {
+  padding: 0px;
+}
+.tabledesign thead tr th {
+  font-size: 15px;
+  font-weight: 500;
+  color: #333;
+  padding: 10px 15px;
+  vertical-align: middle;
+  line-height: 19px;
+}
+.tabledesign thead tr th button {
+  padding: 0px !important;
+  justify-content: flex-start;
+}
