@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from '../pages/auth/Login';
-import Head from '../../user/layouts/head';
 import ForgotPassword from '../pages/auth/ForgotPassword/ForgotPassword';
 import ResetPassword from '../pages/auth/ForgotPassword/ResetPassword';
 import ChangePassword from '../pages/auth/ChangePassword';
@@ -39,7 +38,6 @@ import SettingsPage from '../pages/Settings/SettingsPage';
 const AppRoutes = () => {
   return (
     <Router>
-      <Head />
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />

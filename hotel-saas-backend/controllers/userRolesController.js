@@ -138,10 +138,20 @@ exports.getUsersByRoleExclusion = async (req, res) => {
 
 // API 3: Create a new user
 exports.createUser = async (req, res) => {
+  const t = await db.sequelize.transaction(); // Start transaction
   try {
-    const { fullName, email, phone, role_id, company_id, is_active, countryCodeid } = req.body;
+    const {
+      fullName,
+      email,
+      phone,
+      role_id,
+      company_id,
+      is_active,
+      countryCodeid,
+      permissions = [],
+    } = req.body;
 
-    // --- Input Validation ---
+    // --- Validation ---
     const errors = {};
     if (!fullName || typeof fullName !== 'string' || fullName.trim().length < 2) {
       errors.fullName = 'Full name is required and must be at least 2 characters.';
@@ -152,32 +162,28 @@ exports.createUser = async (req, res) => {
     if (!role_id) {
       errors.role_id = 'Role is required.';
     }
-    // phone is optional, but if provided, could add format validation
 
     if (Object.keys(errors).length > 0) {
       return res.status(400).json({ message: 'Validation failed', errors });
     }
-    // --- End Input Validation ---
 
-    // Check if user with this email already exists
+    // --- Check for duplicate email ---
     const existingUser = await db.User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ message: 'User with this email already exists.' });
     }
 
-    // Check if the provided role_id is valid
+    // --- Validate role ---
     const roleExists = await db.Role.findByPk(role_id);
     if (!roleExists) {
       return res.status(400).json({ message: 'Invalid role ID provided.' });
     }
 
-    // Determine company_id:
-    // If the logged-in user is a company_admin, the new user should belong to the same company.
-    // If it's a super_admin, they might provide a company_id, or it could be null.
+    // --- Resolve company ---
     let finalCompanyId = null;
-    if (req.user.company_id) { // If the admin creating the user belongs to a company
+    if (req.user.company_id) {
       finalCompanyId = req.user.company_id;
-    } else if (company_id) { // If super_admin provides a company_id
+    } else if (company_id) {
       const companyExists = await db.Company.findByPk(company_id);
       if (!companyExists) {
         return res.status(400).json({ message: 'Provided company ID is invalid.' });
@@ -185,26 +191,56 @@ exports.createUser = async (req, res) => {
       finalCompanyId = company_id;
     }
 
-
-    // Generate a temporary password and hash it
+    // --- Generate password ---
     const tempPassword = generateRandomPassword();
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
-    const newUser = await db.User.create({
-      name: fullName.trim(), // Trim whitespace
-      email: email.toLowerCase(), // Store email in lowercase
-      phone: phone ? phone.trim() : null,
-      password: hashedPassword,
-      role_id,
-      company_id: finalCompanyId,
-      is_active: typeof is_active === 'boolean' ? is_active : true, // Default to true
-      countryCodeid: countryCodeid || null,
-    });
+    // --- Create user ---
+    const newUser = await db.User.create(
+      {
+        name: fullName.trim(),
+        email: email.toLowerCase(),
+        phone: phone ? phone.trim() : null,
+        password: hashedPassword,
+        role_id,
+        company_id: finalCompanyId,
+        is_active: typeof is_active === 'boolean' ? is_active : true,
+        countryCodeid: countryCodeid || null,
+      },
+      { transaction: t }
+    );
 
-    // --- Send Email with Temporary Password ---
+    // --- Store permissions ---
+    const flattenedPermissions = [];
+
+    for (const module of permissions) {
+      const { module_key, permissions: modulePermissions } = module;
+      for (const key in modulePermissions) {
+        flattenedPermissions.push({
+          user_id: newUser.id,
+          module_key,
+          permission_key: key,
+          is_allowed: !!modulePermissions[key], // Ensure boolean
+        });
+      }
+    }
+
+    if (flattenedPermissions.length > 0) {
+      await db.UserPermission.bulkCreate(flattenedPermissions, { transaction: t });
+    }
+
+    // --- Send password email ---
     try {
-      const loginUrl = process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/login` : 'YOUR_FRONTEND_LOGIN_URL'; // Replace with actual frontend URL
-      const { subject, html } = getNewUserPasswordEmail(newUser.name, newUser.email, tempPassword, loginUrl);
+      const loginUrl = process.env.FRONTEND_URL
+        ? `${process.env.FRONTEND_URL}/login`
+        : 'YOUR_FRONTEND_LOGIN_URL';
+
+      const { subject, html } = getNewUserPasswordEmail(
+        newUser.name,
+        newUser.email,
+        tempPassword,
+        loginUrl
+      );
 
       await transporter.sendMail({
         from: process.env.MAIL_USERNAME,
@@ -212,16 +248,15 @@ exports.createUser = async (req, res) => {
         subject,
         html,
       });
+
       console.log(`Temporary password email sent to ${newUser.email}`);
     } catch (emailError) {
-      console.error(`Failed to send temporary password email to ${newUser.email}:`, emailError);
-      // Decide if this should be a hard error or just logged.
-      // For user creation, often you'd still create the user but alert about email failure.
-      // For now, it will proceed but log the email error.
+      console.error('Failed to send email:', emailError);
     }
-    // --- End Send Email ---
 
-    res.status(201).json({
+    await t.commit();
+
+    return res.status(201).json({
       message: 'User created successfully. A temporary password has been sent to their email.',
       user: {
         id: newUser.id,
@@ -231,17 +266,27 @@ exports.createUser = async (req, res) => {
         company_id: newUser.company_id,
         is_active: newUser.is_active,
         countryCodeid: newUser.countryCodeid,
+        permissions: flattenedPermissions,
       },
     });
   } catch (error) {
+    await t.rollback();
+
     console.error('Error creating user:', error);
-    // Handle Sequelize validation errors or unique constraint errors specifically if desired
     if (error.name === 'SequelizeUniqueConstraintError') {
-      return res.status(400).json({ message: 'User with this email already exists.', errors: error.errors.map(e => e.message) });
+      return res.status(400).json({
+        message: 'User with this email already exists.',
+        errors: error.errors.map((e) => e.message),
+      });
     }
-    res.status(500).json({ message: 'Failed to create user. Please try again later.', error: error.message });
+
+    return res.status(500).json({
+      message: 'Failed to create user. Please try again later.',
+      error: error.message,
+    });
   }
 };
+
 
 // API 4: Get a single user by ID (for prefill/edit)
 exports.getUserById = async (req, res) => {
@@ -258,7 +303,12 @@ exports.getUserById = async (req, res) => {
         {
           model: db.Company,
           attributes: ['id', 'name'], // Get company ID and name
-        }
+        },
+       {
+         model: db.UserPermission,
+         as: 'permissions',
+         attributes: ['module_key', 'permission_key', 'is_allowed'],
+       }
       ],
       // Add company_id filter if the logged-in user is a company_admin
       where: req.user.company_id ? { company_id: req.user.company_id } : {},
@@ -268,6 +318,27 @@ exports.getUserById = async (req, res) => {
     if (!user || (req.user.company_id && user.company_id !== req.user.company_id)) {
       return res.status(404).json({ message: 'User not found or you do not have permission to view this user.' });
     }
+
+     //Flatten permissions into nested format
+    const permissionsMap = {};
+
+    // Flatten permissions into nested format
+
+if (user.permissions && user.permissions.length > 0) {
+  for (const perm of user.permissions) {
+    if (!permissionsMap[perm.module_key]) {
+      permissionsMap[perm.module_key] = {};
+    }
+    permissionsMap[perm.module_key][perm.permission_key] = perm.is_allowed;
+  }
+}
+
+// Build formattedPermissions array (like frontend expects)
+const formattedPermissions = Object.entries(permissionsMap).map(([module_key, perms]) => ({
+  module_key,
+  permissions: perms
+}));
+
 
     // Flatten response for easier client-side consumption
     const formattedUser = {
@@ -284,6 +355,7 @@ exports.getUserById = async (req, res) => {
       company_name: user.Company ? user.Company.name : null,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      permissions: formattedPermissions,
     };
 
     res.status(200).json({
@@ -300,7 +372,7 @@ exports.getUserById = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fullName, email, phone, role_id, company_id, is_active, countryCodeid } = req.body;
+    const { fullName, email, phone, role_id, company_id, is_active, countryCodeid, permissions } = req.body;
 
     const user = await db.User.findByPk(id, {
       // Add company_id filter for company_admin
@@ -378,6 +450,31 @@ exports.updateUser = async (req, res) => {
 
     await user.save();
 
+     // ✅ Update Permissions
+    if (Array.isArray(permissions)) {
+      // Delete existing permissions
+      await db.UserPermission.destroy({ where: { user_id: id } });
+
+      // Prepare bulk insert
+      const bulkPermissions = [];
+      for (const module of permissions) {
+        if (!module.module_key || typeof module.permissions !== 'object') continue;
+
+        for (const [permission_key, is_allowed] of Object.entries(module.permissions)) {
+          bulkPermissions.push({
+            user_id: id,
+            module_key: module.module_key,
+            permission_key,
+            is_allowed: !!is_allowed,
+          });
+        }
+      }
+
+      if (bulkPermissions.length > 0) {
+        await db.UserPermission.bulkCreate(bulkPermissions);
+      }
+    }
+
     res.status(200).json({
       message: 'User updated successfully.',
       user: {
@@ -437,6 +534,9 @@ exports.deleteUser = async (req, res) => {
     if (req.user.id === userToDelete.id) {
       return res.status(403).json({ message: 'Forbidden: You cannot delete your own account through this API.' });
     }
+
+    // ✅ Delete permissions first
+    await db.UserPermission.destroy({ where: { user_id: id } });
 
 
     const result = await db.User.destroy({
