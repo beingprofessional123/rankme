@@ -5,8 +5,88 @@ import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+const staticModules = [
+    {
+        key: 'dashboard',
+        value: 'Dashboard',
+        permissions: [
+            { key: 'tab', label: 'Tab Show/hide' }
+        ]
+    },
+    {
+        key: 'pricing_calendar',
+        value: 'Pricing Calendar',
+        permissions: [
+            { key: 'tab', label: 'Tab Show/hide' }
+        ]
+    },
+    {
+        key: 'forecasts',
+        value: 'Forecast',
+        permissions: [
+            { key: 'tab', label: 'Tab Show/hide' }
+        ]
+    },
+    {
+        key: 'reports',
+        value: 'Reports',
+        permissions: [
+            { key: 'tab', label: 'Tab Show/hide' },
+        ]
+    },
+    {
+        key: 'hotels_rooms',
+        value: 'Hotels & Rooms',
+        permissions: [
+            { key: 'tab', label: 'Tab Show/hide' },
+            { key: 'add', label: 'Add' },
+            { key: 'edit', label: 'Edit' },
+            { key: 'delete', label: 'Delete' },
+            { key: 'view', label: 'View' },
+        ]
+    },
+    {
+        key: 'upload_data',
+        value: 'Upload Data',
+        permissions: [
+            { key: 'tab', label: 'Tab Show/hide' },
+        ]
+    },
+    {
+        key: 'competitor_rates',
+        value: 'Competitor Rates',
+        permissions: [
+            { key: 'tab', label: 'Tab Show/hide' },
+            { key: 'add', label: 'Add' },
+            { key: 'edit', label: 'Edit' },
+            { key: 'delete', label: 'Delete' },
+        ]
+    },
+    {
+        key: 'user_role_management',
+        value: 'User Role Management',
+        permissions: [
+            { key: 'tab', label: 'Tab Show/hide' },
+            { key: 'add', label: 'Add' },
+            { key: 'edit', label: 'Edit' },
+            { key: 'delete', label: 'Delete' },
+        ]
+    },
+    {
+        key: 'support_ticket',
+        value: 'Support Ticket',
+        permissions: [
+            { key: 'tab', label: 'Tab Show/hide' },
+            { key: 'add', label: 'Add' },
+            { key: 'edit', label: 'Edit' },
+            { key: 'delete', label: 'Delete' },
+            { key: 'view', label: 'View' },
+        ]
+    }
+];
+
 const UserRoleManagementAddPage = () => {
-    const [countryList, setCountryList] = useState(['+91']);
+    const [countryList, setCountryList] = useState(['']);
     const navigate = useNavigate();
     const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
@@ -23,6 +103,7 @@ const UserRoleManagementAddPage = () => {
     const [formErrors, setFormErrors] = useState({});
     const [loading, setLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [tabPermissions, setTabPermissions] = useState([]);
 
     const getAuthToken = () => {
         return localStorage.getItem('token');
@@ -63,19 +144,40 @@ const UserRoleManagementAddPage = () => {
             }
         };
 
+
+        const initialPermissions = staticModules.map((mod, i) => {
+            const permissions = {};
+            mod.permissions.forEach(p => {
+                permissions[p.key] = false;
+            });
+            return {
+                module_id: i + 1,
+                module_key: mod.key,
+                module_name: mod.value,
+                permissions
+            };
+        });
+
+        setTabPermissions(initialPermissions);
+
+
+
         fetchRoles();
         fetchCountryList();
     }, [API_BASE_URL]);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value
-        }));
-        if (formErrors[name]) {
-            setFormErrors(prev => ({ ...prev, [name]: '' }));
-        }
+        setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+        if (formErrors[name]) setFormErrors(prev => ({ ...prev, [name]: '' }));
+    };
+
+    const togglePermission = (index, key) => {
+        setTabPermissions(prev => {
+            const updated = [...prev];
+            updated[index].permissions[key] = !updated[index].permissions[key];
+            return updated;
+        });
     };
 
     const validateForm = () => {
@@ -133,6 +235,7 @@ const UserRoleManagementAddPage = () => {
                 role_id: formData.role_id,
                 is_active: formData.is_active,
                 countryCodeid: formData.countryCodeid,
+                permissions: tabPermissions,
             };
 
             const response = await axios.post(`${API_BASE_URL}/api/users/create`, payload, {
@@ -149,7 +252,7 @@ const UserRoleManagementAddPage = () => {
                 phone: '',
                 role_id: '',
                 is_active: true,
-                countryCodeid: '+91',
+                countryCodeid: '',
             });
             navigate('/user-role-management');
         } catch (error) {
@@ -306,6 +409,44 @@ const UserRoleManagementAddPage = () => {
                                         </div>
                                     </div>
                                 </div>
+                                {/* Module Permissions */}
+                                {formData.role_id && (
+                                    <div className="row mt-3">
+                                        <div className="col-md-12 border rounded p-3 mb-3 text-center">
+                                            <strong>Module Permissions</strong>
+                                        </div>
+
+                                        {tabPermissions.map((module, index) => {
+                                            const moduleDef = staticModules.find(m => m.key === module.module_key);
+                                            return (
+                                                <div key={module.module_key} className="border rounded p-3 mb-3">
+                                                    <div className="row">
+                                                        <div className="col-md-2">
+                                                            <strong>{module.module_name}</strong>
+                                                        </div>
+                                                            {moduleDef?.permissions.map(({ key, label }) => (
+                                                                <div className="col-md-2" key={key}>
+                                                                    <div className="form-check">
+                                                                        <input
+                                                                            className="form-check-input"
+                                                                            type="checkbox"
+                                                                            id={`${module.module_key}-${key}`}
+                                                                            checked={module.permissions[key]}
+                                                                            onChange={() => togglePermission(index, key)}
+                                                                        />
+                                                                        <label className="form-check-label ms-2" htmlFor={`${module.module_key}-${key}`}>
+                                                                            {label}
+                                                                        </label>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
 
                                 <div className="addentry-btn mt-4">
                                     <button

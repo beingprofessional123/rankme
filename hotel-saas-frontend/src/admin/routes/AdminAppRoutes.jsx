@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from '../pages/auth/Login';
-import Head from '../layouts/Head';
 import AdminLayout from '../layouts/AdminLayout';
 import Dashboard from '../pages/Dashboard';
 import UserManagementIndex from '../pages/UserManagement/Index';
@@ -22,7 +21,6 @@ import GuestRoute from './GuestRoute';
 const AdminAppRoutes = () => {
   return (
     <Router>
-      <Head />
       <Script />
       <Routes>
         {/* Login page: only accessible if NOT logged in */}
