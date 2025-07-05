@@ -60,10 +60,7 @@ module.exports = (sequelize, DataTypes) => {
     User.belongsTo(models.Company, { foreignKey: 'company_id' });
     User.belongsTo(models.Role, { foreignKey: 'role_id' });
     User.belongsTo(models.Country, { foreignKey: 'countryCodeid', as: 'Country' });
-
-
-
-
+    User.hasMany(models.UserPermission, { foreignKey: 'user_id', as: 'permissions'});
   };
 
   return User;
