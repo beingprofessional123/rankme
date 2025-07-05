@@ -278,10 +278,12 @@ const HotelsAndRoomsList = () => {
                 </nav>
               </div>
             </div>
-            <div className="col-md-6 text-end">
-              <a href="#" onClick={() => navigate('/hotels-and-rooms/add')} className="btn btn-info">
-                <img src={`/user/images/roomadd.svg`} alt="Add" className="img-fluid" /> Add
-              </a>
+            <div className="col-md-6">
+              <div className="breadcrumb-right">
+                <a href="#" onClick={() => navigate('/hotels-and-rooms/add')} className="btn btn-info">
+                  <img src={`/user/images/roomadd.svg`} alt="Add" className="img-fluid" /> Add
+                </a>
+              </div>
             </div>
           </div>
           <div className="white-bg">

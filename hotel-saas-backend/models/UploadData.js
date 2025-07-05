@@ -30,7 +30,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     originalFileName: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     filePath: { // Optional: if you store files on disk/S3
       type: DataTypes.STRING,

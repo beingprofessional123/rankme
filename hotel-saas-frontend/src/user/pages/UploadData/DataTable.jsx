@@ -105,7 +105,7 @@ const DataTable = ({ data, title = 'Data Preview', onConfirm, onCancel, activeTa
     const options = {
         selectableRows: 'none',
         search: true,
-        download: false,
+        download: true,
         print: false,
         viewColumns: true,
         filter: true,
@@ -159,20 +159,17 @@ const DataTable = ({ data, title = 'Data Preview', onConfirm, onCancel, activeTa
     return (
         <div className="data-uploadtable">
             <div className="data-uploadtop d-flex justify-content-between align-items-center">
-                <h2>{title}</h2>
-                <span>
-                    <img src={`/user/images/download.svg`} className="img-fluid mr-2" alt="Download Template"
-                        onClick={handleDownloadTemplate} style={{ cursor: 'pointer' }} />
-                </span>
             </div>
 
             <div className="tabledesign">
-                <MUIDataTable
-                    title=""
-                    data={data}
-                    columns={columns}
-                    options={options}
-                />
+                <div className="table-responsive">
+                    <MUIDataTable
+                        title={title}
+                        data={data}
+                        columns={columns}
+                        options={options}
+                    />
+                </div>
             </div>
 
             <div className="data-upload-btn d-flex justify-content-end mt-4">
