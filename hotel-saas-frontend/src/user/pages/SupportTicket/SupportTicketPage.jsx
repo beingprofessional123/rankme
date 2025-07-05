@@ -115,13 +115,17 @@ const SupportTicketPage = () => {
                         </div>
                     </div>
 
-                    <div className=""> {/* white-bg p-3 */}
-                        <MUIDataTable
-                            title="Support Tickets"
-                            data={tickets}
-                            columns={columns}
-                            options={options}
-                        />
+                    <div className="white-bg">
+                        <div className="tabledesign">
+                            <div className="table-responsive">
+                                <MUIDataTable
+                                    title="Support Tickets"
+                                    data={tickets}
+                                    columns={columns}
+                                    options={options}
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
