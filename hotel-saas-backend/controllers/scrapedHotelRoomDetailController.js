@@ -1,5 +1,5 @@
 const https = require('https'); // Use 'https' for secure API calls
-const { ScrapeSourceHotel, Hotel, UploadData, MetaUploadData, UploadedExtractDataFile } = require('../models'); // Adjust path as per your model index file
+const { ScrapeSourceHotel, Hotel, UploadData, MetaUploadData, UploadedExtractDataFile, RoomType } = require('../models'); // Add RoomType here
 const { Op } = require('sequelize'); // Import Op for Sequelize operators if needed
 
 exports.getScrapedHotelDetail = async (req, res) => {
@@ -187,7 +187,7 @@ exports.getScrapedHotelDetail = async (req, res) => {
                 for (const room of apiResponseData.data.block) {
                     // Only process rooms where max_occupancy is 2
                     console.log(room);
-                    if (room.max_occupancy == 2) { // <--- This is the key change
+                    if (room.max_occupancy == 2) {
                         const roomName = room.name_without_policy || room.room_name || room.name || 'N/A';
                         let price = room.product_price_breakdown?.gross_amount_per_night?.value || null;
 
@@ -198,7 +198,7 @@ exports.getScrapedHotelDetail = async (req, res) => {
                                 console.warn(`Invalid price for room ${roomName}: ${room.product_price_breakdown?.gross_amount_per_night?.value}. Skipping.`);
                                 continue;
                             }
-                            
+
                         } else {
                             console.warn(`Missing price for room ${roomName}. Skipping.`);
                             continue;
@@ -211,14 +211,33 @@ exports.getScrapedHotelDetail = async (req, res) => {
                             });
 
                             try {
-                                // Create new entry (since old ones for this scrape were deleted)
+                                // Find or Create the RoomType
+                                const [roomTypeEntry, createdRoomType] = await RoomType.findOrCreate({
+                                    where: {
+                                        name: roomName,
+                                        hotel_id: hotelPropertyId
+                                    },
+                                    defaults: {
+                                        capacity: room.max_occupancy // Assuming max_occupancy can be the capacity
+                                        // You might want to add more default values if needed for RoomType
+                                    }
+                                });
+
+                                if (createdRoomType) {
+                                    console.log(`Created new RoomType entry for "${roomName}" (ID: ${roomTypeEntry.id}) for Hotel ID: ${hotelPropertyId}`);
+                                } else {
+                                    console.log(`Found existing RoomType entry for "${roomName}" (ID: ${roomTypeEntry.id}) for Hotel ID: ${hotelPropertyId}`);
+                                }
+
+                                // Create new UploadedExtractDataFile entry (since old ones for this scrape were deleted)
                                 const createdEntry = await UploadedExtractDataFile.create({
                                     uploadDataId: newUploadDataEntry.id,
                                     userId: userID,
                                     checkIn: checkinDate,
                                     checkOut: checkoutDate,
                                     platform: 'booking.com',
-                                    roomType: roomName,
+                                    roomType: roomName, // Keep this for display/redundancy if needed
+                                    roomTypeId: roomTypeEntry.id, // Store the foreign key to RoomType
                                     rate: price,
                                     date: checkoutDate, // Date when data was extracted
                                     isValid: true, // Assuming valid on creation
@@ -227,7 +246,7 @@ exports.getScrapedHotelDetail = async (req, res) => {
                                 extractedDataFileEntries.push(createdEntry.toJSON());
 
                             } catch (entryError) {
-                                console.error(`Error creating UploadedExtractDataFile entry for room "${roomName}" with rate ${price} (hotel ${hotelId}):`, entryError);
+                                console.error(`Error creating UploadedExtractDataFile or RoomType entry for room "${roomName}" with rate ${price} (hotel ${hotelId}):`, entryError);
                             }
                         }
                     }
