@@ -1,16 +1,23 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import MUIDataTable from 'mui-datatables';
 // Removed: import { Modal, Button } from 'react-bootstrap';
+import { PermissionContext } from '../../UserPermission';
 
 const HotelsAndRoomsList = () => {
   const [hotels, setHotels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { permissions, role } = useContext(PermissionContext);
+  const isCompanyAdmin = role?.name === 'company_admin';
+  const canAccess = (action) => {
+    if (isCompanyAdmin) return true;
+    return permissions?.hotels_rooms?.[action] === true;
+  };
 
   // State for the scrape modal
   const [showScrapeModal, setShowScrapeModal] = useState(false); // Still needed to trigger manual show/hide
@@ -236,14 +243,26 @@ const HotelsAndRoomsList = () => {
           const hotel = hotels[dataIndex];
           return (
             <>
-              <a href="#" onClick={() => handleView(hotel.id)} className="action-icon" title="View Details"><img src={`/user/images/view.svg`} alt="View" className="mx-1" /></a>
-              <a href="#" onClick={() => handleEdit(hotel.id)} className="action-icon" title="Edit Hotel"><img src={`/user/images/edit.svg`} alt="Edit" className="mx-1" /></a>
-              {!hotel.isScrapedConnected && (
+              {canAccess('view') && (
+                <a href="#" onClick={() => handleView(hotel.id)} className="action-icon" title="View Details">
+                  <img src={`/user/images/view.svg`} alt="View" className="mx-1" />
+                </a>
+              )}
+              {canAccess('edit') && (
+                <a href="#" onClick={() => handleEdit(hotel.id)} className="action-icon" title="Edit Hotel">
+                  <img src={`/user/images/edit.svg`} alt="Edit" className="mx-1" />
+                </a>
+              )}
+              {!hotel.isScrapedConnected && canAccess('connect') && (
                 <a href="#" onClick={() => handleConnect(hotel)} className="action-icon" title="Connect to Scrape Source">
                   <img src="/user/images/link.svg" alt="Connect" className="mx-1" style={{ width: '20px', height: '20px' }} />
                 </a>
               )}
-              <a href="#" onClick={() => handleDelete(hotel.id)} className="action-icon" title="Delete Hotel"><img src={`/user/images/deletetd.svg`} alt="Delete" className="mx-1" /></a>
+              {canAccess('delete') && (
+                <a href="#" onClick={() => handleDelete(hotel.id)} className="action-icon" title="Delete Hotel">
+                  <img src={`/user/images/deletetd.svg`} alt="Delete" className="mx-1" />
+                </a>
+              )}
             </>
           );
         },
@@ -279,9 +298,11 @@ const HotelsAndRoomsList = () => {
               </div>
             </div>
             <div className="col-md-6 text-end">
-              <a href="#" onClick={() => navigate('/hotels-and-rooms/add')} className="btn btn-info">
-                <img src={`/user/images/roomadd.svg`} alt="Add" className="img-fluid" /> Add
-              </a>
+              {canAccess('add') && (
+                <a href="#" onClick={() => navigate('/hotels-and-rooms/add')} className="btn btn-info">
+                  <img src={`/user/images/roomadd.svg`} alt="Add" className="img-fluid" /> Add
+                </a>
+              )}
             </div>
           </div>
           <div className="white-bg">
@@ -308,11 +329,11 @@ const HotelsAndRoomsList = () => {
       </div>
 
       {/* Bootstrap 5 Modal for Scrape Results */}
-      <div 
-        className="modal fade modaldesign" 
-        id="scrapeResultsModal" 
-        tabIndex="-1" 
-        aria-labelledby="scrapeResultsModalLabel" 
+      <div
+        className="modal fade modaldesign"
+        id="scrapeResultsModal"
+        tabIndex="-1"
+        aria-labelledby="scrapeResultsModalLabel"
         aria-hidden="true"
         ref={scrapeModalRef} // Attach ref to the modal div
       >
@@ -323,10 +344,10 @@ const HotelsAndRoomsList = () => {
                 Scrape Results
               </h4>
               {/* Bootstrap 5 close button */}
-              <button 
-                type="button" 
-                className="btn-close" 
-                data-bs-dismiss="modal" 
+              <button
+                type="button"
+                className="btn-close"
+                data-bs-dismiss="modal"
                 aria-label="Close"
                 onClick={() => setShowScrapeModal(false)} // Update state when closed via button
               >&times;</button>
@@ -334,7 +355,7 @@ const HotelsAndRoomsList = () => {
             <div className="modal-body">
               {scrapingLoading && <p>Loading scraped data...</p>}
               {scrapingError && <p className="text-danger">Error: {scrapingError}</p>}
-              
+
               {!scrapingLoading && scrapedResults.length === 0 && !scrapingError && (
                 <p>No matching hotels found from the scrape source.</p>
               )}
@@ -342,24 +363,24 @@ const HotelsAndRoomsList = () => {
                 {scrapedResults.map((item, index) => (
                   <div key={index} className="col-md-4">
                     <div className="card hotel_result">
-                      <img 
+                      <img
                         src={item.image_url || 'https://via.placeholder.com/150'}
-                        className="card-img-top" 
+                        className="card-img-top"
                         alt={item.hotel_name || 'Scraped Hotel Image'}
-                        style={{ height: '150px', objectFit: 'cover' }} 
+                        style={{ height: '150px', objectFit: 'cover' }}
                       />
                       <div className="card-body">
                         <h5 className="card-title">{item.hotel_name || 'N/A'}</h5>
                         <p className="card-text"><strong>City:</strong> <span>{item.city_name || 'N/A'}</span></p>
                         <p className="card-text"><strong>Source ID:</strong> <span>{item.dest_id || 'N/A'}</span></p>
                         <div className="mt-auto">
-                            <button // Changed from React Bootstrap Button to a regular button
-                                type="button"
-                                className="btn btn-info w-100" // Applied Bootstrap classes directly
-                                onClick={() => handleSelectScrapedHotel(item)}
-                            >
-                                Select
-                            </button>
+                          <button // Changed from React Bootstrap Button to a regular button
+                            type="button"
+                            className="btn btn-info w-100" // Applied Bootstrap classes directly
+                            onClick={() => handleSelectScrapedHotel(item)}
+                          >
+                            Select
+                          </button>
                         </div>
                       </div>
                     </div>

@@ -1,8 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
+import { PermissionContext } from '../../UserPermission';
+
 
 const SupportTicketEditPage = () => {
+  const { permissions, role } = useContext(PermissionContext);
+  const isCompanyAdmin = role?.name === 'company_admin';
+  const canAccess = (action) => {
+    if (isCompanyAdmin) return true;
+    return permissions?.support_ticket?.[action] === true;
+  };
   const location = useLocation();
   const navigate = useNavigate();
   const ticket = location.state?.data;
@@ -200,9 +208,11 @@ const SupportTicketEditPage = () => {
                 </div>
 
                 <div className="addentry-btn">
-                  <button type="submit" className="btn btn-info">
-                    Update
-                  </button>
+                  {canAccess('edit') && (
+                    <button type="submit" className="btn btn-info">
+                      Update
+                    </button>
+                  )}
                 </div>
               </form>
             </div>

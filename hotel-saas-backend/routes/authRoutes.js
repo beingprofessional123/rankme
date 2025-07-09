@@ -33,6 +33,8 @@ router.get('/test', (req, res) => {
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password', authController.resetPassword);
 router.get('/country-list', authController.getAllCountries);
+router.get('/user-permissions', authenticate, authController.getUserPermissions);
+
 
 // Script
 router.get('/scraped-hotel-room-details', scrapedHotelRoomDetailController.getScrapedHotelDetail);

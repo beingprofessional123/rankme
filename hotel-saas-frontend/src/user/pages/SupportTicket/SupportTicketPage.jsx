@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import { Link } from 'react-router-dom';
 import MUIDataTable from 'mui-datatables';
+import { PermissionContext } from '../../UserPermission';
 
 const initialTickets = [
     { id: 1, subject: 'Lorem Ipsum is', category: 'Lorem Ipsum', date: '22/05/2015', status: 'Active' },
@@ -17,6 +18,12 @@ const initialTickets = [
 ];
 
 const SupportTicketPage = () => {
+    const { permissions, role } = useContext(PermissionContext);
+    const isCompanyAdmin = role?.name === 'company_admin';
+    const canAccess = (action) => {
+        if (isCompanyAdmin) return true;
+        return permissions?.support_ticket?.[action] === true;
+    };
     const [tickets, setTickets] = useState(initialTickets);
     const [selectedTicket, setSelectedTicket] = useState(null);
 
@@ -56,20 +63,26 @@ const SupportTicketPage = () => {
                     const rowData = tickets[rowIndex];
                     return (
                         <div className="tdaction">
-                            <Link to={`/support-tickets-view/${value}`} state={{ data: rowData }}>
-                                <img src={`/user/images/view.svg`} className="img-fluid" alt="view" />
-                            </Link>
-                            <Link to={`/support-tickets-edit/${value}`} state={{ data: rowData }}>
-                                <img src={`/user/images/edit.svg`} className="img-fluid" alt="edit" />
-                            </Link>
-                            <a
-                                href="#!"
-                                data-bs-toggle="modal"
-                                data-bs-target="#deleteTicketModal"
-                                onClick={() => handleDelete(rowData)}
-                            >
-                                <img src={`/user/images/deletetd.svg`} className="img-fluid" alt="delete" />
-                            </a>
+                            {canAccess('view') && (
+                                <Link to={`/support-tickets-view/${value}`} state={{ data: rowData }}>
+                                    <img src={`/user/images/view.svg`} className="img-fluid" alt="view" />
+                                </Link>
+                            )}
+                            {canAccess('edit') && (
+                                <Link to={`/support-tickets-edit/${value}`} state={{ data: rowData }}>
+                                    <img src={`/user/images/edit.svg`} className="img-fluid" alt="edit" />
+                                </Link>
+                            )}
+                            {canAccess('delete') && (
+                                <a
+                                    href="#!"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#deleteTicketModal"
+                                    onClick={() => handleDelete(rowData)}
+                                >
+                                    <img src={`/user/images/deletetd.svg`} className="img-fluid" alt="delete" />
+                                </a>
+                            )}
                         </div>
                     );
                 },
@@ -108,9 +121,11 @@ const SupportTicketPage = () => {
                         </div>
                         <div className="col-md-6">
                             <div className="breadcrumb-right">
-                                <Link to="/support-tickets-add" className="btn btn-info">
-                                    <img src={`/user/images/add.svg`} className="img-fluid" alt="Add Ticket" /> Ticket
-                                </Link>
+                                {canAccess('add') && (
+                                    <Link to="/support-tickets-add" className="btn btn-info">
+                                        <img src={`/user/images/add.svg`} className="img-fluid" alt="Add Ticket" /> Ticket
+                                    </Link>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -139,7 +154,7 @@ const SupportTicketPage = () => {
                                     <h3>Delete Ticket</h3>
                                     <p>Are you sure you want to delete <strong>{selectedTicket?.subject}</strong>?</p>
                                     <div className="form-group float-end">
-                                        <button type="button" className="btn btn-info cancelbtn"  data-bs-dismiss="modal"  onClick={confirmDelete}>
+                                        <button type="button" className="btn btn-info cancelbtn" data-bs-dismiss="modal" onClick={confirmDelete}>
                                             Confirm Delete
                                         </button>
                                     </div>

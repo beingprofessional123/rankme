@@ -1,12 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import MUIDataTable from 'mui-datatables';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { PermissionContext } from '../../UserPermission';
 
 const UserRoleManagementPage = () => {
+    const { permissions, user,role } = useContext(PermissionContext);
+    const isCompanyAdmin = role?.name === 'company_admin';
+    const canAccess = (action) => {
+        if (isCompanyAdmin) return true;
+        return permissions?.user_role_management?.[action] === true;
+    };
     const [tableData, setTableData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -30,7 +37,7 @@ const UserRoleManagementPage = () => {
                 return;
             }
 
-            const response = await axios.get(`${API_BASE_URL}/api/users/list`, {
+            const response = await axios.get(`${API_BASE_URL}/api/users/list?company_id=${user?.company_id}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
@@ -58,10 +65,12 @@ const UserRoleManagementPage = () => {
             .replace(/\b\w/g, char => char.toUpperCase());
     };
 
-    useEffect(() => {
+   useEffect(() => {
+    if (user?.company_id) {
         fetchUsers();
-    }, []);
-
+    }
+    }, [user]);
+    
     const handleDelete = (user) => {
         setSelectedUserToDelete(user);
     };
@@ -152,17 +161,21 @@ const UserRoleManagementPage = () => {
                     const user = tableData[rowIndex];
                     return (
                         <div className="tdaction">
-                            <Link to={`/user-role-management-edit/${value}`} state={{ user: user }}>
-                                <img src={`/user/images/edit.svg`} className="img-fluid" alt="edit" />
-                            </Link>
-                            <a
-                                href="#!"
-                                data-bs-toggle="modal"
-                                data-bs-target="#mydeleteuserModal"
-                                onClick={() => handleDelete(user)}
-                            >
-                                <img src={`/user/images/deletetd.svg`} className="img-fluid" alt="delete" />
-                            </a>
+                            {canAccess('edit') && (
+                                <Link to={`/user-role-management-edit/${value}`} state={{ user: user }}>
+                                    <img src={`/user/images/edit.svg`} className="img-fluid" alt="edit" />
+                                </Link>
+                            )}
+                            {canAccess('delete') && (
+                                <a
+                                    href="#!"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#mydeleteuserModal"
+                                    onClick={() => handleDelete(user)}
+                                >
+                                    <img src={`/user/images/deletetd.svg`} className="img-fluid" alt="delete" />
+                                </a>
+                            )}
                         </div>
                     );
                 }
@@ -208,9 +221,11 @@ const UserRoleManagementPage = () => {
                         </div>
                         <div className="col-md-6">
                             <div className="breadcrumb-right">
-                                <Link to="/user-role-management-add" className="btn btn-info">
-                                    <img src={`/user/images/add.svg`} className="img-fluid" alt="Add User" /> User
-                                </Link>
+                                {canAccess('add') && (
+                                    <Link to="/user-role-management-add" className="btn btn-info">
+                                        <img src={`/user/images/add.svg`} className="img-fluid" alt="Add User" /> User
+                                    </Link>
+                                )}
                             </div>
                         </div>
                     </div>

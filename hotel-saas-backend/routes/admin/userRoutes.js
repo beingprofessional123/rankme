@@ -9,6 +9,13 @@ const upload = require('../../middlewares/upload');
 const adminAuth = [authenticate, authorizeRoles('super_admin')];
 
 /**
+ * @route   GET /api/admin/user-roles
+ * @desc    Get user roles (excluding admin/super_admin)
+ */
+router.get('/roles-list', adminAuth, userController.getUserRoles);
+
+
+/**
  * @route   GET /api/admin/user-management
  * @desc    Get all users
  */

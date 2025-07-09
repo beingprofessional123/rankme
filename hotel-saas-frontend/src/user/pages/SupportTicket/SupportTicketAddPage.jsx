@@ -1,8 +1,16 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import { Link } from 'react-router-dom';
+import { PermissionContext } from '../../UserPermission';
 
 const SupportTicketAddPage = () => {
+  const { permissions, role } = useContext(PermissionContext);
+  const isCompanyAdmin = role?.name === 'company_admin';
+  const canAccess = (action) => {
+    if (isCompanyAdmin) return true;
+    return permissions?.support_ticket?.[action] === true;
+  };
+
   return (
     <DashboardLayout>
       <div className="mainbody">
@@ -84,7 +92,9 @@ const SupportTicketAddPage = () => {
                 </div>
 
                 <div className="addentry-btn">
+                  {canAccess('add') && (
                   <button type="submit" className="btn btn-info">Submit</button>
+                  )}
                 </div>
               </form>
             </div>

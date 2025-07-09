@@ -26,7 +26,6 @@ exports.getPropertyPrice = async (req, res) => {
     const data = await UploadData.findAll({
       where: {
         companyId,
-        userId,
         fileType: 'property_price_data',
       },
       include: [
@@ -90,7 +89,6 @@ exports.getBookingData = async (req, res) => {
     const data = await UploadData.findAll({
       where: {
         companyId,
-        userId,
          fileType,
       },
       include: [

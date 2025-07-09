@@ -1,6 +1,6 @@
 // src/pages/auth/Login.jsx
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // Import Link
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'; // Import Link
 import axios from 'axios';
 import Input from '../../components/forms/Input';
 import Button from '../../components/forms/Button';
@@ -8,9 +8,15 @@ import AuthLayout from '../../layouts/AuthLayout';
 
 const Login = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false); // State for password visibility
+
+  const [searchParams] = useSearchParams();
+
+  const [formData, setFormData] = useState({
+    email: searchParams.get('email') || '',
+    password: searchParams.get('password') || ''
+  });
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -64,7 +70,6 @@ const Login = () => {
 
 
 
-
   // Add/remove 'loginbg' class to the body
   useEffect(() => {
     document.body.classList.add('loginbg');
@@ -114,13 +119,13 @@ const Login = () => {
           window.location.href = '/subscription';
           break;
         case 'revenue_manager':
-          window.location.href = '/revenue';
+          window.location.href = '/dashboard';
           break;
         case 'general_manager':
-          window.location.href = '/gm';
+          window.location.href = '/dashboard';
           break;
         case 'analyst':
-          window.location.href = '/reports';
+          window.location.href = '/dashboard';
           break;
         default:
           window.location.href = '/';
@@ -152,7 +157,7 @@ const Login = () => {
             <div className="text-danger small text-center mt-3">{errors.general}</div>
           )}
           <div className="form-design">
-            <form onSubmit={handleSubmit}>
+            <form id="login-form" onSubmit={handleSubmit}>
               {/* Email Input */}
               <Input
                 label="Email Address" // Changed label to match HTML
