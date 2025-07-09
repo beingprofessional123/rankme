@@ -62,6 +62,14 @@ exports.getUsersByRoleExclusion = async (req, res) => {
   try {
     const excludedRoleNames = ['super_admin', 'company_admin'];
 
+    // Extract company_id from query
+    const { company_id } = req.query;
+
+    if (!company_id) {
+      return res.status(400).json({ message: 'company_id is required' });
+    }
+
+
     // First, find the IDs of the roles to exclude
     const excludedRoles = await db.Role.findAll({
       where: {
@@ -77,11 +85,10 @@ exports.getUsersByRoleExclusion = async (req, res) => {
     // Fetch users, excluding those with the found role IDs
     const users = await db.User.findAll({
       where: {
+        company_id: company_id,
         role_id: {
           [Op.notIn]: excludedRoleIds,
         },
-        // Optional company-level filtering
-        // company_id: req.user.company_id,
       },
       attributes: {
         exclude: ['password', 'reset_password_token', 'reset_password_expires'],

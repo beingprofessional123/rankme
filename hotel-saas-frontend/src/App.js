@@ -3,6 +3,7 @@ import AppRoutes from './user/routes/AppRoutes';
 import AdminAppRoutes from './admin/routes/AdminAppRoutes';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { PermissionProvider } from './user/UserPermission';
 
 const App = () => {
 
@@ -11,21 +12,23 @@ const App = () => {
   return isAdmin ? (
     <>
       <AdminAppRoutes />
-       <ToastContainer
-          position="top-right"
-          autoClose={5000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-        />
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
     </>
   ) : (
     <>
-      <AppRoutes />
+      <PermissionProvider>
+        <AppRoutes />
+      </PermissionProvider>
     </>
   );
 };

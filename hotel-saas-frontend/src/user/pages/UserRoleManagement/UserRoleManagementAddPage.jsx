@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { PermissionContext } from '../../UserPermission';
 
 const staticModules = [
     {
@@ -43,6 +44,7 @@ const staticModules = [
             { key: 'edit', label: 'Edit' },
             { key: 'delete', label: 'Delete' },
             { key: 'view', label: 'View' },
+            { key: 'connect', label: 'Connect' },
         ]
     },
     {
@@ -86,6 +88,12 @@ const staticModules = [
 ];
 
 const UserRoleManagementAddPage = () => {
+    const { permissions, role } = useContext(PermissionContext);
+    const isCompanyAdmin = role?.name === 'company_admin';
+    const canAccess = (action) => {
+        if (isCompanyAdmin) return true;
+        return permissions?.user_role_management?.[action] === true;
+    };
     const [countryList, setCountryList] = useState(['']);
     const navigate = useNavigate();
     const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
@@ -96,7 +104,7 @@ const UserRoleManagementAddPage = () => {
         phone: '',
         role_id: '',
         is_active: true,
-        countryCodeid: '+91',
+        countryCodeid: '',
     });
 
     const [roles, setRoles] = useState([]);
@@ -449,6 +457,7 @@ const UserRoleManagementAddPage = () => {
 
 
                                 <div className="addentry-btn mt-4">
+                                    {canAccess('add') && (
                                     <button
                                         type="submit"
                                         className="btn btn-info"
@@ -456,6 +465,7 @@ const UserRoleManagementAddPage = () => {
                                     >
                                         {isSubmitting ? 'Submitting...' : 'Submit'}
                                     </button>
+                                    )}
                                 </div>
                             </form>
                             <ToastContainer />

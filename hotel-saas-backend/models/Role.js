@@ -17,7 +17,6 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   Role.associate = (models) => {
-    // A Role can have many Users
     Role.hasMany(models.User, { foreignKey: 'role_id' });
   };
 
