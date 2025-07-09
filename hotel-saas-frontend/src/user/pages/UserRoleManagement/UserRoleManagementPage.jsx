@@ -235,12 +235,19 @@ const UserRoleManagementPage = () => {
                     ) : error ? (
                         <p style={{ color: 'red' }}>Error: {error}</p>
                     ) : (
-                        <MUIDataTable
-                            title="User Role Management"
-                            data={tableData}
-                            columns={columns}
-                            options={options}
-                        />
+                        <div className="white-bg">
+                            <div className="tabledesign">
+                                <div className="table-responsive">
+                                    <MUIDataTable
+                                        title="User Role Management"
+                                        data={tableData}
+                                        columns={columns}
+                                        options={options}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        
                     )}
                 </div>
             </div>
