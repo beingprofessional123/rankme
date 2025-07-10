@@ -1,21 +1,28 @@
 // src/pages/auth/SubscriptionPlan.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import Button from '../../../components/forms/Button';
 import AuthLayout from '../../../layouts/AuthLayout';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { loadStripe } from '@stripe/stripe-js';
 import { toast } from 'react-toastify';
-
+import { PermissionContext } from '../../../UserPermission';
 import { closeButtonSVG } from '../../../utils/svgIcons';
 
 
 const SubscriptionPlan = () => {
+  const { role } = useContext(PermissionContext);
+  const isCompanyAdmin = role?.name === 'company_admin';
   const navigate = useNavigate();
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (role && !isCompanyAdmin) {
+      navigate('/dashboard'); // Redirect if not company admin
+    }
+  }, [role, isCompanyAdmin, navigate]);
 
   // Modal related state
   const [showModal, setShowModal] = useState(false);
@@ -239,7 +246,7 @@ const SubscriptionPlan = () => {
               </div>
               <div className="form-design modal-body-custom"> {/* Reusing form-design for content padding */}
                 <div className="row g-3">
-                  <div className="col-12">
+                  {/* <div className="col-12">
                     <div className="form-check form-check-inline p-3 border rounded w-100 d-flex align-items-center justify-content-between">
                       <div>
                         <input
@@ -257,7 +264,7 @@ const SubscriptionPlan = () => {
                       </div>
                       <img src={`/user/images/razorpay.png`} alt="Razorpay" height="24" />
                     </div>
-                  </div>
+                  </div> */}
 
                   <div className="col-12">
                     <div className="form-check form-check-inline p-3 border rounded w-100 d-flex align-items-center justify-content-between">

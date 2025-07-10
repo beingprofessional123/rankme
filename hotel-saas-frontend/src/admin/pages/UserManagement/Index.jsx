@@ -29,9 +29,6 @@ const UserManagementIndex = () => {
             );
 
             setUsers(response.data.results || []);
-            if (response.data.status_code === 200) {
-                toast.success(response.data.message);
-            }
         } catch (error) {
             console.error('Error fetching users:', error);
             toast.error('Failed to fetch users');
@@ -104,13 +101,18 @@ const UserManagementIndex = () => {
                 },
             },
         },
-        {
-            name: 'Phone',
-            label: 'Phone',
-            options: {
-                customBodyRenderLite: (dataIndex) => users[dataIndex].phone,
-            },
-        },
+       {
+  name: 'Phone',
+  label: 'Phone',
+  options: {
+    customBodyRenderLite: (dataIndex) => {
+      const user = users[dataIndex];
+      const phoneCode = user.Country?.phonecode || '';
+      const phone = user.phone || '';
+      return `${phoneCode} ${phone}`.trim();
+    },
+  },
+},
         {
             name: 'status',
             label: 'Status',
@@ -191,7 +193,7 @@ const UserManagementIndex = () => {
     };
 
     return (
-        <div id="content" className="main-content">
+        <div>
             <div className="layout-px-spacing">
                 <div className="page-header d-flex justify-content-between">
                     <div className="page-title">

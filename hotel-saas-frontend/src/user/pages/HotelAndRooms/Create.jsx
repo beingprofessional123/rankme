@@ -19,6 +19,8 @@ const HotelAndRoomCreate = () => {
     const [currentStep, setCurrentStep] = useState(0);
     const [hotelData, setHotelData] = useState(null); // Stores the hotel data after HotelInfo step
 
+    localStorage.removeItem('hotel_info');
+
     // Listen for step navigation events
     useEffect(() => {
         const handleNextStep = () => {
@@ -37,21 +39,6 @@ const HotelAndRoomCreate = () => {
             window.removeEventListener('step:back', handlePrevStep);
         };
     }, []);
-
-    // Effect to retrieve hotel data from localStorage if available (e.g., on page refresh)
-    useEffect(() => {
-        const savedHotelInfo = localStorage.getItem('hotel_info');
-        if (savedHotelInfo) {
-            try {
-                const parsedInfo = JSON.parse(savedHotelInfo);
-                // Assuming hotel_id from localStorage maps to hotelData.id
-                setHotelData({ id: parsedInfo.hotel_id, name: parsedInfo.name, location: parsedInfo.location, hotel_type: parsedInfo.hotel_type });
-            } catch (e) {
-                console.error("Failed to parse hotel_info from localStorage", e);
-            }
-        }
-    }, []);
-
 
     const handleHotelCreated = (hotel) => {
         if (hotel?.hotel?.id) {

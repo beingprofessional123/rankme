@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { PermissionContext } from '../../UserPermission';
 
 const staticModules = [
     {
@@ -43,6 +44,7 @@ const staticModules = [
             { key: 'edit', label: 'Edit' },
             { key: 'delete', label: 'Delete' },
             { key: 'view', label: 'View' },
+            { key: 'connect', label: 'Connect' },
         ]
     },
     {
@@ -86,6 +88,12 @@ const staticModules = [
 ];
 
 const UserRoleManagementEditPage = () => {
+    const { permissions, role } = useContext(PermissionContext);
+        const isCompanyAdmin = role?.name === 'company_admin';
+        const canAccess = (action) => {
+            if (isCompanyAdmin) return true;
+            return permissions?.user_role_management?.[action] === true;
+        };
     const navigate = useNavigate();
     const { id } = useParams();
     const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
@@ -94,7 +102,7 @@ const UserRoleManagementEditPage = () => {
         fullName: '',
         email: '',
         phone: '',
-        countryCodeid: '+91',
+        countryCodeid: '',
         role_id: '',
         is_active: false,
     });
@@ -178,7 +186,7 @@ const UserRoleManagementEditPage = () => {
 
                 setTabPermissions(mergedPermissions);
 
-                toast.success(userResponse.data.message || 'User data loaded.');
+                // toast.success(userResponse.data.message || 'User data loaded.');
             } catch (error) {
                 console.error('Error fetching data:', error);
                 const errorMessage = error.response?.data?.message || 'Failed to load data.';
@@ -452,7 +460,7 @@ const UserRoleManagementEditPage = () => {
                                 </div>
                                 {/* Module Permissions */}
                                 {formData.role_id && (
-                                    <div className="row mt-3">
+                                    <div className="mt-3">
                                         <div className="col-md-12 border rounded p-3 mb-3 text-center">
                                             <strong>Module Permissions</strong>
                                         </div>
@@ -465,8 +473,9 @@ const UserRoleManagementEditPage = () => {
                                                         <div className="col-md-2">
                                                             <strong>{module.module_name}</strong>
                                                         </div>
+                                                        <div className="col-md-10">   
                                                             {moduleDef?.permissions.map(({ key, label }) => (
-                                                                <div className="col-md-2" key={key}>
+                                                                <div className='dflexpermession' key={key}>
                                                                     <div className="form-check">
                                                                         <input
                                                                             className="form-check-input"
@@ -482,6 +491,7 @@ const UserRoleManagementEditPage = () => {
                                                                 </div>
                                                             ))}
                                                         </div>
+                                                        </div>
                                                 </div>
                                             );
                                         })}
@@ -489,6 +499,7 @@ const UserRoleManagementEditPage = () => {
                                 )}
 
                                 <div className="addentry-btn mt-4">
+                                    {canAccess('edit') && (
                                     <button
                                         type="submit"
                                         className="btn btn-info"
@@ -496,6 +507,7 @@ const UserRoleManagementEditPage = () => {
                                     >
                                         {isSubmitting ? 'Updating...' : 'Update'}
                                     </button>
+                                    )}
                                 </div>
                             </form>
                         </div>

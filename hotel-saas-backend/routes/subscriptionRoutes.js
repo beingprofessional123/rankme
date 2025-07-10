@@ -6,7 +6,7 @@ const subscriptionController = require('../controllers/subscriptionController');
 
 // Middleware for this route group
 router.use(authenticate);
-router.use(authorizeRoles('company_admin', 'revenue_manager'));
+router.use(authorizeRoles('company_admin','revenue_manager','general_manager','analyst')); 
 
 // Route to fetch subscriptions
 router.get('/subscriptions', subscriptionController.getAllSubscriptions);

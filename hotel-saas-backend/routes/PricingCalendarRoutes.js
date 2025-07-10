@@ -6,7 +6,7 @@ const PricingCalendarController = require('../controllers/PricingCalendarControl
 
 // Middleware for this route group
 router.use(authenticate); // ✅ Ensures only logged-in users access this route
-router.use(authorizeRoles('company_admin')); // ✅ Role-based access control
+router.use(authorizeRoles('company_admin','revenue_manager','general_manager','analyst')); 
 
 // Route to fetch property pricing
 router.get('/property-price', PricingCalendarController.getPropertyPrice);

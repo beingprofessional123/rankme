@@ -5,12 +5,47 @@ const bcrypt = require('bcrypt');
 const db = require('../../models');
 
 const userController = {
+
+  getUserRoles: async (req, res) => {
+    try {
+      // ❌ Exclude only 'admin'
+      const excludedRoleNames = ['super_admin'];
+
+      const roles = await db.Role.findAll({
+        where: {
+          name: {
+            [Op.notIn]: excludedRoleNames,
+          },
+        },
+        attributes: ['id', 'name', 'description'],
+        order: [['name', 'ASC']],
+      });
+
+      res.status(200).json({
+        status: 'success',
+        status_code: 200,
+        status_message: 'OK',
+        message: 'Roles fetched successfully',
+        results: roles,
+      });
+    } catch (error) {
+      console.error('Error fetching user roles:', error);
+      res.status(500).json({
+        status: 'error',
+        status_code: 500,
+        status_message: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch roles. Please try again later.',
+        results: null,
+      });
+    }
+  },
+
   // GET /api/admin/user-management-list
   getUsers: async (req, res) => {
     try {
       const users = await db.User.findAll({
         where: {
-          role: { [Op.ne]: 'super_admin' },
+          '$Role.name$': { [Op.ne]: 'super_admin' }, // ✅ Exclude 'admin' roles
         },
         include: [
           {
@@ -18,23 +53,36 @@ const userController = {
             as: 'Company',
             attributes: ['name'],
           },
+          {
+            model: db.Role,
+            attributes: ['name'],
+          },
+          {
+            model: db.Country,
+            as: 'Country',
+            attributes: ['phonecode'], // Add 'name' if you want full country name
+          },
         ],
         order: [['id', 'DESC']],
       });
 
-      const formattedUsers = users.map((user) => ({
-        id: user.id,
-        first_name: user.name?.split(' ')[0] || '',
-        last_name: user.name?.split(' ')[1] || '',
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        profile: user.profile,
-        status: user.is_active ? '1' : '0',
-        created_at: user.createdAt,
-        company_id: user.company_id,
-        company_name: user.Company?.name || 'No Company',
-      }));
+       const formattedUsers = users.map((user) => {
+        const phonecode = user.Country?.phonecode || '';
+        const phone = user.phone || '';
+        return {
+          id: user.id,
+          first_name: user.name?.split(' ')[0] || '',
+          last_name: user.name?.split(' ')[1] || '',
+          email: user.email,
+          phone: phonecode ? `${phonecode} ${phone}`.trim() : phone,
+          role: user.Role?.name || 'N/A',
+          profile: user.profile,
+          status: user.is_active ? '1' : '0',
+          created_at: user.createdAt,
+          company_id: user.company_id,
+          company_name: user.Company?.name || 'No Company',
+        };
+      });
 
       res.status(200).json({
         status: 'success',
@@ -63,7 +111,16 @@ const userController = {
           {
             model: db.Company,
             as: 'Company',
-            attributes: ['name'],
+            attributes: ['name', 'id'],
+          },
+          {
+            model: db.Role,
+            attributes: ['name', 'id'],
+          },
+          {
+            model: db.Country,
+            as: 'Country',
+            attributes: ['phonecode'], // Add 'name' if you want full country name
           },
         ],
       });
@@ -100,9 +157,19 @@ const userController = {
   // POST /api/admin/user-management
   createUser: async (req, res) => {
     try {
-      const { name, email, phone, password, role, status, company_id } = req.body;
+      const {
+        name,
+        email,
+        phone,
+        password,
+        role_id,
+        status,
+        company_name,
+        countryCodeid,
+      } = req.body;
 
-      if (!name || !email || !password) {
+      // Required fields check
+      if (!name || !email || !password || !role_id || !company_name) {
         return res.status(400).json({
           status: 'error',
           status_code: 400,
@@ -112,6 +179,7 @@ const userController = {
         });
       }
 
+      // Duplicate user check
       const existingUser = await db.User.findOne({ where: { email } });
       if (existingUser) {
         return res.status(400).json({
@@ -123,21 +191,35 @@ const userController = {
         });
       }
 
+      // Create company
+      const company = await db.Company.create({
+        name: company_name,
+        contact_email: email,
+        contact_phone: phone,
+      });
+
+      // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      const profileUrl = req.file ? `${req.protocol}://${req.get('host')}/uploads/profile/${req.file.filename}` : null;
+      // Upload profile image if exists
+      const profileUrl = req.file
+        ? `${req.protocol}://${req.get('host')}/uploads/profile/${req.file.filename}`
+        : null;
 
+      // Create user
       const newUser = await db.User.create({
         name,
         email,
         phone,
         password: hashedPassword,
-        role: role || 'company_admin',
+        role_id,
         is_active: status === '1',
-        company_id: company_id || null,
+        company_id: company.id,
         profile: profileUrl,
+        countryCodeid,
       });
 
+      // Return response
       res.status(201).json({
         status: 'success',
         status_code: 201,
@@ -148,8 +230,9 @@ const userController = {
           name: newUser.name,
           email: newUser.email,
           phone: newUser.phone,
-          role: newUser.role,
+          role_id: newUser.role_id,
           company_id: newUser.company_id,
+          profile: newUser.profile,
         },
       });
     } catch (error) {
@@ -165,7 +248,6 @@ const userController = {
   },
 
   // PUT /api/admin/user-management/:id
-
   updateUser: async (req, res) => {
     try {
       const user = await db.User.findByPk(req.params.id);
@@ -180,24 +262,61 @@ const userController = {
         });
       }
 
-      // Handle profile image update
+      const {
+        name,
+        email,
+        phone,
+        countryCodeid,
+        role_id,
+        status,
+        company_name,
+        company_id,
+        password,
+      } = req.body;
+
+      // 🏢 Update company name if company_id and company_name are provided
+      if (company_id && company_name) {
+        const company = await db.Company.findByPk(company_id);
+        if (company) {
+          await company.update({ name: company_name });
+        }
+      }
+
+      // 🖼️ Handle profile image update
       if (req.file) {
         const oldImagePath = path.join(__dirname, '../../uploads/profile', path.basename(user.profile || ''));
-
         if (user.profile && fs.existsSync(oldImagePath)) {
           fs.unlinkSync(oldImagePath); // Delete old profile image
         }
 
-        // ✅ Save full URL to profile
         req.body.profile = `${req.protocol}://${req.get('host')}/uploads/profile/${req.file.filename}`;
       }
 
-      // Handle status
-      if (req.body.status !== undefined) {
-        req.body.is_active = req.body.status === '1' || req.body.status === true || req.body.status === 'true';
+      // 🔐 If password is provided, hash it
+      if (password) {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        req.body.password = hashedPassword;
+      } else {
+        delete req.body.password;
       }
 
-      await user.update(req.body);
+      // 🔄 Handle status
+      if (status !== undefined) {
+        req.body.is_active = status === '1' || status === true || status === 'true';
+      }
+
+      // Update user fields
+      await user.update({
+        name,
+        email,
+        phone,
+        countryCodeid,
+        role_id,
+        company_id,
+        profile: req.body.profile || user.profile,
+        password: req.body.password || user.password,
+        is_active: req.body.is_active,
+      });
 
       res.status(200).json({
         status: 'success',
@@ -217,6 +336,9 @@ const userController = {
       });
     }
   },
+
+
+
 
   // DELETE /api/admin/user-management/:id
   deleteUser: async (req, res) => {

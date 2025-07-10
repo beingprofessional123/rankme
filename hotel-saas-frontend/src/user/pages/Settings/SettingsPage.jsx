@@ -280,6 +280,7 @@ const SettingsPage = () => {
 
     return (
         <DashboardLayout>
+
             <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
             <div className="mainbody">
                 <div className="container-fluid">
@@ -297,7 +298,6 @@ const SettingsPage = () => {
                             </div>
                         </div>
                     </div>
-
                     <div className="white-bg">
                         <div className="report-tabdesign">
                             <ul className="nav nav-tabs" role="tablist">
@@ -324,6 +324,7 @@ const SettingsPage = () => {
                             </ul>
                         </div>
                         <div className="tab-content">
+
                             <div id="home1" className={`tab-pane fade ${activeTab === 'general' ? 'show active' : ''}`}>
                                 <div className="form-design">
                                     <form onSubmit={handleGeneralSettingsSubmit}>
@@ -447,6 +448,7 @@ const SettingsPage = () => {
                                                         </select>
                                                     }
                                                 />
+
                                             </div>
                                         </div>
                                         <div className="addentry-btn">
@@ -464,6 +466,7 @@ const SettingsPage = () => {
                                             <div className="col-md-12">
                                                 <div className="form-group">
                                                     <label className="form-label">Current Password</label>
+
                                                     <input
                                                         type="password"
                                                         className={`form-control ${errors.currentPassword ? 'is-invalid' : ''}`}
@@ -478,6 +481,7 @@ const SettingsPage = () => {
                                             <div className="col-md-6">
                                                 <div className="form-group">
                                                     <label className="form-label">New Password</label>
+
                                                     <input
                                                         type="password"
                                                         className={`form-control ${errors.newPassword ? 'is-invalid' : ''}`}
@@ -492,6 +496,7 @@ const SettingsPage = () => {
                                             <div className="col-md-6">
                                                 <div className="form-group">
                                                     <label className="form-label">Confirm New Password</label>
+
                                                     <input
                                                         type="password"
                                                         className={`form-control ${errors.confirmPassword ? 'is-invalid' : ''}`}
@@ -505,9 +510,11 @@ const SettingsPage = () => {
                                             </div>
                                         </div>
                                         <div className="addentry-btn">
+
                                             <button type="submit" className="btn btn-info" disabled={loading}>
                                                 {loading ? 'Updating...' : 'Submit'}
                                             </button>
+
                                         </div>
                                     </form>
                                 </div>

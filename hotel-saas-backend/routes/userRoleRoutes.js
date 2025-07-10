@@ -9,7 +9,7 @@ const userRolesController = require('../controllers/userRolesController'); // En
 // Only 'company_admin' and 'super_admin' (due to super_admin bypass in authorizeRoles)
 // will be able to access these routes.
 router.use(authenticate);
-router.use(authorizeRoles('company_admin')); // You might want to add 'super_admin' explicitly here if you remove the bypass in authorizeRoles later.
+router.use(authorizeRoles('company_admin','revenue_manager','general_manager','analyst')); // You might want to add 'super_admin' explicitly here if you remove the bypass in authorizeRoles later.
 
 // Route to fetch role names (excluding super_admin and company_admin)
 router.get('/roles/list', userRolesController.getUserRoles);

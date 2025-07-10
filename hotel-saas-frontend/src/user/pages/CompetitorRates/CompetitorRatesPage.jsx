@@ -1,9 +1,15 @@
-import React, { useEffect } from 'react';
+import React, { useContext } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import MUIDataTable from 'mui-datatables';
-
+import { PermissionContext } from '../../UserPermission';
 
 const CompetitorRatesPage = () => {
+    const { permissions, role } = useContext(PermissionContext);
+    const isCompanyAdmin = role?.name === 'company_admin';
+    const canAccess = (action) => {
+        if (isCompanyAdmin) return true;
+        return permissions?.competitor_rates?.[action] === true;
+    };
 
     const competitorRateColumns = [
         { name: 'id', label: 'ID', options: { sort: true, filter: false } },
@@ -18,12 +24,23 @@ const CompetitorRatesPage = () => {
             options: {
                 filter: false,
                 sort: false,
-                customBodyRender: (value, tableMeta, updateValue) => {
+                display: canAccess('edit') || canAccess('delete'),
+                customBodyRender: (value, tableMeta) => {
                     return (
-                        <div className="tdaction">
-                            <a href="#"><img src={`/user/images/edit.svg`} className="img-fluid" alt="Edit" /></a>
-                            <a href="#"><img src={`/user/images/deletetd.svg`} className="img-fluid" alt="Delete" /></a>
-                        </div>
+                        (canAccess('edit') || canAccess('delete')) && (
+                            <div className="tdaction">
+                                {canAccess('edit') && (
+                                    <a href="#" title="Edit">
+                                        <img src={`/user/images/edit.svg`} className="img-fluid" alt="Edit" />
+                                    </a>
+                                )}
+                                {canAccess('delete') && (
+                                    <a href="#" title="Delete">
+                                        <img src={`/user/images/deletetd.svg`} className="img-fluid" alt="Delete" />
+                                    </a>
+                                )}
+                            </div>
+                        )
                     );
                 },
             },
@@ -38,7 +55,6 @@ const CompetitorRatesPage = () => {
         { id: 5, hotel: 'Urban Retreat', date: '2025-06-07', roomType: 'Standard', rate: '$95', enteredBy: 'Sarah M.' },
     ];
 
-    // Column configuration
     const competitorDataColumns = [
         { name: 'id', label: 'ID', options: { sort: true } },
         { name: 'hotel', label: 'Competitor Hotel', options: { sort: true } },
@@ -49,9 +65,8 @@ const CompetitorRatesPage = () => {
             label: 'Rate',
             options: {
                 sort: true,
-                customBodyRender: (value, tableMeta, updateValue) => {
-                    const rowIndex = tableMeta.rowIndex;
-                    const rowData = competitorDataData[rowIndex];
+                customBodyRender: (value, tableMeta) => {
+                    const rowData = competitorDataData[tableMeta.rowIndex];
                     return (
                         <span className={rowData.warning ? 'warningtr-td' : ''}>
                             ${value}
@@ -67,8 +82,6 @@ const CompetitorRatesPage = () => {
         }
     ];
 
-
-    // Dummy data
     const competitorDataData = [
         { id: 1, hotel: 'Grand Plaza', date: '2025-06-05', roomType: 'Deluxe King', rate: 150 },
         { id: 2, hotel: 'Urban Retreat', date: '2025-06-04', roomType: 'Standard', rate: 100 },
@@ -87,7 +100,6 @@ const CompetitorRatesPage = () => {
         responsive: 'standard',
         pagination: true,
     };
-
 
     return (
         <DashboardLayout>
@@ -177,9 +189,11 @@ const CompetitorRatesPage = () => {
                                                 </div>
                                             </div>
                                             <div className="col-md-12">
-                                                <div className="addentry-btn">
-                                                    <button type="submit" className="btn btn-info">Add Entry</button>
-                                                </div>
+                                               {canAccess('add') && (
+                                                    <div className="addentry-btn">
+                                                        <button type="submit" className="btn btn-info">Add Entry</button>
+                                                    </div>
+                                                )}
                                             </div>
 
                                         </div>
@@ -273,7 +287,9 @@ const CompetitorRatesPage = () => {
                                         </div>
                                         <div className="data-upload-btn">
                                             <button type="submit" className="btn btn-info cancelbtn" data-bs-toggle="modal" data-bs-target="#myModal">Cancel</button>
-                                            <button type="submit" className="btn btn-info">Confirm & Upload</button>
+                                           {canAccess('add') && (
+                                                <button type="submit" className="btn btn-info">Confirm & Upload</button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

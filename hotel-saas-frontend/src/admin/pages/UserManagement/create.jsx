@@ -1,16 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 
 const UserManagementCreate = () => {
   const navigate = useNavigate();
+  const [countryList, setCountryList] = useState([]);
+  const [userRolelist, setUserRoleList] = useState([]);
   const [form, setForm] = useState({
     name: '',
     email: '',
     password: '',
-    status: '1',
+    phone: '',
+    countryCodeid: '',
+    company_name: '',
     profile: null,
+    role_id: '',
+    status: '1', // '1' for active, '0' for inactive
   });
+
+
 
   const handleChange = (e) => {
     const { name, value, type, files } = e.target;
@@ -20,6 +28,47 @@ const UserManagementCreate = () => {
       setForm((prev) => ({ ...prev, [name]: value }));
     }
   };
+
+  const fetchCountryList = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/country-list`);
+      const data = await response.json();
+      if (data.status === 'success') {
+        setCountryList(data.results); // use "results" instead of "data"
+      }
+    } catch (err) {
+      console.error('Failed to fetch countries:', err);
+    }
+  };
+
+  const fetchUserRolelist = async () => {
+    try {
+      const token = localStorage.getItem('admin_token'); // assuming roles endpoint is protected
+
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/admin/roles-list`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (data.status === 'success') {
+        setUserRoleList(data.results);
+      } else {
+        console.error('Error fetching roles:', data.message);
+      }
+    } catch (err) {
+      console.error('Failed to fetch roles:', err);
+    }
+  };
+
+
+  useEffect(() => {
+    fetchCountryList();
+    fetchUserRolelist();
+  }, []);
+
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,7 +93,7 @@ const UserManagementCreate = () => {
   };
 
   return (
-    <div id="content" className="main-content">
+    <div>
       <div className="layout-px-spacing">
         <div className="page-header d-flex justify-content-between">
           <div className="page-title">
@@ -90,6 +139,18 @@ const UserManagementCreate = () => {
                                       <div className="row">
                                         <div className="col-sm-6">
                                           <div className="form-group">
+                                            <label>Company nmae</label>
+                                            <input
+                                              type="text"
+                                              name="company_name"
+                                              className="form-control"
+                                              value={form.company_name}
+                                              onChange={handleChange}
+                                            />
+                                          </div>
+                                        </div>
+                                        <div className="col-sm-6">
+                                          <div className="form-group">
                                             <label>Name</label>
                                             <input
                                               type="text"
@@ -115,37 +176,69 @@ const UserManagementCreate = () => {
                                           </div>
                                         </div>
 
-                                        <div className="col-sm-6">
+                                        <div className="col-sm-2">
                                           <div className="form-group">
-                                            <label>Phone</label>
-                                            <input
-                                              type="text"
-                                              name="phone"
+                                            <label>Country</label>
+                                            <select
+                                              name="countryCodeid"
                                               className="form-control"
-                                              value={form.phone}
+                                              value={form.countryCodeid}
                                               onChange={handleChange}
-                                            />
+                                            >
+                                              <option value="">Select Country</option>
+                                              {countryList.map((country) => (
+                                                <option key={country.id} value={country.id}>
+                                                  {country.phonecode} {country.short_name}
+                                                </option>
+                                              ))}
+                                            </select>
                                           </div>
                                         </div>
+
+                                        <div className="col-sm-4">
+                                          <div className="form-group">
+                                            <label>Phone</label>
+                                            <div className="input-group">
+                                              <div className="input-group-prepend">
+                                                <span className="input-group-text">
+                                                  {
+                                                    countryList.find(c => c.id === form.countryCodeid)?.phonecode || '+'
+                                                  }
+                                                </span>
+                                              </div>
+                                              <input
+                                                type="text"
+                                                name="phone"
+                                                className="form-control"
+                                                value={form.phone}
+                                                onChange={handleChange}
+                                                placeholder="Enter phone number"
+                                              />
+                                            </div>
+                                          </div>
+                                        </div>
+
 
                                         <div className="col-sm-6">
                                           <div className="form-group">
                                             <label>Role</label>
                                             <select
-                                              name="role"
+                                              name="role_id"
                                               className="form-control"
-                                              value={form.role || ''}
+                                              value={form.role_id || ''}
                                               onChange={handleChange}
                                               required
                                             >
                                               <option value="">Select Role</option>
-                                              <option value="company_admin">Company Admin</option>
-                                              <option value="revenue_manager">Revenue Manager</option>
-                                              <option value="general_manager">General Manager</option>
-                                              <option value="analyst">Analyst</option>
+                                              {userRolelist.map((role) => (
+                                                <option key={role.id} value={role.id}>
+                                                  {role.name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                                                </option>
+                                              ))}
                                             </select>
                                           </div>
                                         </div>
+
 
 
                                         <div className="col-sm-6">
@@ -173,24 +266,6 @@ const UserManagementCreate = () => {
                                               value={form.password}
                                               onChange={handleChange}
                                             />
-                                          </div>
-                                        </div>
-
-                                        <div className="col-sm-12">
-                                          <div className="form-group">
-                                            <label>Company</label>
-                                            <select
-                                              name="company_id"
-                                              className="form-control"
-                                              value={form.company_id || ''}
-                                              onChange={handleChange}
-                                              required
-                                            >
-                                              <option value="">Select Company</option>
-                                              <option value="abf33f3f-fdc3-4f9d-abac-166b6d4c6615">Charles Pena Inc</option>
-                                              <option value="b52cc5ca-ce7f-468b-b4ce-135b3d45a504">Tech Innovators</option>
-                                              {/* Map these dynamically if needed */}
-                                            </select>
                                           </div>
                                         </div>
 

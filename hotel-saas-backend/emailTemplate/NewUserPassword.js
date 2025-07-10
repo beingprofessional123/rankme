@@ -12,7 +12,7 @@ const getNewUserPasswordEmail = (userName, userEmail, temporaryPassword, loginUr
       </ul>
       <p>For security reasons, we strongly recommend that you log in and change your password immediately.</p>
       <p style="margin-top: 20px;">
-        <a href="${loginUrl}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px;">Login to Your Account</a>
+        <a href="${loginUrl}?email=${userEmail}&password=${temporaryPassword}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px;">Login to Your Account</a>
       </p>
       <p>If you have any questions, please don't hesitate to contact our support team.</p>
       <p>Best regards,<br>Your Company Team</p>
@@ -22,4 +22,4 @@ const getNewUserPasswordEmail = (userName, userEmail, temporaryPassword, loginUr
   return { subject, html };
 };
 
-module.exports = getNewUserPasswordEmail;
+module.exports = getNewUserPasswordEmail; 

@@ -128,7 +128,6 @@ exports.login = async (req, res) => {
         email: user.email,
         name: user.name,
         phone: user.phone,
-        // Now you can expose the role name
         role: user.Role ? user.Role.name : null, // Access the role name from the included Role object
         company: user.Company ? user.Company : null,
       },
@@ -248,3 +247,80 @@ exports.getAllCountries = async (req, res) => {
     });
   }
 };
+
+
+// Get user permissions with role name
+exports.getUserPermissions = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Fetch user with Role
+    const user = await db.User.findOne({
+      where: { id: userId },
+      attributes: ['id', 'name', 'email', 'phone', 'profile','company_id'], // Add more if needed
+      include: [
+        {
+          model: db.Role,
+          attributes: ['id', 'name'],
+        }
+      ]
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        status_code: 404,
+        status_message: 'NOT_FOUND',
+        message: 'User not found',
+        results: null
+      });
+    }
+
+    // Fetch permissions
+    const userPermissions = await db.UserPermission.findAll({
+      where: { user_id: userId },
+      attributes: ['module_key', 'permission_key', 'is_allowed'],
+    });
+
+    // Transform to structured object
+    const formatted = {};
+    userPermissions.forEach(({ module_key, permission_key, is_allowed }) => {
+      if (!formatted[module_key]) formatted[module_key] = {};
+      formatted[module_key][permission_key] = is_allowed;
+    });
+
+    res.status(200).json({
+      status: 'success',
+      status_code: 200,
+      status_message: 'OK',
+      message: 'Permissions fetched successfully',
+      results: {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          profile: user.profile,
+          company_id: user.company_id,
+        },
+        role: {
+          id: user.Role?.id || null,
+          name: user.Role?.name || null
+        },
+        permissions: formatted,
+      }
+    });
+
+  } catch (err) {
+    console.error('Error fetching permissions:', err);
+    res.status(500).json({
+      status: 'error',
+      status_code: 500,
+      status_message: 'INTERNAL_SERVER_ERROR',
+      message: 'Error fetching permissions',
+      results: null
+    });
+  }
+};
+
+

@@ -6,7 +6,7 @@ const hotelRoomsController = require('../controllers/hotelRoomsController');
 
 // Middleware for this route group
 router.use(authenticate);
-router.use(authorizeRoles('company_admin', 'revenue_manager'));
+router.use(authorizeRoles('company_admin','revenue_manager','general_manager','analyst')); 
 
 // Route to fetch subscriptions
 router.get('/hotels/list', hotelRoomsController.getHotels);

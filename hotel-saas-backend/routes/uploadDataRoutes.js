@@ -25,7 +25,7 @@ const upload = multer({
 
 // Middleware applied to all routes in this router
 router.use(authenticate); // Authenticates the user and attaches req.user (JWT payload)
-router.use(authorizeRoles('company_admin', 'revenue_manager')); // Authorizes roles
+router.use(authorizeRoles('company_admin','revenue_manager','general_manager','analyst')); 
 
 // API 1: Endpoint for file upload, extraction, and preview
 router.post(
