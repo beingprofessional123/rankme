@@ -288,7 +288,6 @@ const PricingCalendar = () => {
     setCalendarEvents(filtered);
   }, [selectedRoomTypes, rawEvents]);
 
-
   const handleEventClick = async (info) => {
     setSelectedDate(info.event.start);
     const bootstrap = await import('bootstrap');
@@ -516,8 +515,6 @@ const PricingCalendar = () => {
                       }
                     }}
                   />
-
-
                 </div>
               </div>
             </div>
