@@ -32,7 +32,12 @@ const HotelInfo = ({ onHotelCreated, editInitialData }) => {
     setErrors({});
     const newErrors = {};
 
-    if (!hotelName.trim()) newErrors.name = 'Please enter a hotel name.';
+
+    if (!hotelName.trim()) {
+      newErrors.name = 'Please enter a hotel name.';
+    } else if (!/[a-zA-Z]/.test(hotelName)) {
+      newErrors.name = 'Hotel name must contain at least one letter.';
+    }
     if (!location.trim()) newErrors.location = 'Please enter a location.';
     if (!hotelType.trim()) newErrors.hotel_type = 'Please select a hotel type.';
 

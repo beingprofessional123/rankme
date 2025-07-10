@@ -31,6 +31,7 @@ import SupportTicketAddPage from '../pages/SupportTicket/SupportTicketAddPage';
 import SupportTicketEditPage from '../pages/SupportTicket/SupportTicketEditPage';
 import SupportTicketViewPage from '../pages/SupportTicket/SupportTicketViewPage';
 import SettingsPage from '../pages/Settings/SettingsPage';
+import InactivePage from '.././error/InactivePage';
 
 
 
@@ -41,6 +42,7 @@ const AppRoutes = () => {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/inactive" element={<InactivePage />} />
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/signup" element={<CompanySignup />} />
 

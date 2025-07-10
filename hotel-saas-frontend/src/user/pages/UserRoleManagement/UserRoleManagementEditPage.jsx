@@ -146,7 +146,7 @@ const UserRoleManagementEditPage = () => {
                     fullName: userData.name || '',
                     email: userData.email || '',
                     phone: userData.phone || '',
-                    countryCodeid: userData.countryCodeid || '+91',
+                    countryCodeid: formData.countryCodeid?.trim() === "" ? null : formData.countryCodeid,
                     role_id: userData.role_id || '',
                     is_active: userData.is_active || false,
                 });
@@ -397,10 +397,10 @@ const UserRoleManagementEditPage = () => {
                                                         onChange={handleChange}
                                                         className="form-control"
                                                     >
-                                                        <option value="">Select</option>
+                                                        <option value="">Select Country</option>
                                                         {countryList.map(country => (
                                                             <option key={country.id} value={country.id}>
-                                                                {country.phonecode}
+                                                                {country.phonecode} ({country.short_name})
                                                             </option>
                                                         ))}
                                                     </select>
