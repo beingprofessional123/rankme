@@ -50,10 +50,10 @@ const PricingCalendar = () => {
                         <span>Predicted Occupancy:</span> <span>${occupancy}</span>
                       </div>
                       <div class="mb-1 d-flex justify-content-between">
-                        <span>Suggested Price:</span> <span>₹${suggested}</span>
+                        <span>Suggested Price:</span> <span>$${suggested}</span>
                       </div>
                       <div class="mb-1 d-flex justify-content-between">
-                        <span>Historical Price:</span> <span>₹${historical}</span>
+                        <span>Historical Price:</span> <span>$${historical}</span>
                       </div>
                     </div>
                   `,
@@ -143,8 +143,6 @@ const PricingCalendar = () => {
       const pricingData = await pricingRes.json();
       const bookingData = await bookingRes.json();
 
-
-
       const allPricingRows = pricingData?.results?.flatMap(item => item.extractedFiles || []) || [];
       const allBookingRows = bookingData?.results?.flatMap(item => item.extractedFiles || []) || [];
 
@@ -194,7 +192,7 @@ const PricingCalendar = () => {
             title: `
             <div class="p-1 d-flex justify-content-between">
               <span>${roomType}</span>
-              <span>₹${minPrice}</span>
+              <span>$${minPrice}</span>
             </div>
             <div class="small text-muted">
               Booked: ${bookedCount}, Occ: ${predicted_occupancy}
@@ -222,8 +220,6 @@ const PricingCalendar = () => {
         }
       }
 
-
-
       setRawEvents(events); // filtered in useEffect
     } catch (error) {
       console.error("❌ Error in handleHotelChange:", error);
@@ -241,9 +237,6 @@ const PricingCalendar = () => {
 
     setCalendarEvents(filtered);
   }, [selectedRoomTypes, rawEvents]);
-
-
-
 
   const handleEventClick = async (info) => {
     setSelectedDate(info.event.start);
@@ -386,7 +379,7 @@ const PricingCalendar = () => {
                       priceSpan.className = 'price';
                       priceSpan.style.cursor = 'pointer';
                       priceSpan.style.color = 'green';
-                      priceSpan.innerText = `₹${average_price}`;
+                      priceSpan.innerText = `$${average_price}`;
 
                       container.appendChild(roomSpan);
                       container.appendChild(priceSpan);
@@ -415,10 +408,10 @@ const PricingCalendar = () => {
                               <span>Predicted Occupancy:</span> <span>${predicted_occupancy}</span>
                             </div>
                             <div class="mb-1 d-flex justify-content-between">
-                              <span>Suggested Price:</span> <span>₹${suggested_price}</span>
+                              <span>Suggested Price:</span> <span>$${suggested_price}</span>
                             </div>
                             <div class="mb-1 d-flex justify-content-between">
-                              <span>Historical Price:</span> <span>₹${historical_price}</span>
+                              <span>Historical Price:</span> <span>$${historical_price}</span>
                             </div>
                           </div>
                         `;
@@ -454,8 +447,6 @@ const PricingCalendar = () => {
                       }
                     }}
                   />
-
-
                 </div>
               </div>
             </div>
@@ -488,7 +479,7 @@ const PricingCalendar = () => {
                             {(selectedRoomTypes.length > 0 ? selectedRoomTypes : allHotelRooms).map((room, i) => (
                               <li key={i}>
                                 <span className="modal-room-name">{room}</span>
-                                <span className="modal-room-price">₹2500</span>
+                                <span className="modal-room-price">$2500</span>
                               </li>
                             ))}
                           </ul>
@@ -509,8 +500,8 @@ const PricingCalendar = () => {
                                 {(selectedRoomTypes.length > 0 ? selectedRoomTypes : allHotelRooms).map((room, i) => (
                                   <tr key={i}>
                                     <td>{room}</td>
-                                    <td><input type="text" className="form-control" placeholder="₹2500" /></td>
-                                    <td>₹3000</td>
+                                    <td><input type="text" className="form-control" placeholder="$2500" /></td>
+                                    <td>$3000</td>
                                   </tr>
                                 ))}
                               </tbody>

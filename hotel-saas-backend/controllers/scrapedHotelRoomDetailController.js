@@ -186,7 +186,7 @@ exports.getScrapedHotelDetail = async (req, res) => {
 
                 for (const room of apiResponseData.data.block) {
                     // Only process rooms where max_occupancy is 2
-                    console.log(room);
+
                     if (room.max_occupancy == 2) {
                         const roomName = room.name_without_policy || room.room_name || room.name || 'N/A';
                         let price = room.product_price_breakdown?.gross_amount_per_night?.value || null;

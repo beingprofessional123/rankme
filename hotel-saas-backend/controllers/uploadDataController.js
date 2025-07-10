@@ -54,7 +54,12 @@ const parseFile = async (fileBuffer, originalname, mimeType) => {
 
             bufferStream
                 .pipe(csv())
-                .on('data', (data) => results.push(data))
+                .on('data', (data) => {
+                    // Add console logs here to inspect the raw data and keys from csv-parser
+                    // console.log('Raw CSV Row Data:', data);
+                    // console.log('Raw CSV Row Keys:', Object.keys(data));
+                    results.push(data);
+                })
                 .on('end', () => resolve(results))
                 .on('error', (error) => {
                     console.error('CSV Parsing Error:', error);
@@ -132,58 +137,71 @@ exports.extractAndPreviewData = async (req, res) => {
         const extractedDataRows = [];
         const errors = [];
 
+        // --- UPDATED getValue helper function ---
+        const getValue = (rowObject, fields) => {
+            // Create a normalized version of the row keys for robust lookup
+            const normalizedRowNoSpace = {}; // For keys like 'roomtype'
+            const normalizedRowWithHyphen = {}; // For keys like 'check-in'
+
+            for (const key in rowObject) {
+                const trimmedKey = key.trim();
+                normalizedRowNoSpace[trimmedKey.toLowerCase().replace(/ /g, '')] = rowObject[key];
+                normalizedRowWithHyphen[trimmedKey.toLowerCase()] = rowObject[key]; // Preserve hyphens
+            }
+
+            for (const field of fields) {
+                const trimmedField = field.trim();
+
+                // 1. Try exact match (trimmed) - covers 'Check-in', 'room_type' directly if csv-parser keeps them
+                if (rowObject[trimmedField] !== undefined && rowObject[trimmedField] !== null) {
+                    return String(rowObject[trimmedField]).trim();
+                }
+
+                // 2. Try normalized (trimmed, lowercase, no spaces) - covers 'Room Type' -> 'roomtype'
+                const noSpaceNormalizedField = trimmedField.toLowerCase().replace(/ /g, '');
+                if (normalizedRowNoSpace[noSpaceNormalizedField] !== undefined && normalizedRowNoSpace[noSpaceNormalizedField] !== null) {
+                    return String(normalizedRowNoSpace[noSpaceNormalizedField]).trim();
+                }
+
+                // 3. Try normalized (trimmed, lowercase, with hyphens) - covers 'Check-in' -> 'check-in'
+                const withHyphenNormalizedField = trimmedField.toLowerCase();
+                if (normalizedRowWithHyphen[withHyphenNormalizedField] !== undefined && normalizedRowWithHyphen[withHyphenNormalizedField] !== null) {
+                    return String(normalizedRowWithHyphen[withHyphenNormalizedField]).trim();
+                }
+            }
+            return null; // Return null if none of the fields are found or are empty
+        };
+        // --- END UPDATED getValue helper function ---
+
+
         parsedData.forEach((row, index) => {
             const rowIndex = index + 1; // 1-based index for user-friendly error messages
-            const rowErrors = [];
+            let rowErrors = [];
             let isValidRow = true;
             let rowData = {
                 uploadDataId: uploadDataRecord.id,
                 userId: user.id,
-                // Initialize fields to null or undefined to ensure they are present
-                // in the object even if not set by getValue or specific logic
                 checkIn: null,
                 checkOut: null,
                 roomType: null,
                 rate: null,
                 source: null,
                 competitorHotel: null,
-                date: null,
+                date: null, // Default to null, will be set for 'competitor' and 'str_ocr_report'
                 reportType: null,
                 occupancy: null,
                 adrUsd: null,
                 revParUsd: null,
-                platform: null // Initialize the new 'platform' field
-            };
-
-            // Helper to safely get value, handling common casing and trimming
-            const getValue = (fields) => {
-                for (const field of fields) {
-                    // Normalize the row keys to handle inconsistencies (trim, lowercase)
-                    const normalizedRow = {};
-                    for (const key in row) {
-                        normalizedRow[key.trim().toLowerCase()] = row[key];
-                    }
-
-                    // Check original key, then lowercase, then remove spaces and lowercase
-                    const value = row[field] !== undefined ? row[field] :
-                                  row[field.toLowerCase()] !== undefined ? row[field.toLowerCase()] :
-                                  row[field.replace(/ /g, '').toLowerCase()] !== undefined ? row[field.replace(/ /g, '').toLowerCase()] :
-                                  undefined; // Ensure this returns undefined if not found
-
-                    if (value !== undefined && value !== null) {
-                        return String(value).trim();
-                    }
-                }
-                return null; // Return null if none of the fields are found or are empty
+                platform: null
             };
 
             // Common mapping for all file types where applicable
-            const commonRoomType = getValue(['Room Type', 'room_type', 'RoomType']);
+            const commonRoomType = getValue(row, ['Room Type', 'room_type', 'RoomType']);
             if (commonRoomType) {
                 rowData.roomType = commonRoomType;
             }
 
-            const commonRate = getValue(['Rate', 'rate', 'Price', 'price']); // Added 'Price' for property price tab
+            const commonRate = getValue(row, ['Rate', 'rate', 'Price', 'price']);
             if (commonRate) {
                 const cleanedRate = String(commonRate).replace(/[^0-9.]/g, '');
                 if (!isNaN(parseFloat(cleanedRate)) && parseFloat(cleanedRate) >= 0) {
@@ -198,9 +216,9 @@ exports.extractAndPreviewData = async (req, res) => {
             // Type-specific field mapping and validation
             switch (fileType) {
                 case 'booking':
-                    const checkIn = getValue(['Check-in', 'check_in', 'Checkin Date']);
-                    const checkOut = getValue(['Check-out', 'check_out', 'Checkout Date']);
-                    const source = getValue(['Source', 'source']);
+                    const checkIn = getValue(row, ['Check-in', 'check_in', 'Checkin Date']);
+                    const checkOut = getValue(row, ['Check-out', 'check_out', 'Checkout Date']);
+                    const source = getValue(row, ['Source', 'source']);
 
                     if (!checkIn || !/^\d{4}-\d{2}-\d{2}$/.test(checkIn)) {
                         rowErrors.push({ field: 'Check-in', message: 'Missing or invalid Check-in date (YYYY-MM-DD).' });
@@ -232,9 +250,9 @@ exports.extractAndPreviewData = async (req, res) => {
                     break;
 
                 case 'competitor':
-                    const competitorHotel = getValue(['Competitor Hotel', 'competitor_hotel', 'CompetitorHotel']);
-                    const competitorDate = getValue(['Date', 'date']);
-                    const competitorPlatform = getValue(['Platform', 'platform']); // Competitor data might also have a platform
+                    const competitorHotel = getValue(row, ['Competitor Hotel', 'competitor_hotel', 'CompetitorHotel']);
+                    const competitorDate = getValue(row, ['Date', 'date']);
+                    const competitorPlatform = getValue(row, ['Platform', 'platform']);
 
                     if (!competitorHotel) {
                         rowErrors.push({ field: 'Competitor Hotel', message: 'Missing Competitor Hotel name.' });
@@ -252,7 +270,6 @@ exports.extractAndPreviewData = async (req, res) => {
                         rowErrors.push({ field: 'Rate', message: 'Missing or invalid Rate.' });
                         isValidRow = false;
                     }
-                    // Platform is also relevant for competitor data
                     if (competitorPlatform) {
                         rowData.platform = competitorPlatform;
                     }
@@ -266,11 +283,11 @@ exports.extractAndPreviewData = async (req, res) => {
                     break;
 
                 case 'str_ocr_report':
-                    const reportType = getValue(['Report Type', 'report_type', 'ReportType']);
-                    const reportDate = getValue(['Date', 'date']);
-                    const occupancy = getValue(['Occupancy', 'occupancy']);
-                    const adrUsd = getValue(['ADR (USD)', 'adr_usd', 'ADRUSD']);
-                    const revParUsd = getValue(['RevPAR (USD)', 'rev_par_usd', 'RevPARUSD']);
+                    const reportType = getValue(row, ['Report Type', 'report_type', 'ReportType']);
+                    const reportDate = getValue(row, ['Date', 'date']);
+                    const occupancy = getValue(row, ['Occupancy', 'occupancy']);
+                    const adrUsd = getValue(row, ['ADR (USD)', 'adr_usd', 'ADRUSD']);
+                    const revParUsd = getValue(row, ['RevPAR (USD)', 'rev_par_usd', 'RevPARUSD']);
 
                     if (!reportType) {
                         rowErrors.push({ field: 'Report Type', message: 'Missing Report Type.' });
@@ -303,20 +320,28 @@ exports.extractAndPreviewData = async (req, res) => {
                     };
                     break;
 
-                case 'property_price_data': // NEW CASE FOR PROPERTY PRICE
-                    const priceDate = getValue(['Date', 'date']);
-                    const propertyPriceRoomType = getValue(['room_type', 'Room Type', 'RoomType']); // Use commonRoomType if that's sufficient
-                    const platform = getValue(['Platform', 'platform']);
+                case 'property_price_data': // MODIFIED CASE FOR PROPERTY PRICE
+                    const propertyPriceCheckIn = getValue(row, ['Check-in', 'check_in', 'Checkin Date']);
+                    // Ensure 'Checkout Date' is included and correctly retrieved
+                    const propertyPriceCheckOut = getValue(row, ['Check-out', 'check_out', 'Checkout Date']);
+                    console.log(propertyPriceCheckOut);
+                    const propertyPriceRoomType = getValue(row, ['room_type', 'Room Type', 'RoomType']);
+                    const platform = getValue(row, ['Platform', 'platform']);
+                    // console.log(propertyPriceCheckIn, propertyPriceCheckOut); // Keep for debugging if needed
 
-                    if (!priceDate || !/^\d{4}-\d{2}-\d{2}$/.test(priceDate)) {
-                        rowErrors.push({ field: 'Date', message: 'Missing or invalid Date (YYYY-MM-DD).' });
+                    if (!propertyPriceCheckIn || !/^\d{4}-\d{2}-\d{2}$/.test(propertyPriceCheckIn)) {
+                        rowErrors.push({ field: 'Check-in', message: 'Missing or invalid Check-in date (YYYY-MM-DD).' });
+                        isValidRow = false;
+                    }
+                    // Validation for propertyPriceCheckOut
+                    if (!propertyPriceCheckOut || !/^\d{4}-\d{2}-\d{2}$/.test(propertyPriceCheckOut)) {
+                        rowErrors.push({ field: 'Check-out', message: 'Missing or invalid Check-out date (YYYY-MM-DD).' });
                         isValidRow = false;
                     }
                     if (!propertyPriceRoomType) {
                         rowErrors.push({ field: 'Room Type', message: 'Missing Room Type.' });
                         isValidRow = false;
                     }
-                    // Validate price using the already parsed commonRate which uses 'Price' or 'price'
                     if (rowData.rate === undefined || rowData.rate === null) {
                         rowErrors.push({ field: 'Price', message: 'Missing or invalid Price.' });
                         isValidRow = false;
@@ -328,15 +353,15 @@ exports.extractAndPreviewData = async (req, res) => {
 
                     rowData = {
                         ...rowData,
-                        date: priceDate || null,
-                        roomType: propertyPriceRoomType || null, // Ensure roomType is set here
-                        platform: platform || null, // Set the new platform field
-                        // rate is already handled by commonRate
+                        checkIn: propertyPriceCheckIn || null,
+                        checkOut: propertyPriceCheckOut || null, // Ensure this is correctly assigned
+                        roomType: propertyPriceRoomType || null,
+                        platform: platform || null,
+                        date: null, // Explicitly set to null for property_price_data
                     };
                     break;
 
                 default:
-                    // This case should ideally not be reached if the initial check for fileType is thorough
                     console.warn(`Unknown fileType: ${fileType}. No specific validation applied.`);
             }
 
@@ -357,7 +382,7 @@ exports.extractAndPreviewData = async (req, res) => {
         res.status(200).json({
             message: 'File extracted and data preview generated successfully.',
             uploadId: uploadDataRecord.id,
-            fileType: uploadDataRecord.fileType, // Confirm the fileType
+            fileType: uploadDataRecord.fileType,
             previewData: extractedDataRows,
             totalRows: parsedData.length,
             invalidRowsCount: errors.length,
@@ -375,8 +400,6 @@ exports.extractAndPreviewData = async (req, res) => {
 };
 
 // --- API 2: Confirm and Save ---
-// This API does not require specific changes for 'property_price_data'
-// as it just confirms the `uploadId` and saves metadata, which are generic.
 exports.confirmAndSaveData = async (req, res) => {
     const t = await db.sequelize.transaction();
     try {
@@ -396,7 +419,7 @@ exports.confirmAndSaveData = async (req, res) => {
                 id: uploadId,
                 userId: user.id,
                 companyId: user.company_id,
-                status: 'extracted', // Ensure the file has been extracted first
+                status: 'extracted',
             },
             transaction: t,
         });
@@ -405,7 +428,6 @@ exports.confirmAndSaveData = async (req, res) => {
             return res.status(404).json({ message: 'Upload record not found or not in a savable state.' });
         }
 
-        // Create MetaUploadData record
         const metaUploadDataRecord = await MetaUploadData.create({
             uploadDataId: uploadId,
             userId: user.id,
@@ -415,7 +437,6 @@ exports.confirmAndSaveData = async (req, res) => {
             toDate: dateRangeTo || null,
         }, { transaction: t });
 
-        // Update the status of the main UploadData record
         await uploadDataRecord.update({ status: 'saved' }, { transaction: t });
 
         await t.commit();
@@ -433,6 +454,7 @@ exports.confirmAndSaveData = async (req, res) => {
         res.status(500).json({
             message: 'An unexpected error occurred while confirming data.',
             error: error.message,
+            trace: error.stack // Add stack trace for better debugging in development
         });
     }
 };
