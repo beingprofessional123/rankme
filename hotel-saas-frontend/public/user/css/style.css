@@ -1229,7 +1229,7 @@ input:checked + .slider:before {
 .breadcrumb-right .btn.btn-info img.img-fluid {
     margin-right: 3px;
 }
-td.tdaction a {
+td .tdaction a {
     display: inline-block;
     margin-right: 7px;
 }
@@ -1851,3 +1851,42 @@ label.fileupload-label {
 .tabledesign .MuiTable-root tfoot tr td .MuiTablePagination-toolbar p {
     margin: 0px;
 }
+span.room-type {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    padding-right: 20px;
+}
+.blue-room-type{
+    color:white;
+}
+.fc-daygrid-day-events .fc-daygrid-event-harness {
+    margin-bottom: 5px;
+}
+.fc-daygrid-event {
+    border-radius: 6px !important;
+}
+.tippy-box {
+    border-radius: 10px !important; 
+    font-size: 13px !important;
+    padding: 12px !important;
+}
+
+.basic-multi-select .select__control {
+    background-color: #F3F7F9;
+    border: 1px solid #F3F7F9;
+    min-height: 50px;
+    border-radius: 8px;
+    padding: 3px 8px;
+    font-size: 15px;
+    outline: none !important;
+    box-shadow: none !important;
+}
+.dflexpermession {
+    display: inline-block;
+    margin-right: 40px;
+}
+

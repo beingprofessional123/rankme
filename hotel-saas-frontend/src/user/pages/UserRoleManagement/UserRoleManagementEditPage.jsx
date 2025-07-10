@@ -460,7 +460,7 @@ const UserRoleManagementEditPage = () => {
                                 </div>
                                 {/* Module Permissions */}
                                 {formData.role_id && (
-                                    <div className="row mt-3">
+                                    <div className="mt-3">
                                         <div className="col-md-12 border rounded p-3 mb-3 text-center">
                                             <strong>Module Permissions</strong>
                                         </div>
@@ -473,8 +473,9 @@ const UserRoleManagementEditPage = () => {
                                                         <div className="col-md-2">
                                                             <strong>{module.module_name}</strong>
                                                         </div>
+                                                        <div className="col-md-10">   
                                                             {moduleDef?.permissions.map(({ key, label }) => (
-                                                                <div className="col-md-2" key={key}>
+                                                                <div className='dflexpermession' key={key}>
                                                                     <div className="form-check">
                                                                         <input
                                                                             className="form-check-input"
@@ -489,6 +490,7 @@ const UserRoleManagementEditPage = () => {
                                                                     </div>
                                                                 </div>
                                                             ))}
+                                                        </div>
                                                         </div>
                                                 </div>
                                             );

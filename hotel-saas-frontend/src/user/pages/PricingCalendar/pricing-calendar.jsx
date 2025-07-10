@@ -22,6 +22,7 @@ const PricingCalendar = () => {
   const [calendarEvents, setCalendarEvents] = useState([]);
   const calendarRef = useRef(null);
   const [rawEvents, setRawEvents] = useState([]);
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
 
 
 
@@ -45,22 +46,22 @@ const PricingCalendar = () => {
               if (roomSpan) {
                 tippy(roomSpan, {
                   content: `
-                    <div class="p-1">
-                      <div class="mb-1 d-flex justify-content-between">
-                        <span>Predicted Occupancy:</span> <span>${occupancy}</span>
+                    <div class="">
+                      <div class="mb-2 gap-4 d-flex justify-content-between">
+                        <span>Predicted Occupancy:</span> <strong>${occupancy}</strong>
                       </div>
-                      <div class="mb-1 d-flex justify-content-between">
-                        <span>Suggested Price:</span> <span>₹${suggested}</span>
+                      <div class="mb-2 gap-4 d-flex justify-content-between">
+                        <span>Suggested Price:</span> <strong>$${suggested}</strong>
                       </div>
-                      <div class="mb-1 d-flex justify-content-between">
-                        <span>Historical Price:</span> <span>₹${historical}</span>
+                      <div class="mb-2 gap-4 d-flex justify-content-between">
+                        <span>Historical Price:</span> <strong>$${historical}</strong>
                       </div>
                     </div>
                   `,
                   allowHTML: true,
                   placement: 'top',
                   animation: 'shift-away',
-                  theme: 'light-border',
+                  theme: 'light-border custom-tooltip',
                 });
               }
 
@@ -104,15 +105,20 @@ const PricingCalendar = () => {
     fetchHotels();
   }, [fetchHotels]);
 
-  // 👇 REPLACE your `handleHotelChange` function with this updated one:
+  // Helper function to safely parse dates
+  const safeParseDate = (value, fallback = new Date()) => {
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? fallback : date;
+  };
+
   const handleHotelChange = async (e) => {
-    const hotelId = e.target.value;
+    const hotelId = e?.target?.value || selectedHotelId;
     setSelectedHotelId(hotelId);
 
     const selectedHotel = hotels.find((hotel) => hotel.id === hotelId);
     const rooms = selectedHotel?.Rooms || [];
     setAllHotelRooms(rooms);
-    setSelectedRoomTypes([]); // reset filter
+    setSelectedRoomTypes([]);
 
     try {
       const token = localStorage.getItem('token');
@@ -122,8 +128,16 @@ const PricingCalendar = () => {
 
       if (!token || !companyId || !userId) throw new Error('Missing credentials');
 
-      const apiUrlPricing = `${process.env.REACT_APP_API_BASE_URL}/api/pricing-calendar/property-price?company_id=${companyId}&user_id=${userId}&hotel_id=${hotelId}`;
-      const apiUrlBooking = `${process.env.REACT_APP_API_BASE_URL}/api/pricing-calendar/booking-data?company_id=${companyId}&user_id=${userId}&hotel_id=${hotelId}`;
+      // 🛠 Use selected date range or fallback to 7-day range from today
+      const today = new Date();
+      const parsedStart = safeParseDate(dateRange?.start, today);
+      const parsedEnd = safeParseDate(dateRange?.end, addDays(today, 6));
+
+      const startDate = format(parsedStart, 'yyyy-MM-dd');
+      const endDate = format(parsedEnd, 'yyyy-MM-dd');
+
+      const apiUrlPricing = `${process.env.REACT_APP_API_BASE_URL}/api/pricing-calendar/property-price?company_id=${companyId}&user_id=${userId}&hotel_id=${hotelId}&start_date=${startDate}&end_date=${endDate}`;
+      const apiUrlBooking = `${process.env.REACT_APP_API_BASE_URL}/api/pricing-calendar/booking-data?company_id=${companyId}&user_id=${userId}&hotel_id=${hotelId}&start_date=${startDate}&end_date=${endDate}`;
 
       const [pricingRes, bookingRes] = await Promise.all([
         fetch(apiUrlPricing, {
@@ -143,63 +157,87 @@ const PricingCalendar = () => {
       const pricingData = await pricingRes.json();
       const bookingData = await bookingRes.json();
 
-
-
       const allPricingRows = pricingData?.results?.flatMap(item => item.extractedFiles || []) || [];
       const allBookingRows = bookingData?.results?.flatMap(item => item.extractedFiles || []) || [];
 
-      const today = new Date();
-      const startDate = startOfMonth(today);
-      const endDate = addMonths(startDate, 6);
-
+      // 🔁 Generate dates between range
       const allDates = [];
-      for (let d = startDate; d <= endDate; d = addDays(d, 1)) {
-        allDates.push(formatDate(d, 'yyyy-MM-dd'));
+      let currentDate = parsedStart;
+      while (currentDate <= parsedEnd) {
+        allDates.push(format(currentDate, 'yyyy-MM-dd'));
+        currentDate = addDays(currentDate, 1);
       }
 
       const events = [];
 
       for (const date of allDates) {
+        const currentDate = new Date(date);
+
         for (const roomType of rooms) {
-          const matchingPriceRows = allPricingRows.filter(
-            row => row.date === date && row.roomType === roomType
-          );
+          const normalizedRoomType = roomType.trim().toLowerCase();
+
+          // ✅ Match property price rows (inclusive checkIn < date < checkOut)
+          const matchingPriceRows = allPricingRows.filter(row => {
+            const rowRoom = (row.roomType || '').trim().toLowerCase();
+            const checkIn = row.checkIn ? new Date(row.checkIn) : null;
+            const checkOut = row.checkOut ? new Date(row.checkOut) : null;
+
+            return (
+              rowRoom === normalizedRoomType &&
+              checkIn && checkOut &&
+              currentDate >= checkIn &&
+              currentDate < checkOut
+            );
+          });
 
           const availableCount = matchingPriceRows.length;
 
-          const bookedCount = allBookingRows.filter(b =>
-            b.roomType === roomType &&
-            b.checkIn &&
-            b.checkOut &&
-            date >= b.checkIn &&
-            date < b.checkOut
-          ).length;
+          // ✅ Match booking rows (inclusive of checkIn == checkOut)
+          const bookedCount = allBookingRows.filter(b => {
+            const bRoom = (b.roomType || '').trim().toLowerCase();
+            const bIn = b.checkIn ? new Date(b.checkIn) : null;
+            const bOut = b.checkOut ? new Date(b.checkOut) : null;
 
-          // ✅ Predicted occupancy calculation (rounded, capped)
+            if (!bIn || !bOut) return false;
+
+            // ✅ Covers:
+            // - Single-day: checkIn === checkOut === date
+            // - Multi-day: checkIn <= date <= checkOut
+            //   (booking valid if guest is still staying)
+            return (
+              bRoom === normalizedRoomType &&
+              currentDate >= bIn &&
+              currentDate <= bOut
+            );
+          }).length;
+
+          // ✅ Calculate occupancy
           let occupancy = availableCount ? (bookedCount / availableCount) * 100 : 0;
           occupancy = Math.min(occupancy, 100);
           const predicted_occupancy = `${Math.round(occupancy)}%`;
 
-          // ✅ Get the min price instead of average
-          const rates = matchingPriceRows.map(r => parseFloat(r.rate || 0)).filter(r => !isNaN(r));
-          const minPrice = rates.length ? Math.min(...rates) : 0;
+          // ✅ Calculate rates
+          const validRates = matchingPriceRows
+            .map(r => parseFloat(r.rate || 0))
+            .filter(r => !isNaN(r) && r > 0);
 
-          const row = matchingPriceRows.find(r => parseFloat(r.rate) === minPrice); // pick the row with min price
+          const minPrice = validRates.length ? Math.min(...validRates) : 0;
+          const row = matchingPriceRows.find(r => parseFloat(r.rate) === minPrice);
 
-          // ✅ Suggested and historical prices based on min price
           const suggested_price = (minPrice + 10).toFixed(0);
           const historical_price = Math.max(0, minPrice - 10).toFixed(0);
 
+          // ✅ Build event
           const event = {
             title: `
-            <div class="p-1 d-flex justify-content-between">
-              <span>${roomType}</span>
-              <span>₹${minPrice}</span>
-            </div>
-            <div class="small text-muted">
-              Booked: ${bookedCount}, Occ: ${predicted_occupancy}
-            </div>
-          `,
+        <div class="p-1 d-flex justify-content-between">
+          <span>${roomType}</span>
+          <span>$${minPrice.toFixed(0)}</span>
+        </div>
+        <div class="small text-muted">
+          Booked: ${bookedCount}, Occ: ${predicted_occupancy}
+        </div>
+      `,
             date,
             backgroundColor: row ? '#2CCDD9' : '#E5E5E5',
             borderColor: row ? '#2CCDD9' : '#E5E5E5',
@@ -222,15 +260,23 @@ const PricingCalendar = () => {
         }
       }
 
-
-
-      setRawEvents(events); // filtered in useEffect
+      console.log(events);
+      setRawEvents(events);
     } catch (error) {
-      console.error("❌ Error in handleHotelChange:", error);
+      console.error('❌ Error in handleHotelChange:', error);
       toast.error(error.message || 'Failed to fetch pricing or booking data');
       setCalendarEvents([]);
     }
   };
+
+  useEffect(() => {
+    if (selectedHotelId) {
+      handleHotelChange({ target: { value: selectedHotelId } });
+    }
+  }, [dateRange]);
+
+
+
 
 
   useEffect(() => {
@@ -241,8 +287,6 @@ const PricingCalendar = () => {
 
     setCalendarEvents(filtered);
   }, [selectedRoomTypes, rawEvents]);
-
-
 
 
   const handleEventClick = async (info) => {
@@ -318,13 +362,29 @@ const PricingCalendar = () => {
                     <div className="col-md-4">
                       <div className="form-group">
                         <label className="form-label">Date Range</label>
-                        <div className="daterange">
-                          <input type="date" className="form-control" />
+                        <div className="daterange d-flex gap-2 align-items-center">
+                          <input
+                            type="date"
+                            className="form-control"
+                            value={dateRange.start}
+                            onChange={(e) =>
+                              setDateRange((prev) => ({ ...prev, start: e.target.value }))
+                            }
+                          />
                           <span>-</span>
-                          <input type="date" className="form-control" />
+                          <input
+                            type="date"
+                            className="form-control"
+                            value={dateRange.end}
+                            onChange={(e) =>
+                              setDateRange((prev) => ({ ...prev, end: e.target.value }))
+                            }
+                          />
                         </div>
                       </div>
                     </div>
+
+
                   </div>
                 </form>
               </div>
@@ -369,16 +429,17 @@ const PricingCalendar = () => {
                         average_price,
                       } = arg.event.extendedProps;
 
+                      const isGray = arg.event.backgroundColor === '#E5E5E5';
+
                       const container = document.createElement('div');
                       container.className = 'd-flex justify-content-between p-1';
 
-                      // 🔥 Fix: add these attributes to persist tooltip info for modal re-renders
                       container.setAttribute('data-occupancy', predicted_occupancy);
                       container.setAttribute('data-suggested', suggested_price);
                       container.setAttribute('data-historical', historical_price);
 
                       const roomSpan = document.createElement('span');
-                      roomSpan.className = 'room-type';
+                      roomSpan.className = isGray ? 'room-type gray-room-type' : 'room-type blue-room-type';
                       roomSpan.style.cursor = 'pointer';
                       roomSpan.innerText = room_type;
 
@@ -386,13 +447,14 @@ const PricingCalendar = () => {
                       priceSpan.className = 'price';
                       priceSpan.style.cursor = 'pointer';
                       priceSpan.style.color = 'green';
-                      priceSpan.innerText = `₹${average_price}`;
+                      priceSpan.innerText = `$${average_price}`;
 
                       container.appendChild(roomSpan);
                       container.appendChild(priceSpan);
 
                       return { domNodes: [container] };
                     }}
+
                     eventDidMount={(info) => {
                       const {
                         predicted_occupancy,
@@ -411,14 +473,14 @@ const PricingCalendar = () => {
                       if (roomSpan) {
                         let tooltipContent = `
                           <div class="p-1">
-                            <div class="mb-1 d-flex justify-content-between">
-                              <span>Predicted Occupancy:</span> <span>${predicted_occupancy}</span>
+                            <div class="mb-2 gap-4 d-flex justify-content-between">
+                              <span>Predicted Occupancy:</span> <strong>${predicted_occupancy}</strong>
                             </div>
-                            <div class="mb-1 d-flex justify-content-between">
-                              <span>Suggested Price:</span> <span>₹${suggested_price}</span>
+                            <div class="mb-2 gap-4 d-flex justify-content-between">
+                              <span>Suggested Price:</span> <strong>$${suggested_price}</strong>
                             </div>
-                            <div class="mb-1 d-flex justify-content-between">
-                              <span>Historical Price:</span> <span>₹${historical_price}</span>
+                            <div class="mb-2 gap-4 d-flex justify-content-between">
+                              <span>Historical Price:</span> <strong>$${historical_price}</strong>
                             </div>
                           </div>
                         `;
@@ -488,7 +550,7 @@ const PricingCalendar = () => {
                             {(selectedRoomTypes.length > 0 ? selectedRoomTypes : allHotelRooms).map((room, i) => (
                               <li key={i}>
                                 <span className="modal-room-name">{room}</span>
-                                <span className="modal-room-price">₹2500</span>
+                                <span className="modal-room-price">$2500</span>
                               </li>
                             ))}
                           </ul>
@@ -509,8 +571,8 @@ const PricingCalendar = () => {
                                 {(selectedRoomTypes.length > 0 ? selectedRoomTypes : allHotelRooms).map((room, i) => (
                                   <tr key={i}>
                                     <td>{room}</td>
-                                    <td><input type="text" className="form-control" placeholder="₹2500" /></td>
-                                    <td>₹3000</td>
+                                    <td><input type="text" className="form-control" placeholder="$2500" /></td>
+                                    <td>$3000</td>
                                   </tr>
                                 ))}
                               </tbody>
