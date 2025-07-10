@@ -8,6 +8,7 @@ const uploadDataRoutes = require('./routes/uploadDataRoutes');
 const hotelNRooms = require('./routes/hotelNRooms');
 const userRoleRoutes = require('./routes/userRoleRoutes');
 const PricingCalendarRoutes = require('./routes/PricingCalendarRoutes');
+const settingsRoutes = require('./routes/settingsRoutes');
 
 
 const adminUserRoutes = require('./routes/admin/userRoutes');
@@ -33,6 +34,7 @@ app.use('/api/upload', uploadDataRoutes);
 app.use('/api', hotelNRooms);
 app.use('/api', userRoleRoutes);
 app.use('/api/pricing-calendar', PricingCalendarRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Admin Routes
 app.use('/api/admin', adminUserRoutes);
