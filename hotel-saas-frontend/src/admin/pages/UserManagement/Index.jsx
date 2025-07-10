@@ -193,7 +193,7 @@ const UserManagementIndex = () => {
     };
 
     return (
-        <div id="content" className="main-content">
+        <div>
             <div className="layout-px-spacing">
                 <div className="page-header d-flex justify-content-between">
                     <div className="page-title">

@@ -12,11 +12,18 @@ const Dashboard = () => {
   }, []);
 
   return (
-    <div id="content" className="main-content">
-      <div className="layout-px-spacing">
-        <h4>Dashboard</h4>
-      </div>
-    </div>
+    <div>
+            <div className="layout-px-spacing">
+                <div className="page-header d-flex justify-content-between">
+                    <div className="page-title">
+                        <h3>Dashboard</h3>
+                    </div>
+                    <div className="page-title page-btn">
+                      
+                    </div>
+                </div>
+            </div>
+        </div>
   );
 };
 

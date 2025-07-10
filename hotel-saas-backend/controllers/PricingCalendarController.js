@@ -9,8 +9,7 @@ const {
 
 exports.getPropertyPrice = async (req, res) => {
   try {
-    const { user_id: userId, company_id: companyId, hotel_id: hotelId } = req.query;
-    const fileType = 'property_price_data';
+    const { user_id: userId, company_id: companyId, hotel_id: hotelId,start_date:startDate ,end_date:endDate } = req.query;
 
     // ✅ Validate query parameters
     if (!userId || !companyId || !hotelId) {
@@ -27,6 +26,7 @@ exports.getPropertyPrice = async (req, res) => {
       where: {
         companyId,
         fileType: 'property_price_data',
+        status: 'saved'
       },
       include: [
         {
@@ -39,8 +39,12 @@ exports.getPropertyPrice = async (req, res) => {
         {
           model: UploadedExtractDataFile,
           as: 'extractedFiles',
-          required: false, // Optional: skip Uploads with no extracted data
-          attributes: ['date', 'roomType', 'rate', 'platform', 'remarks'],
+          required: false,
+          where: {
+            checkIn: { [Op.lte]: endDate },
+            checkOut: { [Op.gte]: startDate },
+          },
+          attributes: ['checkIn', 'checkOut', 'roomType', 'rate', 'platform', 'remarks'],
         },
       ],
       order: [['createdAt', 'DESC']],
@@ -72,7 +76,7 @@ exports.getPropertyPrice = async (req, res) => {
 
 exports.getBookingData = async (req, res) => {
   try {
-    const { user_id: userId, company_id: companyId, hotel_id: hotelId } = req.query;
+   const { user_id: userId, company_id: companyId, hotel_id: hotelId,start_date:startDate ,end_date:endDate } = req.query;
     const fileType = 'booking';
 
     // ✅ Validate query parameters
@@ -89,7 +93,8 @@ exports.getBookingData = async (req, res) => {
     const data = await UploadData.findAll({
       where: {
         companyId,
-         fileType,
+        fileType,
+        status: 'saved'
       },
       include: [
         {
@@ -102,7 +107,11 @@ exports.getBookingData = async (req, res) => {
         {
           model: UploadedExtractDataFile,
           as: 'extractedFiles',
-          required: false, // Optional: skip Uploads with no extracted data
+          required: false,
+          where: {
+            checkIn: { [Op.lte]: endDate },
+            checkOut: { [Op.gte]: startDate },
+          },
            attributes: ['checkIn', 'checkOut', 'roomType', 'rate', 'source', 'remarks'],
         },
       ],

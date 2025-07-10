@@ -24,8 +24,10 @@ const CardDetails = () => {
   };
 
   return (
-    <div className="billing-heading">
-      <h2>Card Details</h2>
+    <>
+      <div className="billing-heading">
+        <h2>Card Details</h2>
+      </div>
       <div className="upgrade-form">
         <form onSubmit={handleSubmit}>
           <div className="form-design">
@@ -127,7 +129,7 @@ const CardDetails = () => {
           </div>
         </form>
       </div>
-    </div>
+    </>
   );
 };
 
