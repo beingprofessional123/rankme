@@ -242,7 +242,7 @@ const UserRoleManagementAddPage = () => {
                 phone: formData.phone || null,
                 role_id: formData.role_id,
                 is_active: formData.is_active,
-                countryCodeid: formData.countryCodeid,
+                countryCodeid: formData.countryCodeid?.trim() || null,
                 permissions: tabPermissions,
             };
 
@@ -354,9 +354,10 @@ const UserRoleManagementAddPage = () => {
                                                         onChange={handleChange}
                                                         className="form-control"
                                                     >
+                                                        <option value="">Select Country</option>
                                                         {countryList.map((country) => (
                                                             <option key={country.id || country.phonecode} value={country.id}>
-                                                                {country.phonecode}
+                                                                 {country.phonecode} ({country.short_name})
                                                             </option>
                                                         ))}
                                                     </select>

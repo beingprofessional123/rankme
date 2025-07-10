@@ -22,6 +22,11 @@ export const PermissionProvider = ({ children }) => {
         setPermissions(permissions);
         setUser(user);
         setRole(role);
+        if (user && user.is_active === false) {
+          localStorage.removeItem('user');
+          localStorage.removeItem('token');
+          window.location.href = '/inactive?status=true'; // Pass status=true in URL
+        }
       }
     } catch (error) {
       console.error('Failed to fetch permissions:', error);

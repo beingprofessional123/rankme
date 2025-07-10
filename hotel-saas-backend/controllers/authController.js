@@ -102,6 +102,14 @@ exports.login = async (req, res) => {
       return res.status(404).json({ message: 'Incorrect email or password. Please try again.' });
     }
 
+    // Check if user is active
+    if (!user.is_active) {
+      const roleName = user.Role ? user.Role.name : '';
+      const message = roleName === 'company_admin' ? 'Your account is inactive. Please contact support.' : 'Your account is inactive. Please contact your company admin or support.';
+      return res.status(403).json({ message });
+    }
+
+
     // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -128,6 +136,7 @@ exports.login = async (req, res) => {
         email: user.email,
         name: user.name,
         phone: user.phone,
+        is_active: user.is_active,
         role: user.Role ? user.Role.name : null, // Access the role name from the included Role object
         company: user.Company ? user.Company : null,
       },
@@ -257,7 +266,7 @@ exports.getUserPermissions = async (req, res) => {
     // Fetch user with Role
     const user = await db.User.findOne({
       where: { id: userId },
-      attributes: ['id', 'name', 'email', 'phone', 'profile','company_id'], // Add more if needed
+      attributes: ['id', 'name', 'email', 'phone', 'profile','company_id','is_active'], // Add more if needed
       include: [
         {
           model: db.Role,
@@ -302,6 +311,7 @@ exports.getUserPermissions = async (req, res) => {
           phone: user.phone,
           profile: user.profile,
           company_id: user.company_id,
+          is_active: user.is_active,
         },
         role: {
           id: user.Role?.id || null,
