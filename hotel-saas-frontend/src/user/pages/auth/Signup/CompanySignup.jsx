@@ -112,7 +112,7 @@ const CompanySignup = () => {
           email: formData.email,
           phone: formData.phone,
           password: formData.password,
-          countryCodeid: formData.countryCodeid,
+          countryCodeid: formData.countryCodeid?.trim() || null,
           role: 'company_admin',
         }),
       });
@@ -222,9 +222,10 @@ const CompanySignup = () => {
                         onChange={handleChange}
                         className="form-select form-control"
                       >
+                         <option value="">Select</option>
                         {countryList.map((country) => (
                           <option key={country.id} value={country.id}>
-                            {country.phonecode}
+                            {country.phonecode} ({country.short_name})
                           </option>
                         ))}
                       </select>
