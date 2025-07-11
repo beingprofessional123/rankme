@@ -7,7 +7,6 @@ const { settingsController, upload } = require('../controllers/settingsControlle
 
 // Middleware for this route group
 router.use(authenticate);
-router.use(authorizeRoles('company_admin', 'revenue_manager'));
 
 // Route to fetch subscriptions
 router.get('/general-settings', settingsController.getGeneralSettingsDetail);

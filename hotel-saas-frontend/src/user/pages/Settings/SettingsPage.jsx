@@ -74,7 +74,6 @@ const SettingsPage = () => {
                     countryCodeid: data.countryCodeid || '',
                     roleName: data.roleName || '',
                 });
-                toast.success('General settings loaded successfully!');
             } catch (error) {
                 console.error('Error fetching general settings:', error);
                 toast.error(error.response?.data?.message || 'Failed to fetch general settings.');
