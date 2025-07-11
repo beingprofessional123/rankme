@@ -8,12 +8,19 @@ import 'react-toastify/dist/ReactToastify.css';
 const DashboardLayout = ({ children }) => {
   const user = JSON.parse(localStorage.getItem('user')) || { name: 'Guest' }; // Ensure 'name' is used
   const username = user.name;
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
+  let image = null;
+  if (user.role === 'company_admin') {
+    image = user.company?.logo_url ? user.company.logo_url : null;
+  } else {
+    image = user.profile_image ? user.profile_image : null;
+  }
   return (
     // The top-level div corresponding to your <body> with class "d-body"
     <div className="d-body">
       <Sidebar />
-      <Header username={username} />
+      <Header username={username} image={image} />
 
       {/* Main Content Area */}
       {/* This corresponds to the content area that's not the sidebar or topbar */}

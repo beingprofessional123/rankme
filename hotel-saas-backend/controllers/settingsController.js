@@ -1,4 +1,4 @@
-const { User, Company, Country  } = require('../models'); // Assuming your models are in a 'models' directory
+const { User, Company, Country, Role } = require('../models'); // Assuming your models are in a 'models' directory
 const Joi = require('joi');
 const path = require('path');
 const fs = require('fs');
@@ -57,6 +57,11 @@ const settingsController = {
                         attributes: ['id', 'short_name', 'name', 'phonecode'],
                         required: false,
                     },
+                    {
+                        model: Role, // Include the Role model
+                        attributes: ['name'], // Only retrieve the 'name' of the role
+                        required: true, // A user must have a role
+                    },
                 ],
             });
 
@@ -78,6 +83,7 @@ const settingsController = {
                     phonecode: user.Country.phonecode,
                 } : null,
                 companyLogoUrl: user.Company && user.Company.logo_url ? `${req.protocol}://${req.get('host')}/${user.Company.logo_url.replace(/\\/g, '/')}` : null,
+                roleName: user.Role ? user.Role.name : null, // Add role name to response
             };
 
             res.status(200).json({ success: true, data: responseData, message: 'General settings retrieved successfully.' });
@@ -184,14 +190,14 @@ const settingsController = {
                 }
                 return res.status(400).json({ message: 'Country code ID is required when a phone number is provided.' });
             } else if (countryCodeid && !phoneNumber) {
-                 // If countryCodeid is provided but phoneNumber is not, it's an error based on your rule
-                 if (profileImageFile && fs.existsSync(profileImageFile.path)) {
-                    fs.unlinkSync(profileImageFile.path);
-                }
-                if (companyLogoFile && fs.existsSync(companyLogoFile.path)) {
-                    fs.unlinkSync(companyLogoFile.path);
-                }
-                return res.status(400).json({ message: 'Phone number is required when a country code is provided.' });
+                    // If countryCodeid is provided but phoneNumber is not, it's an error based on your rule
+                    if (profileImageFile && fs.existsSync(profileImageFile.path)) {
+                        fs.unlinkSync(profileImageFile.path);
+                    }
+                    if (companyLogoFile && fs.existsSync(companyLogoFile.path)) {
+                        fs.unlinkSync(companyLogoFile.path);
+                    }
+                    return res.status(400).json({ message: 'Phone number is required when a country code is provided.' });
             }
 
 
@@ -252,6 +258,11 @@ const settingsController = {
                         attributes: ['id', 'short_name', 'name', 'phonecode'],
                         required: false,
                     },
+                    {
+                        model: Role, // Include the Role model
+                        attributes: ['name'], // Only retrieve the 'name' of the role
+                        required: true, // A user must have a role
+                    },
                 ],
             });
 
@@ -269,6 +280,7 @@ const settingsController = {
                     phonecode: updatedUser.Country.phonecode,
                 } : null,
                 companyLogoUrl: updatedUser.Company && updatedUser.Company.logo_url ? `${req.protocol}://${req.get('host')}/${updatedUser.Company.logo_url.replace(/\\/g, '/')}` : null,
+                roleName: updatedUser.Role ? updatedUser.Role.name : null, // Add role name to response
             };
 
             res.status(200).json({ success: true, message: 'General settings updated successfully!', data: responseData });

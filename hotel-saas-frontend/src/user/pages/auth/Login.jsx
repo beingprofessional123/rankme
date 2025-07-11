@@ -102,12 +102,18 @@ const Login = () => {
       });
 
       const data = response.data;
-
       localStorage.setItem('token', data.token);
       const userWithCompanyId = {
         ...data.user,
         company_id: data.user.company?.id || null // optional chaining in case company is undefined
       };
+      if (userWithCompanyId.profile_image) {
+        userWithCompanyId.profile_image = `${process.env.REACT_APP_API_BASE_URL}/${userWithCompanyId.profile_image}`;
+      }
+      
+      if (userWithCompanyId.company?.logo_url) {
+        userWithCompanyId.company.logo_url = `${process.env.REACT_APP_API_BASE_URL}/${userWithCompanyId.company.logo_url}`;
+      }
       localStorage.setItem('user', JSON.stringify(userWithCompanyId));
 
       // Redirect based on user role
