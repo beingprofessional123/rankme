@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 // import { FaBell, FaUserCircle } from 'react-icons/fa'; // No longer needed for this design
 
-const DashboardHeader = ({ username }) => {
+const DashboardHeader = ({ username, image  }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const notificationsRef = useRef();
@@ -76,15 +76,14 @@ const DashboardHeader = ({ username }) => {
                       onClick={() => setIsProfileOpen(!isProfileOpen)}
                       aria-expanded={isProfileOpen}
                     >
-                      <img src={`/user/images/user.png`} className="img-fluid" alt="User Profile" />
+                    <img
+                      src={image ? image : `/user/images/no-image.webp`}
+                      className="img-fluid rounded-circle"
+                      alt="User Profile"
+                    />
                     </Link>
                     {isProfileOpen && (
                       <ul className="dropdown-menu show"> {/* 'show' class from Bootstrap */}
-                        <li>
-                          <Link className="dropdown-item" to=''>
-                            <img src={`/user/images/profile.svg`} className="img-fluid" alt="Profile" />Profile
-                          </Link>
-                        </li>
                         <li>
                           <Link className="dropdown-item" to='/settings'>
                             <img src={`/user/images/setting.svg`} className="img-fluid" alt="Settings" />Settings
