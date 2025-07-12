@@ -431,7 +431,7 @@ const SettingsPage = () => {
                                                             <option value="">Select Code</option>
                                                             {countryList.map((country) => (
                                                                 <option key={country.id} value={country.id}>
-                                                                    {country.phonecode}
+                                                                    {country.phonecode} ({country.short_name})
                                                                 </option>
                                                             ))}
                                                         </select>
