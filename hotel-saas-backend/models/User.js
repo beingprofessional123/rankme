@@ -61,6 +61,8 @@ module.exports = (sequelize, DataTypes) => {
     User.belongsTo(models.Role, { foreignKey: 'role_id' });
     User.belongsTo(models.Country, { foreignKey: 'countryCodeid', as: 'Country' });
     User.hasMany(models.UserPermission, { foreignKey: 'user_id', as: 'permissions'});
+    User.hasMany(models.UserSubscription, { foreignKey: 'user_id' });
+    User.hasMany(models.Payment, { foreignKey: 'user_id' });
   };
 
   return User;
