@@ -239,6 +239,13 @@ const HotelsAndRoomsList = () => {
       options: {
         filter: false,
         sort: false,
+        customHeadRender: (columnMeta) => {
+          return (
+            <th key={columnMeta.index} style={{ minWidth: '170px' }}>
+              {columnMeta.label}
+            </th>
+          );
+        },
         customBodyRenderLite: (dataIndex) => {
           const hotel = hotels[dataIndex];
           return (

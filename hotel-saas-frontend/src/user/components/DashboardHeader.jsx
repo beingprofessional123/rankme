@@ -13,6 +13,7 @@ const DashboardHeader = ({ username, image  }) => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('hotel_info');
     window.location.href = '/login'; // Redirect to login page
   };
 

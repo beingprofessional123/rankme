@@ -13,6 +13,7 @@ import withReactContent from 'sweetalert2-react-content';
 import { Link } from 'react-router-dom';
 import { saveAs } from 'file-saver';
 
+
 const MySwal = withReactContent(Swal);
 
 const UploadData = () => {
@@ -232,13 +233,9 @@ const UploadData = () => {
                                     <div className="form-design">
                                         <div className="d-flex justify-content-between align-items-center mb-3">
                                             <h4>Upload Your Data</h4>
-                                            <button
-                                                type="button"
-                                                className="btn btn-primary btn-sm"
-                                                onClick={handleDownloadTemplate}
-                                            >
-                                                Download Template
-                                            </button>
+                                            
+                                            <img src={`/user/images/download.svg`} alt="" onClick={handleDownloadTemplate} />
+                                            
                                         </div>
                                         <FileUploadSection
                                             onFileExtracted={handleFileExtracted}

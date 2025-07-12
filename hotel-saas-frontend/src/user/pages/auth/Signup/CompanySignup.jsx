@@ -76,10 +76,6 @@ const CompanySignup = () => {
       }
     }
 
-
-
-
-
     if (!formData.password) {
       newErrors.password = 'Please enter a password.';
     } else if (formData.password.length < 6) {
