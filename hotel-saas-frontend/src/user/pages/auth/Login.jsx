@@ -46,19 +46,27 @@ const Login = () => {
 
         const { results: subscription, hotelExists } = response.data;
 
-        const isSubscriptionActive =
-          subscription?.status === 'active' &&
-          new Date(subscription?.expires_at) > new Date();
-
-        if (isSubscriptionActive) {
+        if (subscription?.subscriptionPlan?.billing_period === 'free' && subscription?.status === 'active') {
           if (hotelExists) {
             navigate('/dashboard');
           } else {
             navigate('/setup/setup-wizard');
           }
         } else {
-          navigate('/subscription');
+          const isSubscriptionActive =
+            subscription?.status === 'active' && new Date(subscription?.expires_at) > new Date();
+
+          if (isSubscriptionActive) {
+            if (hotelExists) {
+              navigate('/dashboard');
+            } else {
+              navigate('/setup/setup-wizard');
+            }
+          } else {
+            navigate('/subscription');
+          }
         }
+
       } catch (error) {
         console.error('Error fetching subscription:', error);
         navigate('/login');
@@ -110,7 +118,7 @@ const Login = () => {
       if (userWithCompanyId.profile_image) {
         userWithCompanyId.profile_image = `${process.env.REACT_APP_API_BASE_URL}/${userWithCompanyId.profile_image}`;
       }
-      
+
       if (userWithCompanyId.company?.logo_url) {
         userWithCompanyId.company.logo_url = `${process.env.REACT_APP_API_BASE_URL}/${userWithCompanyId.company.logo_url}`;
       }
