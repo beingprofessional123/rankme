@@ -11,10 +11,10 @@ import CompanySignup from '../pages/auth/Signup/CompanySignup';
 import SetupWizard from '../pages/SetupWizard/SetupWizard';
 import Dashboard from '../pages/Dashboard';
 import PricingCalendar from '../pages/PricingCalendar/pricing-calendar';
-// import RoomTypes from '../pages/SetupWizard/RoomTypes';
-// import RateCategories from '../pages/SetupWizard/RateCategories';
 import ProtectedRoute from '../components/ProtectedRoute';
 import Billing from '../pages/Billing/Billing';
+import UpgradePlan from '../pages/Billing/UpgradePlan';
+import InvoiceHistory from '../pages/Billing/InvoiceHistory';
 import UploadData from '../pages/UploadData/UploadData';
 import HotelsAndRoomsList from '../pages/HotelAndRooms/List';
 import HotelAndRoomDetails from '../pages/HotelAndRooms/Details';
@@ -55,11 +55,11 @@ const AppRoutes = () => {
         <Route path="/subscription" element={<ProtectedRoute><SubscriptionPlan /></ProtectedRoute>} />
         <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
         <Route path="/setup/setup-wizard" element={<ProtectedRoute><SetupWizard /></ProtectedRoute>} />
-        {/* <Route path="/setup/room-types" element={<ProtectedRoute><RoomTypes /></ProtectedRoute>} />
-        <Route path="/setup/rate-categories" element={<ProtectedRoute><RateCategories /></ProtectedRoute>} /> */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/pricing-calendar" element={<ProtectedRoute><PricingCalendar /></ProtectedRoute>} />
         <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
+        <Route path="/upgrade-plan/:currentplanId" element={<ProtectedRoute><UpgradePlan /></ProtectedRoute>} />
+        <Route path="/invoice-history" element={<ProtectedRoute><InvoiceHistory /></ProtectedRoute>} />
         <Route path="/upload-data" element={<ProtectedRoute><UploadData  /></ProtectedRoute>} />
         <Route path="/hotels-and-rooms" element={<ProtectedRoute><HotelsAndRoomsList /></ProtectedRoute>} /> 
         <Route path="/hotels-and-rooms/add" element={<ProtectedRoute><HotelAndRoomCreate /></ProtectedRoute>} /> 

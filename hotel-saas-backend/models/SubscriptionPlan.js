@@ -8,16 +8,18 @@ module.exports = (sequelize, DataTypes) => {
     name: DataTypes.STRING,
     price: DataTypes.FLOAT,
     billing_period: {
-      type: DataTypes.ENUM('monthly', 'yearly'),
+      type: DataTypes.ENUM('free','monthly', 'yearly'),
       allowNull: false,
-      defaultValue: 'monthly',
+      defaultValue: 'free',
     }, 
     features: DataTypes.JSONB, // or TEXT if storing as plain string
   });
 
   SubscriptionPlan.associate = (models) => {
     SubscriptionPlan.hasMany(models.Company, { foreignKey: 'subscription_plan_id' });
+    SubscriptionPlan.hasMany(models.UserSubscription, { foreignKey: 'subscription_id' }); // ✅ Add this
   };
+
 
   return SubscriptionPlan;
 };

@@ -6,8 +6,19 @@ const Sidebar = () => {
   const location = useLocation();
   const { permissions, role } = useContext(PermissionContext);
 
-  const isActive = (segment) => location.pathname.includes(segment);
   const isCompanyAdmin = role?.name === 'company_admin';
+
+  // ✅ Updated isActive logic
+  const isActive = (path, key) => {
+    if (key === 'billing') {
+      return (
+        location.pathname.startsWith('/billing') ||
+        location.pathname.startsWith('/invoice-history') ||
+        location.pathname.startsWith('/upgrade-plan')
+      );
+    }
+    return location.pathname.startsWith(path);
+  };
 
   const canAccess = (key) => {
     if (key === 'settings') return true;
@@ -38,10 +49,12 @@ const Sidebar = () => {
       <ul>
         {sidebarItems.map(({ path, label, icon, key }) => (
           canAccess(key) && (
-            
-            <li key={key} className={isActive(path) ? 'active' : ''}>
+            <li key={key} className={isActive(path, key) ? 'active' : ''}>
               <Link to={path}>
-                <span><img src={`/user/images/${icon}`} className="img-fluid" alt={label} /></span>{label}
+                <span>
+                  <img src={`/user/images/${icon}`} className="img-fluid" alt={label} />
+                </span>
+                {label}
               </Link>
             </li>
           )
