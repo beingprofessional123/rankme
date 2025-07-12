@@ -8,6 +8,7 @@ const PaymentSuccess = () => {
   const navigate = useNavigate();
   const sessionId = params.get('session_id');
   const fronttype = params.get('fronttype') || null; // ✅ default to null if missing
+  const billingType = params.get('billingType'); // ✅ default to null if missing
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false); // ✅ to track verification failure
 
@@ -18,7 +19,7 @@ const PaymentSuccess = () => {
           const token = localStorage.getItem('token');
           const response = await axios.post(
             `${process.env.REACT_APP_API_BASE_URL}/api/payments/verify-stripe`,
-            { session_id: sessionId, fronttype }, // ✅ send fronttype (can be null)
+            { session_id: sessionId, fronttype,billingType }, // ✅ send fronttype (can be null)
             {
               headers: {
                 Authorization: `Bearer ${token}`,

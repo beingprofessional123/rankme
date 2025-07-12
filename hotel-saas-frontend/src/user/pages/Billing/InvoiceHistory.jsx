@@ -49,7 +49,7 @@ const InvoiceHistory = () => {
     planName: p.SubscriptionPlan?.name || 'N/A',
     date: moment(p.createdAt).format('MMM D, YYYY'),
     type: p.SubscriptionPlan?.billing_period || 'N/A',
-    amount: `$S${p.amount}`,
+    amount: `$${p.amount}`,
     status: p.status,
     action: 'Download',
     invoice_url: p.invoice_url || '',

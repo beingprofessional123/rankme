@@ -28,6 +28,7 @@ exports.createPayment = async (req, res) => {
     }
 
     let payment, session;
+    const billingType = subscription.billing_period;
 
     if (gateway === 'stripe') {
       // ✅ Create Stripe Checkout Session
@@ -36,7 +37,7 @@ exports.createPayment = async (req, res) => {
         line_items: [
           {
             price_data: {
-              currency: currency || 'INR',
+              currency: currency || 'usd',
               product_data: {
                 name: subscription.name,
               },
@@ -49,7 +50,7 @@ exports.createPayment = async (req, res) => {
         invoice_creation: {
           enabled: true, // ✅ Enable invoice generation
         },
-        success_url: `${process.env.FRONTEND_URL}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${process.env.FRONTEND_URL}/payment-success?session_id={CHECKOUT_SESSION_ID}&billingType=${billingType}`,
         cancel_url: `${process.env.FRONTEND_URL}/subscription-cancelled`,
         metadata: {
           user_id,
@@ -62,7 +63,7 @@ exports.createPayment = async (req, res) => {
         user_id,
         subscription_id,
         amount,
-        currency: currency || 'INR',
+        currency: currency || 'usd',
         gateway,
         status: 'pending',
         order_id: session.id,
@@ -96,81 +97,82 @@ exports.createPayment = async (req, res) => {
 
 exports.verifyStripePayment = async (req, res) => {
   try {
-    const { session_id, fronttype = null } = req.body;
+    const { session_id, billingType, fronttype = null } = req.body;
 
     // 1. Get the Stripe session details
     const session = await stripe.checkout.sessions.retrieve(session_id);
-
     if (session.payment_status === 'paid') {
       let invoiceUrl = null;
       let invoice = null;
+      console.log(billingType);
 
-      const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
+      if (billingType !== 'free') {
+        const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
+        if (paymentIntent.invoice) {
+          invoice = await stripe.invoices.retrieve(paymentIntent.invoice);
+          invoiceUrl = invoice.hosted_invoice_url;
+        } else {
+          let customerId = session.customer;  // changed to `let`
+          const amount = session.amount_total;
+          const email = session.customer_email;
 
-      if (paymentIntent.invoice) {
-        invoice = await stripe.invoices.retrieve(paymentIntent.invoice);
-        invoiceUrl = invoice.hosted_invoice_url;
-      } else {
-        let customerId = session.customer;  // changed to `let`
-        const amount = session.amount_total;
-        const email = session.customer_email;
+          try {
+            if ((!customerId || customerId === '') && email) {
+              const customers = await stripe.customers.list({
+                email: email,
+                limit: 1,
+              });
 
-        try {
-          if ((!customerId || customerId === '') && email) {
-            const customers = await stripe.customers.list({
-              email: email,
-              limit: 1,
+              if (customers.data.length > 0) {
+                customerId = customers.data[0].id;
+              } else {
+                // Create new customer with email
+                const newCustomer = await stripe.customers.create({
+                  email: email,
+                  name: session.customer_details?.name || undefined,
+                });
+                customerId = newCustomer.id;
+              }
+            }
+
+            if (!customerId) {
+              throw new Error('Customer ID could not be determined.');
+            }
+
+            // 1. Create a draft invoice (force currency to 'usd')
+            invoice = await stripe.invoices.create({
+              customer: customerId,
+              auto_advance: false,
+              collection_method: 'charge_automatically',
+              currency: 'usd',
+              metadata: {
+                created_for: 'manual_invoice_generation',
+                payment_intent_id: paymentIntent.id,
+              },
             });
 
-            if (customers.data.length > 0) {
-              customerId = customers.data[0].id;
-            } else {
-              // Create new customer with email
-              const newCustomer = await stripe.customers.create({
-                email: email,
-                name: session.customer_details?.name || undefined,
-              });
-              customerId = newCustomer.id;
-            }
+            // 2. Add line item (also in USD)
+            await stripe.invoiceItems.create({
+              customer: customerId,
+              amount: amount, // assuming amount is in USD cents
+              currency: 'usd',
+              description: 'One-time payment (manual invoice)',
+              invoice: invoice.id,
+            });
+
+            // 3. Mark invoice as paid manually
+            await stripe.invoices.pay(invoice.id, {
+              paid_out_of_band: true,
+            });
+
+            // 4. Refresh invoice to get the URL
+            invoice = await stripe.invoices.retrieve(invoice.id);
+            invoiceUrl = invoice.hosted_invoice_url;
+
+          } catch (invoiceErr) {
+            console.warn('Invoice generation skipped:', invoiceErr.message);
+            invoiceUrl = null;
           }
-
-          if (!customerId) {
-            throw new Error('Customer ID could not be determined.');
-          }
-
-          // 1. Create a draft invoice (force currency to 'usd')
-          invoice = await stripe.invoices.create({
-            customer: customerId,
-            auto_advance: false,
-            collection_method: 'charge_automatically',
-            currency: 'usd',
-            metadata: {
-              created_for: 'manual_invoice_generation',
-              payment_intent_id: paymentIntent.id,
-            },
-          });
-
-          // 2. Add line item (also in USD)
-          await stripe.invoiceItems.create({
-            customer: customerId,
-            amount: amount, // assuming amount is in USD cents
-            currency: 'usd',
-            description: 'One-time payment (manual invoice)',
-            invoice: invoice.id,
-          });
-
-          // 3. Mark invoice as paid manually
-          await stripe.invoices.pay(invoice.id, {
-            paid_out_of_band: true,
-          });
-
-          // 4. Refresh invoice to get the URL
-          invoice = await stripe.invoices.retrieve(invoice.id);
-          invoiceUrl = invoice.hosted_invoice_url;
-
-        } catch (invoiceErr) {
-          console.warn('Invoice generation skipped:', invoiceErr.message);
-          invoiceUrl = null;
         }
       }
 
@@ -285,6 +287,7 @@ exports.upgradePayment = async (req, res) => {
     }
 
     let payment, session;
+    const billingType = subscription.billing_period;
 
     if (gateway === 'stripe') {
       // ✅ Create Stripe Checkout Session
@@ -293,7 +296,7 @@ exports.upgradePayment = async (req, res) => {
         line_items: [
           {
             price_data: {
-              currency: currency || 'INR',
+              currency: currency || 'usd',
               product_data: {
                 name: subscription.name,
               },
@@ -303,7 +306,7 @@ exports.upgradePayment = async (req, res) => {
           },
         ],
         mode: 'payment',
-        success_url: `${process.env.FRONTEND_URL}/payment-success?session_id={CHECKOUT_SESSION_ID}&fronttype=${fronttype}`,
+        success_url: `${process.env.FRONTEND_URL}/payment-success?session_id={CHECKOUT_SESSION_ID}&fronttype=${fronttype}&billingType=${billingType}`,
         cancel_url: `${process.env.FRONTEND_URL}/subscription-cancelled`,
         metadata: {
           user_id,
@@ -316,7 +319,7 @@ exports.upgradePayment = async (req, res) => {
         user_id,
         subscription_id,
         amount,
-        currency: currency || 'INR',
+        currency: currency || 'usd',
         gateway,
         status: 'pending',
         order_id: session.id,
