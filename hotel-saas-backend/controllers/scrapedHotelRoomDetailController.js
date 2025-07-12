@@ -19,7 +19,7 @@ exports.getScrapedHotelDetail = async (req, res) => {
 
         const today = new Date();
         const tomorrow = new Date(today);
-        today.setDate(today.getDate()); // Keep today's date for check-in
+        today.setDate(today.getDate() + 1); // Keep today's date for check-in
         tomorrow.setDate(today.getDate() + 1); // Tomorrow's date for check-out
 
         const formatDate = (date) => {

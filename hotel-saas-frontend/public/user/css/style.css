@@ -261,9 +261,9 @@ a {
 }
 .subscription-heading h2 {
     color: #fff;
-    font-size: 26px;
     font-weight: 600;
     margin-bottom: 10px;
+    font-size: 24px;
 }
 .subscription-heading h6 {
     color: #fff;
@@ -1890,3 +1890,14 @@ span.room-type {
     margin-right: 40px;
 }
 
+
+.MuiPaper-root.MuiPopover-paper {
+    padding: 15px 20px;
+}
+.MuiPaper-root.MuiPopover-paper label.MuiFormControlLabel-root {
+    margin: 0px;
+}
+.MuiPaper-root.MuiPopover-paper label.MuiFormControlLabel-root .MuiCheckbox-root {
+    padding-left: 0px;
+}
+ 

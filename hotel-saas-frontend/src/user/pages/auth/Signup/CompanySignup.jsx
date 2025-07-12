@@ -76,10 +76,6 @@ const CompanySignup = () => {
       }
     }
 
-
-
-
-
     if (!formData.password) {
       newErrors.password = 'Please enter a password.';
     } else if (formData.password.length < 6) {
@@ -135,6 +131,7 @@ const CompanySignup = () => {
       }
       console.log(data);
       localStorage.setItem('token', data.token);
+      
       localStorage.setItem('user', JSON.stringify(data.user));
 
       navigate('/subscription');

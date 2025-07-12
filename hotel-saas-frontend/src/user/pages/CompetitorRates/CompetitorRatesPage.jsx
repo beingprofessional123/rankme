@@ -207,7 +207,7 @@ const CompetitorRatesPage = () => {
                                     <div className="tabledesign">
                                         <div className="table-responsive">
                                             <MUIDataTable
-                                                title="Data"
+                                                title="Data Table"
                                                 columns={competitorRateColumns}
                                                 data={competitorRateData}
                                                 options={options}
@@ -278,7 +278,7 @@ const CompetitorRatesPage = () => {
                                     <div className="tabledesign">
                                         <div className="table-responsive">
                                             <MUIDataTable
-                                                title="Competitor Data"
+                                                title="Competitor Data Table"
                                                 columns={competitorDataColumns}
                                                 data={competitorDataData}
                                                 options={options}
