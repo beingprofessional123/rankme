@@ -44,6 +44,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
     },
+    invoice_url: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    }
+
   }, {
     timestamps: true,
   });

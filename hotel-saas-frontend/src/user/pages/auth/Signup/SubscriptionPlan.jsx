@@ -89,18 +89,26 @@ const SubscriptionPlan = () => {
 
       const { results: subscription, hotelExists } = response.data;
 
-      const isSubscriptionActive = subscription?.status === 'active' && new Date(subscription?.expires_at) > new Date();
-
-      if (isSubscriptionActive) {
+      if (subscription?.subscriptionPlan?.billing_period === 'free' && subscription?.status === 'active') {
         if (hotelExists) {
           navigate('/dashboard');
         } else {
           navigate('/setup/setup-wizard');
         }
       } else {
-        fetchPlans();
-      }
+        const isSubscriptionActive =
+          subscription?.status === 'active' && new Date(subscription?.expires_at) > new Date();
 
+        if (isSubscriptionActive) {
+          if (hotelExists) {
+            navigate('/dashboard');
+          } else {
+            navigate('/setup/setup-wizard');
+          }
+        } else {
+          fetchPlans();
+        }
+      }
 
 
       setLoading(false);
