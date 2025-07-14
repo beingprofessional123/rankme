@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -82,11 +82,11 @@ const staticModules = [
 
 const UserRoleManagementEditPage = () => {
     const { permissions, role } = useContext(PermissionContext);
-        const isCompanyAdmin = role?.name === 'company_admin';
-        const canAccess = (action) => {
-            if (isCompanyAdmin) return true;
-            return permissions?.user_role_management?.[action] === true;
-        };
+    const isCompanyAdmin = role?.name === 'company_admin';
+    const canAccess = (action) => {
+        if (isCompanyAdmin) return true;
+        return permissions?.user_role_management?.[action] === true;
+    };
     const navigate = useNavigate();
     const { id } = useParams();
     const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
@@ -95,7 +95,7 @@ const UserRoleManagementEditPage = () => {
         fullName: '',
         email: '',
         phone: '',
-        countryCodeid: '',
+        countryCodeid: '', // This will store the UUID of the selected country
         role_id: '',
         is_active: false,
     });
@@ -135,21 +135,24 @@ const UserRoleManagementEditPage = () => {
                 ]);
 
                 const userData = userResponse.data.user;
-                setFormData({
+
+                // Set countryCodeid from userData if available
+                setFormData(prev => ({
+                    ...prev,
                     fullName: userData.name || '',
                     email: userData.email || '',
                     phone: userData.phone || '',
-                    countryCodeid: formData.countryCodeid?.trim() === "" ? null : formData.countryCodeid,
+                    countryCodeid: userData.countryCodeid || '', // Set the UUID here
                     role_id: userData.role_id || '',
                     is_active: userData.is_active || false,
-                });
+                }));
 
                 setRoles(rolesResponse.data.roles);
                 if (countriesResponse.status === 'success') {
                     setCountryList(countriesResponse.results);
                 }
 
-                 // Process permissions
+                // Process permissions
                 const userPermissionsFromAPI = userData.permissions || [];
 
                 const initialPermissions = staticModules.map((mod, i) => {
@@ -267,7 +270,7 @@ const UserRoleManagementEditPage = () => {
                 fullName: formData.fullName,
                 email: formData.email,
                 phone: formData.phone || null,
-                countryCodeid: formData.countryCodeid,
+                countryCodeid: formData.countryCodeid === "" ? null : formData.countryCodeid, // Ensure null if empty string
                 role_id: formData.role_id,
                 is_active: formData.is_active,
                 permissions: tabPermissions,
@@ -386,14 +389,14 @@ const UserRoleManagementEditPage = () => {
                                                     <label>Code</label>
                                                     <select
                                                         name="countryCodeid"
-                                                        value={formData.countryCodeid}
+                                                        value={formData.countryCodeid} // This should be the UUID of the selected country
                                                         onChange={handleChange}
                                                         className="form-control"
                                                     >
                                                         <option value="">Select Country</option>
                                                         {countryList.map(country => (
                                                             <option key={country.id} value={country.id}>
-                                                                {country.phonecode} ({country.short_name})
+                                                                {`${country.phonecode} (${country.short_name})`}
                                                             </option>
                                                         ))}
                                                     </select>
@@ -466,7 +469,7 @@ const UserRoleManagementEditPage = () => {
                                                         <div className="col-md-2">
                                                             <strong>{module.module_name}</strong>
                                                         </div>
-                                                        <div className="col-md-10">   
+                                                        <div className="col-md-10">
                                                             {moduleDef?.permissions.map(({ key, label }) => (
                                                                 <div className='dflexpermession' key={key}>
                                                                     <div className="form-check">
@@ -484,7 +487,7 @@ const UserRoleManagementEditPage = () => {
                                                                 </div>
                                                             ))}
                                                         </div>
-                                                        </div>
+                                                    </div>
                                                 </div>
                                             );
                                         })}
@@ -493,13 +496,13 @@ const UserRoleManagementEditPage = () => {
 
                                 <div className="addentry-btn mt-4">
                                     {canAccess('edit') && (
-                                    <button
-                                        type="submit"
-                                        className="btn btn-info"
-                                        disabled={isSubmitting}
-                                    >
-                                        {isSubmitting ? 'Updating...' : 'Update'}
-                                    </button>
+                                        <button
+                                            type="submit"
+                                            className="btn btn-info"
+                                            disabled={isSubmitting}
+                                        >
+                                            {isSubmitting ? 'Updating...' : 'Update'}
+                                        </button>
                                     )}
                                 </div>
                             </form>
