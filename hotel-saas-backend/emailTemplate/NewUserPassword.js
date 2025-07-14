@@ -6,7 +6,7 @@ const getNewUserPasswordEmail = (userName, userEmail, temporaryPassword, loginUr
     <!DOCTYPE html>
     <html lang="en">
     <head>
-      <title>mybestdm</title>
+      <title>Rank Me Now</title>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <style type="text/css">
