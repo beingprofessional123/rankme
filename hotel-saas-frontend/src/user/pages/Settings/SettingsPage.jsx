@@ -192,7 +192,6 @@ const SettingsPage = () => {
                     user.profile_image = updatedData.profileImage;
                 }
 
-
                 localStorage.setItem('user', JSON.stringify(user));
             }
             toast.success(response.data.message || 'General settings updated successfully!');

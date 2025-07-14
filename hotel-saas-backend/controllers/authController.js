@@ -84,6 +84,8 @@ exports.signup = async (req, res) => {
                 phone: userWithDetails.phone,
                 role: userWithDetails.Role ? userWithDetails.Role.name : null, // Access the role name
                 company: userWithDetails.Company ? userWithDetails.Company : null, // Include company details
+                company_id: userWithDetails.Company ? userWithDetails.Company.id : null, // Include company details
+
                 profile_image: userWithDetails.profile,
             },
         });

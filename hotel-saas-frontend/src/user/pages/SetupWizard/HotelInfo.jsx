@@ -25,7 +25,7 @@ const HotelInfo = ({ onHotelCreated }) => {
     setLoading(true);
     setErrors({}); // Clear previous errors
     const newErrors = {};
-
+    
     if (!hotelName.trim()) {
       newErrors.name = 'Please enter a hotel name.';
     } else if (!/[a-zA-Z]/.test(hotelName)) {
@@ -33,18 +33,18 @@ const HotelInfo = ({ onHotelCreated }) => {
     }
     if (!location.trim()) newErrors.location = 'Please enter a location.';
     if (!hotelType.trim()) newErrors.hotel_type = 'Please select a hotel type.';
-
+    
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       setLoading(false);
       return;
     }
-
+    
     try {
       const token = localStorage.getItem('token');
       const user = JSON.parse(localStorage.getItem('user'));
-      const company_id = user?.company_id;
-
+      const company_id = user?.company?.id;
+    
       if (!token || !company_id) {
         toast.warning('Missing token or company information. Please log in again.');
         setLoading(false);
