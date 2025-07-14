@@ -48,7 +48,7 @@ const InvoiceHistory = () => {
     userName: p.User?.name || 'N/A', // ✅ Add user name from nested User object
     planName: p.SubscriptionPlan?.name || 'N/A',
     date: moment(p.createdAt).format('MMM D, YYYY'),
-    type: p.SubscriptionPlan?.billing_period || 'N/A',
+    type: p.SubscriptionPlan?.billing_period ? p.SubscriptionPlan.billing_period.charAt(0).toUpperCase() + p.SubscriptionPlan.billing_period.slice(1)  : 'N/A',
     amount: `$${p.amount}`,
     status: p.status,
     action: 'Download',
