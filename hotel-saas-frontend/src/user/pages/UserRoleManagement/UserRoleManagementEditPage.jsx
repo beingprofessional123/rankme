@@ -8,13 +8,6 @@ import { PermissionContext } from '../../UserPermission';
 
 const staticModules = [
     {
-        key: 'dashboard',
-        value: 'Dashboard',
-        permissions: [
-            { key: 'tab', label: 'Tab Show/hide' }
-        ]
-    },
-    {
         key: 'pricing_calendar',
         value: 'Pricing Calendar',
         permissions: [
