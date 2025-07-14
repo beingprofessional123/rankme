@@ -9,9 +9,9 @@ import AuthLayout from '../../layouts/AuthLayout';
 const Login = () => {
   const navigate = useNavigate();
   const [errors, setErrors] = useState({});
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // New state for loading indicator
 
+  const [showPassword, setShowPassword] = useState(false); // State for password visibility
+  const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
 
   const [formData, setFormData] = useState({
@@ -34,6 +34,7 @@ const Login = () => {
         navigate('/login');
         return;
       }
+      
 
       try {
         const response = await axios.get(
@@ -103,7 +104,9 @@ const Login = () => {
     }
 
     setErrors({}); // Clear previous errors
-    setIsLoading(true); // Set loading to true when submission starts
+
+    setLoading(true);
+
 
     try {
       const response = await axios.post(`${process.env.REACT_APP_API_BASE_URL}/api/login`, {
@@ -144,7 +147,8 @@ const Login = () => {
       const message = error.response?.data?.message || 'Login failed';
       setErrors({ general: message });
     } finally {
-      setIsLoading(false); // Set loading to false after response or error
+      setLoading(false); // ⬅️ End loading state
+
     }
   };
 
@@ -204,11 +208,11 @@ const Login = () => {
               </div>
 
               <div className="login-btn">
-                <Button type="submit" className="btn btn-info" disabled={isLoading}>
-                  {isLoading ? (
+
+                <Button type="submit" className="btn btn-info" disabled={loading}>
+                  {loading ? (
                     <>
-                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                      {' '}Loading...
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                     </>
                   ) : (
                     'Log In'

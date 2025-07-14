@@ -75,10 +75,11 @@ const UpgradePlan = () => {
 
 
         if (result.isConfirmed) {
+            let response;
             try {
                 const token = localStorage.getItem('token');
 
-                const response = await axios.post(
+                response = await axios.post(
                     `${process.env.REACT_APP_API_BASE_URL}/api/payments/upgrade-payment`,
                     {
                         subscription_id: planId,
@@ -94,6 +95,10 @@ const UpgradePlan = () => {
                     }
                 );
 
+                if(response.data.billingType === 'free' && response.data.userSubscription.status === 'active'){
+                    navigate('/billing');
+                }
+
                 const stripe = await stripePromise;
                 const result = await stripe.redirectToCheckout({ sessionId: response.data.sessionId });
                 if (result.error) {
@@ -102,7 +107,9 @@ const UpgradePlan = () => {
                 }
             } catch (err) {
                 console.error('Error upgrading plan:', err);
-                Swal.fire('Error', 'Upgrade failed. Please try again.', 'error');
+                if(response.data.billingType !== 'free' && response.data.userSubscription.status !== 'active'){
+                    Swal.fire('Error', 'Upgrade failed. Please try again.', 'error');
+                }
             }
         }
 
