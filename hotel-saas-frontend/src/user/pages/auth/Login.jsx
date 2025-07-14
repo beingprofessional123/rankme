@@ -1,6 +1,6 @@
 // src/pages/auth/Login.jsx
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'; // Import Link
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import Input from '../../components/forms/Input';
 import Button from '../../components/forms/Button';
@@ -9,7 +9,8 @@ import AuthLayout from '../../layouts/AuthLayout';
 const Login = () => {
   const navigate = useNavigate();
   const [errors, setErrors] = useState({});
-  const [showPassword, setShowPassword] = useState(false); // State for password visibility
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // New state for loading indicator
 
   const [searchParams] = useSearchParams();
 
@@ -69,14 +70,14 @@ const Login = () => {
 
       } catch (error) {
         console.error('Error fetching subscription:', error);
+        localStorage.removeItem('token'); // Clear token if validation fails
+        localStorage.removeItem('user');
         navigate('/login');
       }
     };
 
     checkLoginAndRedirect();
   }, []);
-
-
 
   // Add/remove 'loginbg' class to the body
   useEffect(() => {
@@ -102,6 +103,7 @@ const Login = () => {
     }
 
     setErrors({}); // Clear previous errors
+    setIsLoading(true); // Set loading to true when submission starts
 
     try {
       const response = await axios.post(`${process.env.REACT_APP_API_BASE_URL}/api/login`, {
@@ -113,7 +115,7 @@ const Login = () => {
       localStorage.setItem('token', data.token);
       const userWithCompanyId = {
         ...data.user,
-        company_id: data.user.company?.id || null // optional chaining in case company is undefined
+        company_id: data.user.company?.id || null
       };
       if (userWithCompanyId.profile_image) {
         userWithCompanyId.profile_image = `${process.env.REACT_APP_API_BASE_URL}/${userWithCompanyId.profile_image}`;
@@ -126,18 +128,11 @@ const Login = () => {
 
       // Redirect based on user role
       switch (data.user.role) {
-        // case 'super_admin':
-        //   window.location.href = '/admin';
-        //   break;
         case 'company_admin':
           window.location.href = '/subscription';
           break;
         case 'revenue_manager':
-          window.location.href = '/dashboard';
-          break;
         case 'general_manager':
-          window.location.href = '/dashboard';
-          break;
         case 'analyst':
           window.location.href = '/dashboard';
           break;
@@ -148,14 +143,14 @@ const Login = () => {
       console.error(error);
       const message = error.response?.data?.message || 'Login failed';
       setErrors({ general: message });
+    } finally {
+      setIsLoading(false); // Set loading to false after response or error
     }
   };
 
   return (
-    // AuthLayout will now just provide a wrapper, not the background styles.
-    // The 'loginbg' class on the body will handle the main background.
     <AuthLayout>
-      <div className="loginmain"> {/* This wraps the entire login content */}
+      <div className="loginmain">
         <div className="logo">
           <a href="#">
             <img
@@ -165,36 +160,33 @@ const Login = () => {
             />
           </a>
         </div>
-        <div className="loginbg-w"> {/* This is the white background box */}
-          <h1>Log in to your account</h1> {/* Changed h2 to h1 as per HTML */}
+        <div className="loginbg-w">
+          <h1>Log in to your account</h1>
           {errors.general && (
             <div className="text-danger small text-center mt-3">{errors.general}</div>
           )}
           <div className="form-design">
             <form id="login-form" onSubmit={handleSubmit}>
-              {/* Email Input */}
               <Input
-                label="Email Address" // Changed label to match HTML
+                label="Email Address"
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="Email Address" // Changed placeholder to match HTML
+                placeholder="Email Address"
                 error={errors.email}
               />
 
-              {/* Password Input with eye icon */}
-              <div className="form-group"> {/* Outer div for the group, Input component handles the inner form-group */}
+              <div className="form-group">
                 <label className="form-label">Password</label>
                 <div className="password-icon">
                   <Input
-                    // We don't pass the label prop here as we rendered it above
                     type={showPassword ? 'text' : 'password'}
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
-                    placeholder="Password" // Changed placeholder to match HTML
-                    className="" // Ensure no extra classes are passed from here to avoid conflict
+                    placeholder="Password"
+                    className=""
                     error={errors.password}
                   />
                   <img
@@ -202,20 +194,25 @@ const Login = () => {
                     className="img-fluid"
                     alt="Toggle Password Visibility"
                     onClick={togglePasswordVisibility}
-                    style={{ cursor: 'pointer' }} // Add a style for better UX
+                    style={{ cursor: 'pointer' }}
                   />
                 </div>
               </div>
 
-              {/* Forgot Password Link */}
               <div className="form-group forgotpassword">
                 <Link to="/forgot-password">Forgot Password ?</Link>
               </div>
 
-              {/* Login Button */}
               <div className="login-btn">
-                <Button type="submit" className="btn btn-info"> {/* Apply Bootstrap classes */}
-                  Log In
+                <Button type="submit" className="btn btn-info" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                      {' '}Loading...
+                    </>
+                  ) : (
+                    'Log In'
+                  )}
                 </Button>
               </div>
             </form>
