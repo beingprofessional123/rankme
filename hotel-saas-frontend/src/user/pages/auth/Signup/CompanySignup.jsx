@@ -21,6 +21,7 @@ const CompanySignup = () => {
   const [errors, setErrors] = useState({});
   const [generalError, setGeneralError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchCountryList();
@@ -95,6 +96,7 @@ const CompanySignup = () => {
       return;
     }
     setErrors({});
+    setLoading(true);
 
     try {
       const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/signup`, {
@@ -138,6 +140,8 @@ const CompanySignup = () => {
     } catch (error) {
       setGeneralError('Network error. Please check your internet connection and try again.');
       console.error(error);
+    } finally {
+      setLoading(false); // ⬅️ End loading state
     }
   };
 
@@ -255,7 +259,13 @@ const CompanySignup = () => {
 
               <div className="login-btn">
                 <Button type="submit" className="btn btn-info">
-                  Next
+                   {loading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    </>
+                  ) : (
+                    'Next'
+                  )}
                 </Button>
               </div>
             </form>

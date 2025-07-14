@@ -10,7 +10,7 @@ const Login = () => {
   const navigate = useNavigate();
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false); // State for password visibility
-
+  const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
 
   const [formData, setFormData] = useState({
@@ -33,6 +33,7 @@ const Login = () => {
         navigate('/login');
         return;
       }
+      
 
       try {
         const response = await axios.get(
@@ -102,6 +103,7 @@ const Login = () => {
     }
 
     setErrors({}); // Clear previous errors
+    setLoading(true);
 
     try {
       const response = await axios.post(`${process.env.REACT_APP_API_BASE_URL}/api/login`, {
@@ -148,6 +150,8 @@ const Login = () => {
       console.error(error);
       const message = error.response?.data?.message || 'Login failed';
       setErrors({ general: message });
+    } finally {
+      setLoading(false); // ⬅️ End loading state
     }
   };
 
@@ -214,8 +218,14 @@ const Login = () => {
 
               {/* Login Button */}
               <div className="login-btn">
-                <Button type="submit" className="btn btn-info"> {/* Apply Bootstrap classes */}
-                  Log In
+                <Button type="submit" className="btn btn-info" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    </>
+                  ) : (
+                    'Log In'
+                  )}
                 </Button>
               </div>
             </form>
