@@ -11,7 +11,6 @@ exports.getAllSubscriptions = async (req, res) => {
   }
 };
 
-
 exports.getUserSubscriptions = async (req, res) => {
   try {
     const user_id = req.user.id;

@@ -143,7 +143,7 @@ const Billing = () => {
                                                 planName: plan?.name,
                                                 subscription: {
                                                     subscription_id: subscription?.subscription_id,
-                                                    status: subscription?.status,
+                                                    status: subscription?.status?.charAt(0).toUpperCase() + subscription?.status?.slice(1),
                                                     started_at: subscription?.started_at,
                                                     expires_at: subscription?.expires_at,
                                                 }

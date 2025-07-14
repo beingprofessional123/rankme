@@ -311,11 +311,16 @@ exports.getUserById = async (req, res) => {
           model: db.Company,
           attributes: ['id', 'name'], // Get company ID and name
         },
-       {
-         model: db.UserPermission,
-         as: 'permissions',
-         attributes: ['module_key', 'permission_key', 'is_allowed'],
-       }
+        {
+          model: db.UserPermission,
+          as: 'permissions',
+          attributes: ['module_key', 'permission_key', 'is_allowed'],
+        },
+        {
+          model: db.Country, // Add Country model here
+          as: 'Country', // Make sure this alias matches the 'as' in User.belongsTo
+          attributes: ['id', 'name', 'phonecode'], // Get country ID, name, and phonecode
+        }
       ],
       // Add company_id filter if the logged-in user is a company_admin
       where: req.user.company_id ? { company_id: req.user.company_id } : {},
@@ -326,26 +331,23 @@ exports.getUserById = async (req, res) => {
       return res.status(404).json({ message: 'User not found or you do not have permission to view this user.' });
     }
 
-     //Flatten permissions into nested format
+    //Flatten permissions into nested format
     const permissionsMap = {};
 
-    // Flatten permissions into nested format
-
-if (user.permissions && user.permissions.length > 0) {
-  for (const perm of user.permissions) {
-    if (!permissionsMap[perm.module_key]) {
-      permissionsMap[perm.module_key] = {};
+    if (user.permissions && user.permissions.length > 0) {
+      for (const perm of user.permissions) {
+        if (!permissionsMap[perm.module_key]) {
+          permissionsMap[perm.module_key] = {};
+        }
+        permissionsMap[perm.module_key][perm.permission_key] = perm.is_allowed;
+      }
     }
-    permissionsMap[perm.module_key][perm.permission_key] = perm.is_allowed;
-  }
-}
 
-// Build formattedPermissions array (like frontend expects)
-const formattedPermissions = Object.entries(permissionsMap).map(([module_key, perms]) => ({
-  module_key,
-  permissions: perms
-}));
-
+    // Build formattedPermissions array (like frontend expects)
+    const formattedPermissions = Object.entries(permissionsMap).map(([module_key, perms]) => ({
+      module_key,
+      permissions: perms
+    }));
 
     // Flatten response for easier client-side consumption
     const formattedUser = {
@@ -360,6 +362,8 @@ const formattedPermissions = Object.entries(permissionsMap).map(([module_key, pe
       role_id: user.role_id,
       role_name: user.Role ? user.Role.name : null,
       company_name: user.Company ? user.Company.name : null,
+      country_name: user.Country ? user.Country.name : null, // Add country name
+      country_phonecode: user.Country ? user.Country.phonecode : null, // Add country phonecode
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       permissions: formattedPermissions,
@@ -374,7 +378,6 @@ const formattedPermissions = Object.entries(permissionsMap).map(([module_key, pe
     res.status(500).json({ message: 'Failed to fetch user. Please try again later.' });
   }
 };
-
 // API 5: Update an existing user
 exports.updateUser = async (req, res) => {
   try {
