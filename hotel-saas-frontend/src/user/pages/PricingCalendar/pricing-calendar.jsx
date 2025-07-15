@@ -12,19 +12,135 @@ import Swal from 'sweetalert2';
 import { addDays, startOfMonth, addMonths, format as formatDate } from 'date-fns';
 import tippy from 'tippy.js';
 import 'tippy.js/dist/tippy.css'; // Optional: include default toolti
+import { Link } from 'react-router-dom';
 
 const PricingCalendar = () => {
-  const [selectedDate, setSelectedDate] = useState(null);
   const [hotels, setHotels] = useState([]);
-  const [selectedHotelId, setSelectedHotelId] = useState('');
-  const [allHotelRooms, setAllHotelRooms] = useState([]);
-  const [selectedRoomTypes, setSelectedRoomTypes] = useState([]);
+  const [selectedHotelIds, setSelectedHotelIds] = useState([]);
   const [calendarEvents, setCalendarEvents] = useState([]);
+  const [dateRange, setDateRange] = useState({
+    start: format(new Date(), 'yyyy-MM-dd'),
+    end: format(addDays(new Date(), 14), 'yyyy-MM-dd'),
+  });
   const calendarRef = useRef(null);
-  const [rawEvents, setRawEvents] = useState([]);
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [selectedDate, setSelectedDate] = useState(null);
+
+  const fetchHotels = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user'));
+      const companyId = user?.company_id;
+      if (!token || !companyId) throw new Error('Missing credentials');
+
+      const res = await fetch(
+        `${process.env.REACT_APP_API_BASE_URL}/api/hotels/list?company_id=${companyId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      const data = await res.json();
+      setHotels(data.hotels || []);
+    } catch (err) {
+      toast.error(err.message || 'Failed to fetch hotels');
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchHotels();
+  }, [fetchHotels]);
+
+  const generateDateRange = (start, end) => {
+    const dates = [];
+    let current = new Date(start);
+    const endDate = new Date(end);
+    while (current <= endDate) {
+      dates.push(format(current, 'yyyy-MM-dd'));
+      current = addDays(current, 1);
+    }
+    return dates;
+  };
+
+  useEffect(() => {
+  const fetchCalendarData = async () => {
+    if (!selectedHotelIds.length || !dateRange.start || !dateRange.end) return;
+
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user'));
+    const companyId = user?.company_id;
+    const userId = user?.id;
+    const startDate = dateRange.start;
+    const endDate = dateRange.end;
+
+    const hotelIdsStr = selectedHotelIds.join(',');
+
+    try {
+      const apiUrlPricing = `${process.env.REACT_APP_API_BASE_URL}/api/pricing-calendar/property-price?company_id=${companyId}&user_id=${userId}&hotel_id=${hotelIdsStr}&start_date=${startDate}&end_date=${endDate}`;
+      const apiUrlBooking = `${process.env.REACT_APP_API_BASE_URL}/api/pricing-calendar/booking-data?company_id=${companyId}&user_id=${userId}&hotel_id=${hotelIdsStr}&start_date=${startDate}&end_date=${endDate}`;
+
+      const [pricingRes, bookingRes] = await Promise.all([
+        fetch(apiUrlPricing, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(apiUrlBooking, { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+
+      const pricingData = await pricingRes.json();
+      const bookingData = await bookingRes.json();
+
+      // Expected data shape:
+      // pricingData.data = { [hotelId]: { [date]: { suggested_price, historical_price, average_price, room_type } } }
+      // bookingData.data = { [hotelId]: { [date]: { occupancy } } }
+
+      const allEvents = [];
+
+      for (const hotelId of selectedHotelIds) {
+        const hotel = hotels.find(h => h.id === hotelId);
+        if (!hotel) continue;
+
+        const priceByDate = pricingData?.data?.[hotelId] || {};
+        const bookingByDate = bookingData?.data?.[hotelId] || {};
+
+        const dates = generateDateRange(startDate, endDate);
+        for (const date of dates) {
+          const priceInfo = priceByDate[date] || {};
+          const bookingInfo = bookingByDate[date] || {};
+
+          allEvents.push({
+            title: hotel.name,
+            date,
+            backgroundColor: '#E5E5E5',
+            borderColor: '#E5E5E5',
+            textColor: '#000000',
+            extendedProps: {
+              hotel_id: hotel.id,
+              hotel_name: hotel.name,
+              suggested_price: priceInfo.suggested_price || 0,
+              historical_price: priceInfo.historical_price || 0,
+              average_price: priceInfo.average_price || 0,
+              predicted_occupancy: bookingInfo.occupancy || '0%',
+            },
+          });
+        }
+      }
+
+      setCalendarEvents(allEvents);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load pricing/booking data');
+    }
+  };
+
+  fetchCalendarData();
+}, [selectedHotelIds, dateRange, hotels]);
 
 
+  const handleEventClick = async (info) => {
+    setSelectedDate(info.event.start);
+    const bootstrap = await import('bootstrap');
+    const modal = new bootstrap.Modal(document.getElementById('myModal'));
+    modal.show();
+  };
 
   useEffect(() => {
     const modalElement = document.getElementById('myModal');
@@ -46,18 +162,18 @@ const PricingCalendar = () => {
               if (roomSpan) {
                 tippy(roomSpan, {
                   content: `
-                    <div class="">
-                      <div class="mb-2 gap-4 d-flex justify-content-between">
-                        <span>Predicted Occupancy:</span> <strong>${occupancy}</strong>
+                      <div class="">
+                        <div class="mb-2 gap-4 d-flex justify-content-between">
+                          <span>Predicted Occupancy:</span> <strong>${occupancy}</strong>
+                        </div>
+                        <div class="mb-2 gap-4 d-flex justify-content-between">
+                          <span>Suggested Price:</span> <strong>$${suggested}</strong>
+                        </div>
+                        <div class="mb-2 gap-4 d-flex justify-content-between">
+                          <span>Historical Price:</span> <strong>$${historical}</strong>
+                        </div>
                       </div>
-                      <div class="mb-2 gap-4 d-flex justify-content-between">
-                        <span>Suggested Price:</span> <strong>$${suggested}</strong>
-                      </div>
-                      <div class="mb-2 gap-4 d-flex justify-content-between">
-                        <span>Historical Price:</span> <strong>$${historical}</strong>
-                      </div>
-                    </div>
-                  `,
+                    `,
                   allowHTML: true,
                   placement: 'top',
                   animation: 'shift-away',
@@ -80,221 +196,6 @@ const PricingCalendar = () => {
     }
   }, []);
 
-  const fetchHotels = useCallback(async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const user = JSON.parse(localStorage.getItem('user'));
-      const companyId = user?.company_id;
-      if (!token || !companyId) throw new Error('Missing token or company ID');
-
-      const apiUrl = `${process.env.REACT_APP_API_BASE_URL}/api/hotels/list?company_id=${companyId}`;
-      const response = await fetch(apiUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      const data = await response.json();
-      setHotels(data.hotels || []);
-    } catch (err) {
-      toast.error(err.message || 'Failed to fetch hotels');
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchHotels();
-  }, [fetchHotels]);
-
-  // Helper function to safely parse dates
-  const safeParseDate = (value, fallback = new Date()) => {
-    const date = new Date(value);
-    return isNaN(date.getTime()) ? fallback : date;
-  };
-
-  const handleHotelChange = async (e) => {
-    const hotelId = e?.target?.value || selectedHotelId;
-    setSelectedHotelId(hotelId);
-
-    const selectedHotel = hotels.find((hotel) => hotel.id === hotelId);
-    const rooms = selectedHotel?.Rooms || [];
-    setAllHotelRooms(rooms);
-    setSelectedRoomTypes([]);
-
-    try {
-      const token = localStorage.getItem('token');
-      const user = JSON.parse(localStorage.getItem('user'));
-      const companyId = user?.company_id;
-      const userId = user?.id;
-
-      if (!token || !companyId || !userId) throw new Error('Missing credentials');
-
-      // 🛠 Use selected date range or fallback to 7-day range from today
-      const today = new Date();
-      const parsedStart = safeParseDate(dateRange?.start, today);
-      const parsedEnd = safeParseDate(dateRange?.end, addDays(today, 6));
-
-      const startDate = format(parsedStart, 'yyyy-MM-dd');
-      const endDate = format(parsedEnd, 'yyyy-MM-dd');
-
-      const apiUrlPricing = `${process.env.REACT_APP_API_BASE_URL}/api/pricing-calendar/property-price?company_id=${companyId}&user_id=${userId}&hotel_id=${hotelId}&start_date=${startDate}&end_date=${endDate}`;
-      const apiUrlBooking = `${process.env.REACT_APP_API_BASE_URL}/api/pricing-calendar/booking-data?company_id=${companyId}&user_id=${userId}&hotel_id=${hotelId}&start_date=${startDate}&end_date=${endDate}`;
-
-      const [pricingRes, bookingRes] = await Promise.all([
-        fetch(apiUrlPricing, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }),
-        fetch(apiUrlBooking, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }),
-      ]);
-
-      const pricingData = await pricingRes.json();
-      const bookingData = await bookingRes.json();
-
-      const allPricingRows = pricingData?.results?.flatMap(item => item.extractedFiles || []) || [];
-      const allBookingRows = bookingData?.results?.flatMap(item => item.extractedFiles || []) || [];
-
-      // 🔁 Generate dates between range
-      const allDates = [];
-      let currentDate = parsedStart;
-      while (currentDate <= parsedEnd) {
-        allDates.push(format(currentDate, 'yyyy-MM-dd'));
-        currentDate = addDays(currentDate, 1);
-      }
-
-      const events = [];
-
-      for (const date of allDates) {
-        const currentDate = new Date(date);
-
-        for (const roomType of rooms) {
-          const normalizedRoomType = roomType.trim().toLowerCase();
-
-          // ✅ Match property price rows (inclusive checkIn < date < checkOut)
-          const matchingPriceRows = allPricingRows.filter(row => {
-            const rowRoom = (row.roomType || '').trim().toLowerCase();
-            const checkIn = row.checkIn ? new Date(row.checkIn) : null;
-            const checkOut = row.checkOut ? new Date(row.checkOut) : null;
-
-            return (
-              rowRoom === normalizedRoomType &&
-              checkIn && checkOut &&
-              currentDate >= checkIn &&
-              currentDate < checkOut
-            );
-          });
-
-          const availableCount = matchingPriceRows.length;
-
-          // ✅ Match booking rows (inclusive of checkIn == checkOut)
-          const bookedCount = allBookingRows.filter(b => {
-            const bRoom = (b.roomType || '').trim().toLowerCase();
-            const bIn = b.checkIn ? new Date(b.checkIn) : null;
-            const bOut = b.checkOut ? new Date(b.checkOut) : null;
-
-            if (!bIn || !bOut) return false;
-
-            // ✅ Covers:
-            // - Single-day: checkIn === checkOut === date
-            // - Multi-day: checkIn <= date <= checkOut
-            //   (booking valid if guest is still staying)
-            return (
-              bRoom === normalizedRoomType &&
-              currentDate >= bIn &&
-              currentDate <= bOut
-            );
-          }).length;
-
-          // ✅ Calculate occupancy
-          let occupancy = availableCount ? (bookedCount / availableCount) * 100 : 0;
-          occupancy = Math.min(occupancy, 100);
-          const predicted_occupancy = `${Math.round(occupancy)}%`;
-
-          // ✅ Calculate rates
-          const validRates = matchingPriceRows
-            .map(r => parseFloat(r.rate || 0))
-            .filter(r => !isNaN(r) && r > 0);
-
-          const minPrice = validRates.length ? Math.min(...validRates) : 0;
-          const row = matchingPriceRows.find(r => parseFloat(r.rate) === minPrice);
-
-          const suggested_price = (minPrice + 10).toFixed(0);
-          const historical_price = Math.max(0, minPrice - 10).toFixed(0);
-
-          // ✅ Build event
-          const event = {
-            title: `
-        <div class="p-1 d-flex justify-content-between">
-          <span>${roomType}</span>
-          <span>$${minPrice.toFixed(0)}</span>
-        </div>
-        <div class="small text-muted">
-          Booked: ${bookedCount}, Occ: ${predicted_occupancy}
-        </div>
-      `,
-            date,
-            backgroundColor: row ? '#2CCDD9' : '#E5E5E5',
-            borderColor: row ? '#2CCDD9' : '#E5E5E5',
-            textColor: '#000000',
-            extendedProps: {
-              room_type: roomType,
-              price: minPrice.toFixed(0),
-              platform: row?.platform || 'N/A',
-              remarks: row?.remarks || '',
-              predicted_occupancy,
-              suggested_price,
-              historical_price,
-              average_price: minPrice.toFixed(0),
-              bookedCount,
-              availableCount,
-            },
-          };
-
-          events.push(event);
-        }
-      }
-
-      console.log(events);
-      setRawEvents(events);
-    } catch (error) {
-      console.error('❌ Error in handleHotelChange:', error);
-      toast.error(error.message || 'Failed to fetch pricing or booking data');
-      setCalendarEvents([]);
-    }
-  };
-
-  useEffect(() => {
-    if (selectedHotelId) {
-      handleHotelChange({ target: { value: selectedHotelId } });
-    }
-  }, [dateRange]);
-
-
-
-
-
-  useEffect(() => {
-    const filtered =
-      selectedRoomTypes.length > 0
-        ? rawEvents.filter(ev => selectedRoomTypes.includes(ev.extendedProps.room_type))
-        : rawEvents;
-
-    setCalendarEvents(filtered);
-  }, [selectedRoomTypes, rawEvents]);
-
-  const handleEventClick = async (info) => {
-    setSelectedDate(info.event.start);
-    const bootstrap = await import('bootstrap');
-    const modal = new bootstrap.Modal(document.getElementById('myModal'));
-    modal.show();
-  };
-
   return (
     <DashboardLayout>
       <div className="mainbody">
@@ -306,7 +207,7 @@ const PricingCalendar = () => {
                 <h2>Pricing Calendar</h2>
                 <nav aria-label="breadcrumb">
                   <ol className="breadcrumb">
-                    <li className="breadcrumb-item"><a href="#">Home</a></li>
+                    <li className="breadcrumb-item"><Link to=''>Home</Link></li>
                     <li className="breadcrumb-item active" aria-current="page">Pricing Calendar</li>
                   </ol>
                 </nav>
@@ -320,45 +221,30 @@ const PricingCalendar = () => {
               <div className="white-bg form-design">
                 <form>
                   <div className="row calendarfilter">
-                    <div className="col-md-4">
+                    <div className="col-md-6">
                       <div className="form-group">
                         <label className="form-label">Hotel</label>
-                        <select
-                          className="form-select form-control"
-                          onChange={handleHotelChange}
-                          value={selectedHotelId}
-                        >
-                          <option value="">Select Hotel</option>
-                          {hotels.map((hotel) => (
-                            <option key={hotel.id} value={hotel.id}>
-                              {hotel.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="col-md-4">
-                      <div className="form-group">
-                        <label className="form-label">Room Types</label>
-                        <Select
-                          isMulti
-                          options={allHotelRooms.map((room) => ({
-                            label: room,
-                            value: room,
+                        <Select isMulti
+                          options={hotels.map(h => ({
+                            label: h.name,
+                            value: h.id,
                           }))}
-                          value={selectedRoomTypes.map((room) => ({
-                            label: room,
-                            value: room,
-                          }))}
-                          onChange={(selectedOptions) =>
-                            setSelectedRoomTypes(selectedOptions.map((opt) => opt.value))
-                          }
+                          value={selectedHotelIds.map(id => {
+                            const h = hotels.find(hotel => hotel.id === id);
+                            return h ? { label: h.name, value: h.id } : null;
+                          }).filter(Boolean)}
+                          onChange={(selected) => {
+                            const ids = selected.map(opt => opt.value);
+                            setSelectedHotelIds(ids);
+                          }}
+
                           className="basic-multi-select"
                           classNamePrefix="select"
                         />
+
                       </div>
                     </div>
-                    <div className="col-md-4">
+                    <div className="col-md-6">
                       <div className="form-group">
                         <label className="form-label">Date Range</label>
                         <div className="daterange d-flex gap-2 align-items-center">
@@ -422,7 +308,7 @@ const PricingCalendar = () => {
                     eventContent={(arg) => {
                       const {
                         suggested_price,
-                        room_type,
+                        hotel_name,
                         predicted_occupancy,
                         historical_price,
                         average_price,
@@ -440,7 +326,7 @@ const PricingCalendar = () => {
                       const roomSpan = document.createElement('span');
                       roomSpan.className = isGray ? 'room-type gray-room-type' : 'room-type blue-room-type';
                       roomSpan.style.cursor = 'pointer';
-                      roomSpan.innerText = room_type;
+                      roomSpan.innerText = hotel_name;
 
                       const priceSpan = document.createElement('span');
                       priceSpan.className = 'price';
@@ -471,18 +357,18 @@ const PricingCalendar = () => {
 
                       if (roomSpan) {
                         let tooltipContent = `
-                          <div class="p-1">
-                            <div class="mb-2 gap-4 d-flex justify-content-between">
-                              <span>Predicted Occupancy:</span> <strong>${predicted_occupancy}</strong>
-                            </div>
-                            <div class="mb-2 gap-4 d-flex justify-content-between">
-                              <span>Suggested Price:</span> <strong>$${suggested_price}</strong>
-                            </div>
-                            <div class="mb-2 gap-4 d-flex justify-content-between">
-                              <span>Historical Price:</span> <strong>$${historical_price}</strong>
-                            </div>
-                          </div>
-                        `;
+                                    <div class="p-1">
+                                      <div class="mb-2 gap-4 d-flex justify-content-between">
+                                        <span>Predicted Occupancy:</span> <strong>${predicted_occupancy}</strong>
+                                      </div>
+                                      <div class="mb-2 gap-4 d-flex justify-content-between">
+                                        <span>Suggested Price:</span> <strong>$${suggested_price}</strong>
+                                      </div>
+                                      <div class="mb-2 gap-4 d-flex justify-content-between">
+                                        <span>Historical Price:</span> <strong>$${historical_price}</strong>
+                                      </div>
+                                    </div>
+                                  `;
 
                         tippy(roomSpan, {
                           content: tooltipContent,
@@ -544,12 +430,7 @@ const PricingCalendar = () => {
                       <div id="home" className="tab-pane active">
                         <div className="modal-allroom">
                           <ul>
-                            {(selectedRoomTypes.length > 0 ? selectedRoomTypes : allHotelRooms).map((room, i) => (
-                              <li key={i}>
-                                <span className="modal-room-name">{room}</span>
-                                <span className="modal-room-price">$2500</span>
-                              </li>
-                            ))}
+
                           </ul>
                         </div>
                       </div>
@@ -565,13 +446,7 @@ const PricingCalendar = () => {
                                 </tr>
                               </thead>
                               <tbody>
-                                {(selectedRoomTypes.length > 0 ? selectedRoomTypes : allHotelRooms).map((room, i) => (
-                                  <tr key={i}>
-                                    <td>{room}</td>
-                                    <td><input type="text" className="form-control" placeholder="$2500" /></td>
-                                    <td>$3000</td>
-                                  </tr>
-                                ))}
+
                               </tbody>
                             </table>
                             <div className="calendar-edit-btn">

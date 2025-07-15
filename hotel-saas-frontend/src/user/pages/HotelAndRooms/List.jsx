@@ -219,19 +219,9 @@ const HotelsAndRoomsList = () => {
       options: { filter: false, sort: true },
     },
     {
-      name: 'Rooms',
-      label: 'Rooms',
-      options: {
-        customBodyRender: (value) => {
-          if (Array.isArray(value) && value.length > 0) {
-            if (typeof value[0] === 'object' && value[0] !== null && 'name' in value[0]) {
-              return value.map(room => room.name).join(', ');
-            }
-            return value.join(', ');
-          }
-          return 'N/A';
-        },
-      },
+      name: 'total_rooms',
+      label: 'Total Room',
+      options: { filter: false, sort: true },
     },
     {
       name: 'Actions',

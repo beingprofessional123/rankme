@@ -91,7 +91,7 @@ const HotelAndRoomCreate = () => {
                             <div className="col-md-12">
                                 <div className="stepform">
                                     <form id="msform">
-                                        <Stepper steps={steps.map(s => s.name)} currentStep={currentStep} /> {/* Pass only names for stepper */}
+                                        {/* <Stepper steps={steps.map(s => s.name)} currentStep={currentStep} /> */}
                                         {renderStep()}
                                     </form>
                                 </div>

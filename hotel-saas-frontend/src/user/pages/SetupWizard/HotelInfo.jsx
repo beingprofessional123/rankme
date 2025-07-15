@@ -2,14 +2,17 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 const HotelInfo = ({ onHotelCreated }) => {
   const [hotelID, setHotelID] = useState('');
   const [hotelName, setHotelName] = useState('');
   const [location, setLocation] = useState('');
+  const [totalRooms, setTotalRooms] = useState('');
   const [hotelType, setHotelType] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const navigate = useNavigate();
 
   useEffect(() => {
     const savedHotelData = JSON.parse(localStorage.getItem('hotel_info'));
@@ -18,6 +21,7 @@ const HotelInfo = ({ onHotelCreated }) => {
       setHotelName(savedHotelData.name || '');
       setLocation(savedHotelData.location || '');
       setHotelType(savedHotelData.hotel_type || '');
+      setTotalRooms(savedHotelData.total_rooms || '');
     }
   }, []);
 
@@ -33,6 +37,7 @@ const HotelInfo = ({ onHotelCreated }) => {
     }
     if (!location.trim()) newErrors.location = 'Please enter a location.';
     if (!hotelType.trim()) newErrors.hotel_type = 'Please select a hotel type.';
+    if (!totalRooms.trim()) newErrors.totalRooms = 'Please enter total numbers of rooms';
     
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -59,6 +64,7 @@ const HotelInfo = ({ onHotelCreated }) => {
           hotel_type: hotelType,
           company_id,
           hotel_id: hotelID, // This might be null for new hotels, but included for consistency
+          total_rooms:totalRooms,
         },
         {
           headers: {
@@ -73,9 +79,11 @@ const HotelInfo = ({ onHotelCreated }) => {
           name: hotelName,
           location,
           hotel_type: hotelType,
+          total_rooms:totalRooms
         })
       );
-      onHotelCreated(response.data); // Proceed to next step
+      navigate('/dashboard');
+      // onHotelCreated(response.data); // Proceed to next step
     } catch (error) {
       console.error('Error creating hotel:', error);
       if (error.response?.status === 400 || error.response?.status === 422) {
@@ -128,6 +136,21 @@ const HotelInfo = ({ onHotelCreated }) => {
           </select>
           {errors.hotel_type && <div className="invalid-feedback">{errors.hotel_type}</div>}
         </div>
+        <div className="form-group">
+          <label className="form-label">Total Room</label>
+          <input
+            type="number"
+            min="0"
+            className={`form-control ${errors.totalRooms ? 'is-invalid' : ''}`}
+            value={totalRooms}
+            onChange={(e) => setTotalRooms(e.target.value)}
+            placeholder="Enter total rooms"
+            inputMode="numeric"
+          />
+          {errors.totalRooms && <div className="invalid-feedback">{errors.totalRooms}</div>}
+        </div>
+
+        
       </div>
       <input
         type="button"
