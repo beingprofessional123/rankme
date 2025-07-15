@@ -176,16 +176,15 @@ const SubscriptionPlan = () => {
         }
       } else if (selectedGateway === 'razorpay') {
         console.log("Razorpay payment initiated:", response.data);
-        if(response.data.billingType !== 'free' && response.data.userSubscription.status !== 'active'){
         toast.error('Razorpay integration not fully implemented in this example.');
-        }
+
 
       }
     } catch (err) {
       console.error('Payment initiation failed:', err);
-
-      toast.error(err.response?.data?.message || 'Failed to start payment. Please try again.');
-
+      if (response.data.billingType !== 'free' && response.data.userSubscription.status !== 'active') {
+        toast.error(err.response?.data?.message || 'Failed to start payment. Please try again.');
+      }
     } finally {
       setIsPaying(false);
       // Removed setShowModal(false) here, typically you'd close the modal
