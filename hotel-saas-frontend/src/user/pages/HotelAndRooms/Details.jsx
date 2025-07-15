@@ -97,10 +97,10 @@ const HotelAndRoomDetails = () => {
                     <span>{hotelDetails.hotel_type || 'N/A'}</span>
                   </li>
                   <li>
-                    <strong>Room Name</strong>
-                    <span>{listOrNA(hotelDetails.rooms, 'name')}</span>
+                    <strong>Total Room</strong>
+                    <span>{hotelDetails.total_rooms}</span>
                   </li>
-                  <li>
+                  {/* <li>
                     <strong>Capacity</strong>
                     <span>
                       {listOrNA(
@@ -111,7 +111,7 @@ const HotelAndRoomDetails = () => {
                   <li>
                     <strong>Rate Category</strong>
                     <span>{listOrNA(hotelDetails.rateCategories, 'name')}</span>
-                  </li>
+                  </li> */}
                 </ul>
               </div>
             </div>

@@ -46,6 +46,7 @@ const HotelAndRoomEdit = () => {
                     name: parsed.name,
                     location: parsed.location,
                     hotel_type: parsed.hotel_type,
+                    total_rooms: parsed.total_rooms,
                 });
             } catch (err) {
                 console.error('Failed to parse hotel_info from localStorage', err);
@@ -130,7 +131,7 @@ const HotelAndRoomEdit = () => {
                             <div className="col-md-12">
                                 <div className="stepform">
                                     <form id="msform">
-                                        <Stepper steps={steps.map(s => s.name)} currentStep={currentStep} />
+                                        {/* <Stepper steps={steps.map(s => s.name)} currentStep={currentStep} /> */}
                                         {loading ? (
                                             <p>Loading...</p>
                                         ) : error ? (

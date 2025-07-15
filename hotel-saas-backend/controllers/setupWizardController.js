@@ -3,7 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 
 // Step 1: Create Hotel
 exports.createHotel = async (req, res) => {
-  const { hotel_id, name, location, hotel_type, company_id } = req.body;
+  const { hotel_id, name, location, hotel_type, company_id,total_rooms } = req.body;
 
   if (!name || !location || !hotel_type || !company_id) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -18,7 +18,7 @@ exports.createHotel = async (req, res) => {
         return res.status(404).json({ error: 'Hotel not found' });
       }
 
-      await existingHotel.update({ name, location, hotel_type, company_id });
+      await existingHotel.update({ name, location, hotel_type, company_id,total_rooms });
 
       return res.status(200).json({ message: 'Hotel updated successfully', hotel: existingHotel });
     }
@@ -30,6 +30,7 @@ exports.createHotel = async (req, res) => {
       location,
       hotel_type,
       company_id,
+      total_rooms,
     });
 
     return res.status(201).json({ message: 'Hotel created successfully', hotel: newHotel });

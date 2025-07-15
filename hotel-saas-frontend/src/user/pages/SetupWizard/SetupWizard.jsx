@@ -85,7 +85,7 @@ const SetupWizard = () => {
             <div className="col-md-12">
               <div className="stepform"> {/* From your HTML */}
                 <form id="msform"> {/* The form element, but content is dynamic via React */}
-                  <Stepper steps={steps.map(s => s.name)} currentStep={currentStep} /> {/* Pass only names for stepper */}
+                  {/* <Stepper steps={steps.map(s => s.name)} currentStep={currentStep} /> */}
                   {renderStep()}
                 </form>
               </div>

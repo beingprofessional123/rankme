@@ -9,9 +9,8 @@ const {
 
 exports.getPropertyPrice = async (req, res) => {
   try {
-    const { user_id: userId, company_id: companyId, hotel_id: hotelId,start_date:startDate ,end_date:endDate } = req.query;
+    const { user_id: userId, company_id: companyId, hotel_id: hotelId, start_date: startDate, end_date: endDate } = req.query;
 
-    // ✅ Validate query parameters
     if (!userId || !companyId || !hotelId) {
       return res.status(400).json({
         status: 'error',
@@ -22,18 +21,28 @@ exports.getPropertyPrice = async (req, res) => {
       });
     }
 
+    // ✅ Support comma-separated hotel IDs
+    let hotelIds = hotelId;
+    if (typeof hotelId === 'string') {
+      hotelIds = hotelId.split(',').map(id => id.trim());
+    }
+
     const data = await UploadData.findAll({
       where: {
         companyId,
         fileType: 'property_price_data',
-        status: 'saved'
+        status: 'saved',
       },
       include: [
         {
           model: MetaUploadData,
           as: 'metaData',
           required: true,
-          where: { hotelPropertyId: hotelId },
+          where: {
+            hotelPropertyId: {
+              [Op.in]: hotelIds,
+            },
+          },
           attributes: ['hotelPropertyId', 'fromDate', 'toDate'],
         },
         {
@@ -50,16 +59,14 @@ exports.getPropertyPrice = async (req, res) => {
       order: [['createdAt', 'DESC']],
     });
 
-    // ✅ Response with count
     res.status(200).json({
       status: 'success',
       status_code: 200,
       status_message: 'OK',
       message: 'Property price data fetched successfully',
       count: data.length,
-      results: data
+      results: data,
     });
-
   } catch (error) {
     console.error('Error fetching property prices:', error);
 
@@ -74,12 +81,20 @@ exports.getPropertyPrice = async (req, res) => {
   }
 };
 
+
 exports.getBookingData = async (req, res) => {
   try {
-   const { user_id: userId, company_id: companyId, hotel_id: hotelId,start_date:startDate ,end_date:endDate } = req.query;
+    const {
+      user_id: userId,
+      company_id: companyId,
+      hotel_id: hotelId,
+      start_date: startDate,
+      end_date: endDate,
+    } = req.query;
+
     const fileType = 'booking';
 
-    // ✅ Validate query parameters
+    // ✅ Validate required query params
     if (!userId || !companyId || !hotelId) {
       return res.status(400).json({
         status: 'error',
@@ -90,18 +105,29 @@ exports.getBookingData = async (req, res) => {
       });
     }
 
+    // ✅ Convert hotel_id string to array if comma-separated
+    let hotelIds = hotelId;
+    if (typeof hotelId === 'string') {
+      hotelIds = hotelId.split(',').map(id => id.trim());
+    }
+
+    // ✅ Fetch booking data for all hotel IDs
     const data = await UploadData.findAll({
       where: {
         companyId,
         fileType,
-        status: 'saved'
+        status: 'saved',
       },
       include: [
         {
           model: MetaUploadData,
           as: 'metaData',
           required: true,
-          where: { hotelPropertyId: hotelId },
+          where: {
+            hotelPropertyId: {
+              [Op.in]: hotelIds,
+            },
+          },
           attributes: ['hotelPropertyId', 'fromDate', 'toDate'],
         },
         {
@@ -112,22 +138,20 @@ exports.getBookingData = async (req, res) => {
             checkIn: { [Op.lte]: endDate },
             checkOut: { [Op.gte]: startDate },
           },
-           attributes: ['checkIn', 'checkOut', 'roomType', 'rate', 'source', 'remarks'],
+          attributes: ['checkIn', 'checkOut', 'roomType', 'rate', 'source', 'remarks'],
         },
       ],
       order: [['createdAt', 'DESC']],
     });
 
-    // ✅ Response with count
     res.status(200).json({
       status: 'success',
       status_code: 200,
       status_message: 'OK',
       message: 'Booking data fetched successfully',
       count: data.length,
-      results: data
+      results: data,
     });
-
   } catch (error) {
     console.error('Error fetching Bookings:', error);
 

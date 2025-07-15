@@ -43,6 +43,7 @@ exports.getHotels = async (req, res) => {
       name: hotel.name,
       location: hotel.location,
       hotel_type: hotel.hotel_type,
+      total_rooms: hotel.total_rooms,
       // Access the associated rooms via the alias property
       Rooms: hotel.RoomTypes ? hotel.RoomTypes.map(room => room.name) : [], // Add a check for null/undefined
       // --- NEW: Add isScrapedConnected flag ---
@@ -96,6 +97,7 @@ exports.getHotelDetails = async (req, res) => {
       name: hotel.name,
       location: hotel.location,
       hotel_type: hotel.hotel_type,
+      total_rooms: hotel.total_rooms,
       // Access via the alias: hotel.RoomTypes
       rooms: hotel.RoomTypes ? hotel.RoomTypes.map(room => ({
         id: room.id,
