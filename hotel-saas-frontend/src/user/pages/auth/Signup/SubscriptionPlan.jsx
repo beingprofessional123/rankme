@@ -181,8 +181,8 @@ const SubscriptionPlan = () => {
 
       }
     } catch (err) {
-      console.error('Payment initiation failed:', err);
-      if (response.data.billingType !== 'free' && response.data.userSubscription.status !== 'active') {
+       if (response.data.billingType !== 'free' && response.data.userSubscription.status !== 'active') {
+        console.error('Payment initiation failed:', err);
         toast.error(err.response?.data?.message || 'Failed to start payment. Please try again.');
       }
     } finally {
