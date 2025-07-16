@@ -5,11 +5,13 @@ const { Op } = require('sequelize'); // Import Op for Sequelize operators if nee
 exports.getScrapedHotelDetail = async (req, res) => {
     const incomingSecret = req.query.secret;
     const expectedSecret = process.env.CRON_SECRET; // Ensure this is loaded via dotenv in your main server file
+
     if (!incomingSecret || incomingSecret !== expectedSecret) {
         return res.status(403).json({
             message: "Access Denied: Invalid or missing authentication credential."
         });
     }
+
     try {
         const scrapeSourceHotels = await ScrapeSourceHotel.findAll();
         if (!scrapeSourceHotels || scrapeSourceHotels.length === 0) {
@@ -17,23 +19,12 @@ exports.getScrapedHotelDetail = async (req, res) => {
             return res.status(404).json({ message: "No scraped source hotels found." });
         }
 
-        const today = new Date();
-        const tomorrow = new Date(today);
-        today.setDate(today.getDate() + 1); // Keep today's date for check-in
-        tomorrow.setDate(today.getDate() + 1); // Tomorrow's date for check-out
-
         const formatDate = (date) => {
             const yyyy = date.getFullYear();
             const mm = String(date.getMonth() + 1).padStart(2, '0');
             const dd = String(date.getDate()).padStart(2, '0');
             return `${yyyy}-${mm}-${dd}`;
         };
-
-        const checkinDate = formatDate(today);
-        const checkoutDate = formatDate(tomorrow);
-
-        console.log(`Using check-in date: ${checkinDate}`);
-        console.log(`Using check-out date: ${checkoutDate}`);
 
         const allProcessedResponses = [];
 
@@ -55,215 +46,260 @@ exports.getScrapedHotelDetail = async (req, res) => {
             const companyID = company.company_id;
             console.log(`Processing for User ID: ${userID}, Company ID: ${companyID}`);
 
-            let newUploadDataEntry;
-            let newMetaDataEntry;
+            // Loop for the next 14 days
+            for (let i = 1; i <= 14; i++) {
+                const today = new Date();
+                const checkinDateObj = new Date(today);
+                checkinDateObj.setDate(today.getDate() + i);
 
-            // --- Step 2 & 3: Check for existing UploadData and MetaUploadData, or create new ones ---
-            try {
-                // Attempt to find an existing UploadData record that has a MetaUploadData child
-                // matching the specific scrape criteria (user, hotel, checkin/checkout dates)
-                let existingUploadData = await UploadData.findOne({
-                    where: {
-                        userId: userID,
-                        companyId: companyID,
-                        fileType: 'property_price_data', // Specific to this type of scrape
-                    },
-                    include: [{
-                        model: MetaUploadData,
-                        as: 'metaData', // Use the alias defined in UploadData.associate
+                const checkoutDateObj = new Date(checkinDateObj);
+                checkoutDateObj.setDate(checkinDateObj.getDate() + 1);
+
+                const checkinDate = formatDate(checkinDateObj);
+                const checkoutDate = formatDate(checkoutDateObj);
+
+                console.log(`Using check-in date: ${checkinDate}`);
+                console.log(`Using check-out date: ${checkoutDate}`);
+
+                let newUploadDataEntry;
+                let newMetaDataEntry;
+                let skipApiCall = false;
+
+                // --- Step 2 & 3: Check for existing UploadData and MetaUploadData, or create new ones ---
+                try {
+                    let existingUploadData = await UploadData.findOne({
                         where: {
+                            userId: userID,
+                            companyId: companyID,
+                            fileType: 'property_price_data', // Specific to this type of scrape
+                        },
+                        include: [{
+                            model: MetaUploadData,
+                            as: 'metaData', // Use the alias defined in UploadData.associate
+                            where: {
+                                hotelPropertyId: hotelPropertyId,
+                                fromDate: checkinDate,
+                                toDate: checkoutDate,
+                            },
+                            required: true // Ensures it only returns UploadData records that *have* a matching MetaUploadData
+                        }]
+                    });
+
+                    if (existingUploadData) {
+                        newUploadDataEntry = existingUploadData;
+                        newMetaDataEntry = existingUploadData.metaData;
+
+                        console.log(`Found existing UploadData (${newUploadDataEntry.id}) and MetaUploadData (${newMetaDataEntry.id}) for hotel ${hotelPropertyId} and dates ${checkinDate}-${checkoutDate}.`);
+
+                        // Check if UploadedExtractDataFile records were updated within the last 6 hours
+                        const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+                        const latestUploadedExtract = await UploadedExtractDataFile.findOne({
+                            where: {
+                                uploadDataId: newUploadDataEntry.id,
+                                userId: userID,
+                                checkIn: checkinDate,
+                                checkOut: checkoutDate,
+                            },
+                            order: [['updatedAt', 'DESC']]
+                        });
+
+                        if (latestUploadedExtract && new Date(latestUploadedExtract.updatedAt) > sixHoursAgo) {
+                            console.log(`Skipping API call for hotel ${hotelPropertyId} and dates ${checkinDate}-${checkoutDate}. Records updated within the last 6 hours.`);
+                            await newUploadDataEntry.update({ status: 'saved' });
+                            allProcessedResponses.push({
+                                scrapeSourceHotel: scrapeSourceHotel.toJSON(),
+                                checkin_date: checkinDate,
+                                checkout_date: checkoutDate,
+                                status: "API call skipped, data is recent.",
+                                existing_upload_data_id: newUploadDataEntry.id
+                            });
+                            skipApiCall = true; // Set flag to skip API call
+                        } else {
+                            console.log(`Existing records found, but older than 6 hours or no records, proceeding with API call for hotel ${hotelPropertyId} and dates ${checkinDate}-${checkoutDate}.`);
+                            await newUploadDataEntry.update({ status: 'saved' }); // Set status to 'saved' before making API call
+                        }
+
+                    } else {
+                        // No existing UploadData/MetaUploadData found for this specific scrape event, create new ones
+                        console.log(`No existing UploadData/MetaUploadData found for hotel ${hotelPropertyId} and dates ${checkinDate}-${checkoutDate}. Creating new entries.`);
+
+                        newUploadDataEntry = await UploadData.create({
+                            userId: userID,
+                            companyId: companyID,
+                            fileType: 'property_price_data',
+                            status: 'saved',
+                        });
+                        console.log("New UploadData entry created successfully:", newUploadDataEntry.toJSON());
+
+                        newMetaDataEntry = await MetaUploadData.create({
+                            uploadDataId: newUploadDataEntry.id,
+                            userId: userID,
                             hotelPropertyId: hotelPropertyId,
                             fromDate: checkinDate,
                             toDate: checkoutDate,
-                            // userId: userID // Already in UploadData.where, can be redundant here
-                        },
-                        required: true // Ensures it only returns UploadData records that *have* a matching MetaUploadData
-                    }]
-                });
+                        });
+                        console.log("New MetaData entry created successfully:", newMetaDataEntry.toJSON());
+                    }
 
-                if (existingUploadData) {
-                    // Found existing UploadData and its associated MetaUploadData
-                    newUploadDataEntry = existingUploadData;
-                    newMetaDataEntry = existingUploadData.metaData;
-
-                    console.log(`Found existing UploadData (${newUploadDataEntry.id}) and MetaUploadData (${newMetaDataEntry.id}) for hotel ${hotelPropertyId} and dates ${checkinDate}-${checkoutDate}. Updating.`);
-
-                    // Optionally update the status or timestamps of the UploadData record
-                    // For example, if you want to update its 'updatedAt' timestamp or status back to 'saved'
-                    await newUploadDataEntry.update({ status: 'saved' });
-
-                } else {
-                    // No existing UploadData/MetaUploadData found for this specific scrape event, create new ones
-                    console.log(`No existing UploadData/MetaUploadData found for hotel ${hotelPropertyId} and dates ${checkinDate}-${checkoutDate}. Creating new entries.`);
-
-                    newUploadDataEntry = await UploadData.create({
-                        userId: userID,
-                        companyId: companyID,
-                        fileType: 'property_price_data',
-                        status: 'saved',
-                    });
-                    console.log("New UploadData entry created successfully:", newUploadDataEntry.toJSON());
-
-                    newMetaDataEntry = await MetaUploadData.create({
-                        uploadDataId: newUploadDataEntry.id,
-                        userId: userID,
-                        hotelPropertyId: hotelPropertyId,
-                        fromDate: checkinDate,
-                        toDate: checkoutDate,
-                    });
-                    console.log("New MetaData entry created successfully:", newMetaDataEntry.toJSON());
+                } catch (error) {
+                    console.error(`Error handling UploadData/MetaUploadData for hotel_id ${hotelPropertyId} (Day ${i}):`, error);
+                    if (newUploadDataEntry && newUploadDataEntry.status !== 'failed') {
+                        await newUploadDataEntry.update({ status: 'failed' });
+                    }
+                    continue; // Skip to the next day if there's a database error here
                 }
 
-            } catch (error) {
-                console.error(`Error handling UploadData/MetaUploadData for hotel_id ${hotelPropertyId}:`, error);
-                if (newUploadDataEntry && newUploadDataEntry.status !== 'failed') {
+                if (skipApiCall) {
+                    continue; // Skip to the next day's iteration if the API call was determined to be skipped
+                }
+
+                // --- 4. Make External API Call ---
+                const options = {
+                    method: 'GET',
+                    hostname: 'booking-com15.p.rapidapi.com',
+                    port: null,
+                    path: `/api/v1/hotels/getRoomList?hotel_id=${hotelId}&arrival_date=${checkinDate}&departure_date=${checkoutDate}&adults=1&room_qty=1&units=metric&temperature_unit=c&languagecode=en-us&currency_code=USD&location=US`,
+                    headers: {
+                        'x-rapidapi-key': `${process.env.RAPIDAPI_KEY}`,
+                        'x-rapidapi-host': 'booking-com15.p.rapidapi.com'
+                    }
+                };
+
+                let apiResponseData;
+                try {
+                    apiResponseData = await new Promise((resolve, reject) => {
+                        const req = https.request(options, (apiRes) => {
+                            const chunks = [];
+                            apiRes.on('data', (chunk) => chunks.push(chunk));
+                            apiRes.on('end', () => {
+                                try {
+                                    const body = Buffer.concat(chunks);
+                                    const parsedBody = JSON.parse(body.toString());
+                                    resolve(parsedBody);
+                                } catch (parseError) {
+                                    console.error(`Error parsing API response for hotel_id ${hotelId} (Day ${i}):`, parseError);
+                                    reject(new Error(`Failed to parse response for hotel_id ${hotelId} (Day ${i}): ${parseError.message}`));
+                                }
+                            });
+                        });
+
+                        req.on('error', (e) => {
+                            console.error(`Error making API request for hotel_id ${hotelId} (Day ${i}):`, e);
+                            reject(e);
+                        });
+                        req.end();
+                    });
+                } catch (error) {
+                    console.error(`API request failed for hotel_id ${hotelId} (Day ${i}):`, error);
                     await newUploadDataEntry.update({ status: 'failed' });
+                    continue; // Skip to the next day if API call fails
                 }
-                continue;
-            }
 
-            // --- 4. Make External API Call ---
-            const options = {
-                method: 'GET',
-                hostname: 'booking-com15.p.rapidapi.com',
-                port: null,
-                path: `/api/v1/hotels/getRoomList?hotel_id=${hotelId}&arrival_date=${checkinDate}&departure_date=${checkoutDate}&adults=1&room_qty=1&units=metric&temperature_unit=c&languagecode=en-us&currency_code=USD&location=US`,
-                headers: {
-                    'x-rapidapi-key': `${process.env.RAPIDAPI_KEY}`,
-                    'x-rapidapi-host': 'booking-com15.p.rapidapi.com'
-                }
-            };
+                // --- 5. Process API Response and Create/Update UploadedExtractDataFile Entries ---
+                let lowestPriceRoom = null;
+                let lowestPrice = Infinity;
+                const extractedDataFileEntries = [];
 
-            let apiResponseData;
-            try {
-                apiResponseData = await new Promise((resolve, reject) => {
-                    const req = https.request(options, (apiRes) => {
-                        const chunks = [];
-                        apiRes.on('data', (chunk) => chunks.push(chunk));
-                        apiRes.on('end', () => {
-                            try {
-                                const body = Buffer.concat(chunks);
-                                const parsedBody = JSON.parse(body.toString());
-                                resolve(parsedBody);
-                            } catch (parseError) {
-                                console.error(`Error parsing API response for hotel_id ${hotelId}:`, parseError);
-                                reject(new Error(`Failed to parse response for hotel_id ${hotelId}: ${parseError.message}`));
+                if (apiResponseData?.data?.block && Array.isArray(apiResponseData.data.block)) {
+                    // Delete existing records for this specific UploadData (and thus checkin/checkout date) before inserting new ones
+                    try {
+                        const deleteResult = await UploadedExtractDataFile.destroy({
+                            where: {
+                                uploadDataId: newUploadDataEntry.id,
+                                userId: userID,
+                                checkIn: checkinDate,
+                                checkOut: checkoutDate,
                             }
                         });
-                    });
+                        console.log(`Deleted ${deleteResult} existing UploadedExtractDataFile entries for UploadData ID: ${newUploadDataEntry.id}, dates ${checkinDate}-${checkoutDate}.`);
+                    } catch (deleteError) {
+                        console.error(`Error deleting existing UploadedExtractDataFile entries for UploadData ID ${newUploadDataEntry.id} (Day ${i}):`, deleteError);
+                        // Do not continue here, as we still want to attempt to save new data
+                    }
 
-                    req.on('error', (e) => {
-                        console.error(`Error making API request for hotel_id ${hotelId}:`, e);
-                        reject(e);
-                    });
-                    req.end();
-                });
-            } catch (error) {
-                console.error(`API request failed for hotel_id ${hotelId}:`, error);
-                await newUploadDataEntry.update({ status: 'failed' });
-                continue;
-            }
-
-            // --- 5. Process API Response and Create/Update UploadedExtractDataFile Entries ---
-            const roomData = [];
-            const extractedDataFileEntries = [];
-            if (apiResponseData?.data?.block && Array.isArray(apiResponseData.data.block)) {
-                // Delete existing records for this scrape before inserting new ones
-                try {
-                    const deleteResult = await UploadedExtractDataFile.destroy({
-                        where: {
-                            uploadDataId: newUploadDataEntry.id,
-                            userId: userID,
-                            checkIn: checkinDate,
-                            checkOut: checkoutDate,
-                        }
-                    });
-                    console.log(`Deleted ${deleteResult} existing UploadedExtractDataFile entries for UploadData ID: ${newUploadDataEntry.id}, dates ${checkinDate}-${checkoutDate}.`);
-                } catch (deleteError) {
-                    console.error(`Error deleting existing UploadedExtractDataFile entries for UploadData ID ${newUploadDataEntry.id}:`, deleteError);
-                    continue;
-                }
-
-                for (const room of apiResponseData.data.block) {
-                    // Only process rooms where max_occupancy is 2
-
-                    if (room.max_occupancy == 2) {
-                        const roomName = room.name_without_policy || room.room_name || room.name || 'N/A';
-                        let price = room.product_price_breakdown?.gross_amount_per_night?.value || null;
-
-                        // Ensure price is valid and round it
-                        if (price !== null) {
-                            price = parseFloat(price);
-                            if (isNaN(price)) {
-                                console.warn(`Invalid price for room ${roomName}: ${room.product_price_breakdown?.gross_amount_per_night?.value}. Skipping.`);
-                                continue;
-                            }
-
-                        } else {
-                            console.warn(`Missing price for room ${roomName}. Skipping.`);
-                            continue;
-                        }
-
-                        if (roomName !== 'N/A' && price !== null) {
-                            roomData.push({
-                                room_name: roomName,
-                                price: price
-                            });
-
-                            try {
-                                // Find or Create the RoomType
-                                const [roomTypeEntry, createdRoomType] = await RoomType.findOrCreate({
-                                    where: {
-                                        name: roomName,
-                                        hotel_id: hotelPropertyId
-                                    },
-                                    defaults: {
-                                        capacity: room.max_occupancy // Assuming max_occupancy can be the capacity
-                                        // You might want to add more default values if needed for RoomType
-                                    }
-                                });
-
-                                if (createdRoomType) {
-                                    console.log(`Created new RoomType entry for "${roomName}" (ID: ${roomTypeEntry.id}) for Hotel ID: ${hotelPropertyId}`);
-                                } else {
-                                    console.log(`Found existing RoomType entry for "${roomName}" (ID: ${roomTypeEntry.id}) for Hotel ID: ${hotelPropertyId}`);
+                    for (const room of apiResponseData.data.block) {
+                        if (room.max_occupancy == 2) {
+                            const roomName = room.name_without_policy || room.room_name || room.name || 'N/A';
+                            let price = room.product_price_breakdown?.gross_amount_per_night?.value || null;
+                            
+                            if (price !== null) {
+                                price = parseFloat(price);
+                                if (isNaN(price)) {
+                                    console.warn(`Invalid price for room ${roomName} (Day ${i}): ${room.product_price_breakdown?.gross_amount_per_night?.value}. Skipping.`);
+                                    continue;
                                 }
 
-                                // Create new UploadedExtractDataFile entry (since old ones for this scrape were deleted)
-                                const createdEntry = await UploadedExtractDataFile.create({
-                                    uploadDataId: newUploadDataEntry.id,
-                                    userId: userID,
-                                    checkIn: checkinDate,
-                                    checkOut: checkoutDate,
-                                    platform: 'booking.com',
-                                    roomType: roomName, // Keep this for display/redundancy if needed
-                                    roomTypeId: roomTypeEntry.id, // Store the foreign key to RoomType
-                                    rate: price,
-                                    date: checkoutDate, // Date when data was extracted
-                                    isValid: true, // Assuming valid on creation
-                                });
-                                console.log(`Created new UploadedExtractDataFile entry for room "${roomName}" with rate ${price} (hotel ${hotelId}):`, createdEntry.toJSON());
-                                extractedDataFileEntries.push(createdEntry.toJSON());
-
-                            } catch (entryError) {
-                                console.error(`Error creating UploadedExtractDataFile or RoomType entry for room "${roomName}" with rate ${price} (hotel ${hotelId}):`, entryError);
+                                if (price < lowestPrice) {
+                                    lowestPrice = price;
+                                    lowestPriceRoom = {
+                                        room_name: roomName,
+                                        price: price,
+                                        max_occupancy: room.max_occupancy
+                                    };
+                                }
+                            } else {
+                                console.warn(`Missing price for room ${roomName} (Day ${i}). Skipping.`);
                             }
                         }
                     }
-                }
-            }
 
-            allProcessedResponses.push({
-                scrapeSourceHotel: scrapeSourceHotel.toJSON(),
-                checkin_date: checkinDate,
-                checkout_date: checkoutDate,
-                api_response_summary: {
-                    total_rooms_found_in_api: apiResponseData?.data?.block?.length || 0,
-                    two_occupancy_rooms_processed_and_saved: roomData.length
-                },
-                extracted_room_data: roomData,
-                uploaded_extracted_file_entries: extractedDataFileEntries,
-            });
+                    if (lowestPriceRoom) {
+                        try {
+                            // Find or Create the RoomType for the lowest priced room
+                            const [roomTypeEntry, createdRoomType] = await RoomType.findOrCreate({
+                                where: {
+                                    name: lowestPriceRoom.room_name,
+                                    hotel_id: hotelPropertyId
+                                },
+                                defaults: {
+                                    capacity: lowestPriceRoom.max_occupancy
+                                }
+                            });
+
+                            if (createdRoomType) {
+                                console.log(`Created new RoomType entry for "${lowestPriceRoom.room_name}" (ID: ${roomTypeEntry.id}) for Hotel ID: ${hotelPropertyId}`);
+                            } else {
+                                console.log(`Found existing RoomType entry for "${lowestPriceRoom.room_name}" (ID: ${roomTypeEntry.id}) for Hotel ID: ${hotelPropertyId}`);
+                            }
+
+                            // Create new UploadedExtractDataFile entry for the lowest priced room
+                            const createdEntry = await UploadedExtractDataFile.create({
+                                uploadDataId: newUploadDataEntry.id,
+                                userId: userID,
+                                checkIn: checkinDate,
+                                checkOut: checkoutDate,
+                                platform: 'booking.com',
+                                roomType: lowestPriceRoom.room_name,
+                                roomTypeId: roomTypeEntry.id,
+                                rate: lowestPriceRoom.price,
+                                date: checkinDate, // Date when data was extracted (using checkinDate)
+                                isValid: true,
+                            });
+                            console.log(`Created new UploadedExtractDataFile entry for LOWEST priced room "${lowestPriceRoom.room_name}" with rate ${lowestPriceRoom.price} (hotel ${hotelId}) for dates ${checkinDate}-${checkoutDate}:`, createdEntry.toJSON());
+                            extractedDataFileEntries.push(createdEntry.toJSON());
+
+                        } catch (entryError) {
+                            console.error(`Error creating UploadedExtractDataFile or RoomType entry for lowest priced room (hotel ${hotelId}, dates ${checkinDate}-${checkoutDate}):`, entryError);
+                        }
+                    } else {
+                        console.log(`No rooms with max_occupancy == 2 found or processed for hotel ${hotelId} on dates ${checkinDate}-${checkoutDate}.`);
+                    }
+
+                } else {
+                    console.log(`No room data found in API response for hotel ${hotelId} on dates ${checkinDate}-${checkoutDate}.`);
+                }
+
+                allProcessedResponses.push({
+                    scrapeSourceHotel: scrapeSourceHotel.toJSON(),
+                    checkin_date: checkinDate,
+                    checkout_date: checkoutDate,
+                    api_response_summary: {
+                        total_rooms_found_in_api: apiResponseData?.data?.block?.length || 0,
+                        lowest_price_room_for_two_occupancy: lowestPriceRoom
+                    },
+                    uploaded_extracted_file_entries: extractedDataFileEntries,
+                });
+            }
         }
 
         return res.status(200).json({
