@@ -31,6 +31,9 @@ import SupportTicketAddPage from '../pages/SupportTicket/SupportTicketAddPage';
 import SupportTicketEditPage from '../pages/SupportTicket/SupportTicketEditPage';
 import SupportTicketViewPage from '../pages/SupportTicket/SupportTicketViewPage';
 import SettingsPage from '../pages/Settings/SettingsPage';
+import BookingPage from '../pages/Bookings/BookingPage';
+import CompetitorDataPage from '../pages/CompetitorData/CompetitorDataPage';
+import STROCRReportPage from '../pages/STROCRReport/STROCRReportPage';
 import InactivePage from '.././error/InactivePage';
 
 
@@ -76,6 +79,9 @@ const AppRoutes = () => {
         <Route path="/support-tickets-edit/:id" element={<ProtectedRoute><SupportTicketEditPage /></ProtectedRoute>} /> 
         <Route path="/support-tickets-view/:id" element={<ProtectedRoute><SupportTicketViewPage /></ProtectedRoute>} /> 
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} /> 
+        <Route path="/bookings" element={<ProtectedRoute><BookingPage /></ProtectedRoute>} /> 
+        <Route path="/competitor-data" element={<ProtectedRoute><CompetitorDataPage /></ProtectedRoute>} /> 
+        <Route path="/str-ocr-reports" element={<ProtectedRoute><STROCRReportPage /></ProtectedRoute>} /> 
 
         {/* Add more routes later */}
       </Routes>
