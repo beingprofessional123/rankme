@@ -126,21 +126,29 @@ const SubscriptionPlan = () => {
 
 
 
+
   const handleSelectPlan = (plan) => {
     setSelectedPlan(plan);
-    setShowModal(true);
+
+    if (plan.billing_period === 'free') {
+      handlePay(); // Directly trigger payment logic (or free activation)
+    } else {
+      setShowModal(true); // Show modal for paid plans
+    }
   };
 
+
   const handlePay = async () => {
-    if (!selectedPlan || !selectedGateway) {
+    if (!selectedPlan) {
       toast.warning('Please select a plan and a payment gateway.');
       return;
     }
 
     setIsPaying(true);
+    let response;
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post(
+      response = await axios.post(
         `${process.env.REACT_APP_API_BASE_URL}/api/payments/create-payment`,
         {
           subscription_id: selectedPlan.id,
@@ -154,8 +162,8 @@ const SubscriptionPlan = () => {
         }
       );
 
-      if(response.data.billingType === 'free' && response.data.userSubscription.status === 'active'){
-         navigate('/setup/setup-wizard');
+      if (response.data.billingType === 'free' && response.data.userSubscription.status === 'active') {
+        navigate('/setup/setup-wizard');
       }
 
       if (selectedGateway === 'stripe') {
@@ -170,11 +178,13 @@ const SubscriptionPlan = () => {
         console.log("Razorpay payment initiated:", response.data);
         toast.error('Razorpay integration not fully implemented in this example.');
 
+
       }
     } catch (err) {
-      console.error('Payment initiation failed:', err);
-      toast.error(err.response?.data?.message || 'Failed to start payment. Please try again.');
-
+       if (response.data.billingType !== 'free' && response.data.userSubscription.status !== 'active') {
+        console.error('Payment initiation failed:', err);
+        toast.error(err.response?.data?.message || 'Failed to start payment. Please try again.');
+      }
     } finally {
       setIsPaying(false);
       // Removed setShowModal(false) here, typically you'd close the modal
@@ -233,9 +243,17 @@ const SubscriptionPlan = () => {
                             </li>
                           ))}
                       </ul>
-                      <Button onClick={() => handleSelectPlan(plan)} className="btn btn-info">
-                        Select Plan
+                      <Button
+                        onClick={() => handleSelectPlan(plan)}
+                        className="btn btn-info"
+                        disabled={isPaying}
+                      >
+                        {isPaying && selectedPlan?.id === plan.id && (
+                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        )}
+                        {isPaying && selectedPlan?.id === plan.id ? 'Processing...' : 'Select Plan'}
                       </Button>
+
                     </div>
                   </div>
                 </div>
