@@ -30,6 +30,22 @@ exports.createPayment = async (req, res) => {
     let payment, session;
     const billingType = subscription.billing_period;
 
+    if (billingType === 'free') {
+      const userSubscription = await UserSubscription.create({
+        user_id,
+        subscription_id,
+        status: 'active',
+        started_at: new Date(),
+        expires_at: null,
+      });
+
+      return res.status(201).json({
+        message: 'Free subscription activated',
+        userSubscription,
+        billingType
+      });
+    }
+
     if (gateway === 'stripe') {
       // ✅ Create Stripe Checkout Session
       session = await stripe.checkout.sessions.create({
@@ -289,6 +305,22 @@ exports.upgradePayment = async (req, res) => {
     let payment, session;
     const billingType = subscription.billing_period;
 
+    if (billingType === 'free') {
+      const userSubscription = await UserSubscription.create({
+        user_id,
+        subscription_id,
+        status: 'active',
+        started_at: new Date(),
+        expires_at: null,
+      });
+
+      return res.status(201).json({
+        message: 'Free subscription activated',
+        userSubscription,
+        billingType
+      });
+    }
+    
     if (gateway === 'stripe') {
       // ✅ Create Stripe Checkout Session
       session = await stripe.checkout.sessions.create({

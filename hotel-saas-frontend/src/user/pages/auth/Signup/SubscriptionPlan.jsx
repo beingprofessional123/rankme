@@ -154,6 +154,10 @@ const SubscriptionPlan = () => {
         }
       );
 
+      if(response.data.billingType === 'free' && response.data.userSubscription.status === 'active'){
+         navigate('/setup/setup-wizard');
+      }
+
       if (selectedGateway === 'stripe') {
         const stripe = await stripePromise;
         const result = await stripe.redirectToCheckout({ sessionId: response.data.sessionId });
