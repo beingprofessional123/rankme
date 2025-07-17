@@ -37,9 +37,9 @@ const Sidebar = () => {
     { path: '/billing', label: 'Billing', icon: 'billing.svg', key: 'billing' },
     { path: '/support-tickets', label: 'Support', icon: 'support.svg', key: 'support_ticket' },
     { path: '/settings', label: 'Settings', icon: 'settings.svg', key: 'settings' },
-    // { path: '/bookings', label: 'Bookings', icon: 'Bookings.svg', key: 'bookings' },
-    // { path: '/competitor-data', label: 'Competitor Data', icon: 'CompetitorData.svg', key: 'competitordata' },
-    // { path: '/str-ocr-reports', label: 'STR/OCR Reports', icon: 'StrOcreports.svg', key: 'str-ocr-reports' },
+    { path: '/bookings', label: 'Bookings', icon: 'Bookings.svg', key: 'bookings' },
+    { path: '/competitor-data', label: 'Competitor Data', icon: 'CompetitorData.svg', key: 'competitordata' },
+    { path: '/str-ocr-reports', label: 'STR/OCR Reports', icon: 'StrOcreports.svg', key: 'str-ocr-reports' },
   ];
 
   return (
