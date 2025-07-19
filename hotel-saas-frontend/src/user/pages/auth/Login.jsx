@@ -35,7 +35,7 @@ const Login = () => {
         return;
       }
       
-
+        //fatching the user subscriptions
       try {
         const response = await axios.get(
           `${process.env.REACT_APP_API_BASE_URL}/api/company/subscriptions-by-user`,
@@ -48,6 +48,7 @@ const Login = () => {
 
         const { results: subscription, hotelExists } = response.data;
 
+        //checking the user subscriptions
         if (subscription?.subscriptionPlan?.billing_period === 'free' && subscription?.status === 'active') {
           if (hotelExists) {
             navigate('/dashboard');
@@ -107,7 +108,7 @@ const Login = () => {
 
     setLoading(true);
 
-
+      //login api
     try {
       const response = await axios.post(`${process.env.REACT_APP_API_BASE_URL}/api/login`, {
         email,
@@ -156,13 +157,13 @@ const Login = () => {
     <AuthLayout>
       <div className="loginmain">
         <div className="logo">
-          <a href="#">
+          <Link href="#">
             <img
               src={`/user/images/logo.png`}
               className="img-fluid"
               alt="RankMeOne Logo"
             />
-          </a>
+          </Link>
         </div>
         <div className="loginbg-w">
           <h1>Log in to your account</h1>
