@@ -1,4 +1,3 @@
-// src/pages/auth/ChangePassword.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios'; // Assuming you'll make an API call for password reset
 import { useParams, useLocation } from 'react-router-dom'; // If using react-router-dom for token from URL
@@ -111,9 +110,9 @@ const ChangePassword = () => {
     <AuthLayout>
       <div className="loginmain">
         <div className="logo">
-          <a href="#">
+          <Link to=''>
             <img src={`/user/images/logo.png`} className="img-fluid" alt="RankMeOne Logo" />
-          </a>
+          </Link>
         </div>
         <div className="loginbg-w">
           <h1>Create a New Password</h1>
