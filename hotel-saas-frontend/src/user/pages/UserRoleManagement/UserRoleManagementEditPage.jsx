@@ -77,7 +77,28 @@ const staticModules = [
             { key: 'delete', label: 'Delete' },
             { key: 'view', label: 'View' },
         ]
-    }
+    },
+    {
+        key: 'bookings',
+        value: 'Bookings',
+        permissions: [
+            { key: 'tab', label: 'Tab Show/hide' },
+        ]
+    },
+    {
+        key: 'competitor-data',
+        value: 'Competitor Data',
+        permissions: [
+            { key: 'tab', label: 'Tab Show/hide' },
+        ]
+    },
+    {
+        key: 'str-ocr-reports',
+        value: 'STR/OCR Report',
+        permissions: [
+            { key: 'tab', label: 'Tab Show/hide' },
+        ]
+    },
 ];
 
 const UserRoleManagementEditPage = () => {
