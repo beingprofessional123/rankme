@@ -75,33 +75,56 @@ const UserManagementIndex = () => {
     };
 
 
-    const columns = [
-        {
-            name: 'name',
-            label: 'Name',
-            options: {
-                customBodyRenderLite: (dataIndex) => {
-                    const user = users[dataIndex];
-                    return (
-                        <div className="d-flex align-items-center">
-                            <img
-                                width="40"
-                                height="40"
-                                className="rounded-circle me-2"
-                                src={user.profile ? `${user.profile}` : '/admin/assets/img/90x90.jpg'}
-                                alt="avatar"
-                            />
-                            <div className='m-1'>
-                                <div><b>{user.first_name} {user.last_name}</b></div>
-                                <div className="text-muted" style={{ fontSize: '0.875rem' }}>{user.email}</div>
-                            </div>
-                        </div>
-
-                    );
-                },
-            },
-        },
-       {
+const columns = [
+  {
+    name: 'full_name',
+    label: 'Name',
+    options: {
+      filter: false,
+      sort: false,
+      customBodyRender: (value, tableMeta) => {
+        const rowIndex = tableMeta.rowIndex;
+        const user = users[rowIndex];
+        return (
+          <div className="d-flex align-items-center">
+            <img
+              width="40"
+              height="40"
+              className="rounded-circle me-2"
+              src={user.profile || '/admin/assets/img/90x90.jpg'}
+              alt="avatar"
+            />
+            <div className="m-1">
+              <div><b>{user.first_name} {user.last_name}</b></div>
+              <div className="text-muted" style={{ fontSize: '0.875rem' }}>{user.email}</div>
+            </div>
+          </div>
+        );
+      },
+    },
+  },
+{
+  name: 'subscription_plan',
+  label: 'Plan',
+  options: {
+    filter: true,
+    sort: false,
+    filterType: 'dropdown',
+    filterOptions: {
+      names: [...new Set(users.map(u => u.subscription_plan?.name).filter(Boolean))]
+    },
+    customBodyRender: (value) => {
+      return value?.name || 'N/A';
+    },
+    customFilterListOptions: {
+      render: v => `Plan: ${v}`
+    },
+    customFilterLogic: (value, filterVal) => {
+      return value?.name === filterVal;
+    },
+  }
+},
+ {
   name: 'Phone',
   label: 'Phone',
   options: {
@@ -113,71 +136,110 @@ const UserManagementIndex = () => {
     },
   },
 },
-        {
-            name: 'status',
-            label: 'Status',
-            options: {
-                customBodyRenderLite: (dataIndex) => {
-                    const status = users[dataIndex].status;
-                    return (
-                        <span className={`badge ${status === '1' ? 'bg-success' : 'bg-danger'}`}>
-                            {status === '1' ? 'Active' : 'Inactive'}
-                        </span>
-                    );
-                },
-            },
-        },
-        {
-            name: 'created_at',
-            label: 'Created',
-            options: {
-                customBodyRenderLite: (dataIndex) =>
-                    new Date(users[dataIndex].created_at).toLocaleDateString(),
-            },
-        },
-        {
-            name: 'actions',
-            label: 'Actions',
-            options: {
-                customBodyRenderLite: (dataIndex) => {
-                    const user = users[dataIndex];
-                    return (
-                        <>
-                            <Tooltip title="View">
-                                <IconButton
-                                    component={Link}
-                                    to={`/admin/user-management/${user.id}`}
-                                    size="small"
-                                    color="primary"
-                                >
-                                    <Visibility />
-                                </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Edit">
-                                <IconButton
-                                    component={Link}
-                                    to={`/admin/user-management/${user.id}/edit`}
-                                    size="small"
-                                    color="warning"
-                                >
-                                    <Edit />
-                                </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Delete">
-                                <IconButton
-                                    size="small"
-                                    color="error"
-                                    onClick={() => deleteUser(user.id)}
-                                >
-                                    <Delete />
-                                </IconButton>
-                            </Tooltip>
-                        </>
-                    );
-                },
-            },
-        },
-    ];
+
+{
+  name: 'status',
+  label: 'Status',
+  options: {
+    filter: true,
+    sort: true,
+    filterType: 'dropdown',
+    filterOptions: {
+      names: ['1', '0'],
+      display: (filterList, onChange, index, column) => {
+        return (
+          <div style={{ padding: '8px 16px' }}>
+            <select
+              value={filterList[index]?.[0] || ''}
+              onChange={(event) => {
+                const value = event.target.value;
+                onChange(value === '' ? [] : [value], index, column);
+              }}
+              className="form-select"
+            >
+              <option value="">All</option>
+              <option value="1">Active</option>
+              <option value="0">Inactive</option>
+            </select>
+          </div>
+        );
+      },
+      logic: (value, filters) => {
+        // If filters are applied, hide rows that don't match
+        if (filters.length === 0) return false;
+        return !filters.includes(value);
+      }
+    },
+    customFilterListOptions: {
+      render: (v) => (v === '1' ? 'Active' : 'Inactive')
+    },
+    customBodyRender: (value) => {
+      const isActive = value === '1';
+      return (
+        <span className={`badge ${isActive ? 'bg-success' : 'bg-danger'}`}>
+          {isActive ? 'Active' : 'Inactive'}
+        </span>
+      );
+    }
+  }
+},
+  {
+    name: 'created_at',
+    label: 'Created',
+    options: {
+      filter: true,
+      sort: true,
+      customBodyRender: (value) =>
+        value ? new Date(value).toLocaleDateString() : 'N/A',
+    },
+  },
+  {
+    name: 'actions',
+    label: 'Actions',
+    options: {
+      filter: false,
+      sort: false,
+      customBodyRender: (value, tableMeta) => {
+        const user = users[tableMeta.rowIndex];
+        return (
+          <>
+            <Tooltip title="View">
+              <IconButton
+                component={Link}
+                to={`/admin/user-management/${user.id}`}
+                size="small"
+                color="primary"
+              >
+                <Visibility />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Edit">
+              <IconButton
+                component={Link}
+                to={`/admin/user-management/${user.id}/edit`}
+                size="small"
+                color="warning"
+              >
+                <Edit />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Delete">
+              <IconButton
+                size="small"
+                color="error"
+                onClick={() => deleteUser(user.id)}
+              >
+                <Delete />
+              </IconButton>
+            </Tooltip>
+          </>
+        );
+      },
+    },
+  },
+];
+
+
 
     const options = {
         selectableRows: 'none',

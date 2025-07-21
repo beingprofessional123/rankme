@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     currency: {
       type: DataTypes.STRING(10),
-      defaultValue: 'INR',
+      defaultValue: 'usd',
     },
     status: {
       type: DataTypes.STRING(20),
