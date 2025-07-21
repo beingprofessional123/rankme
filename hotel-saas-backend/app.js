@@ -16,6 +16,7 @@ const strocrReportRoutes = require('./routes/strocrReportRoutes');
 
 const adminUserRoutes = require('./routes/admin/userRoutes');
 const adminPlanRoutes = require('./routes/admin/planRoutes');
+const adminTransactionRoutes = require('./routes/admin/transactionRoutes');
 
 const path = require('path');
 
@@ -45,6 +46,7 @@ app.use('/api/strocrReport', strocrReportRoutes);
 // Admin Routes
 app.use('/api/admin', adminUserRoutes);
 app.use('/api/admin', adminPlanRoutes);
+app.use('/api/admin/transaction', adminTransactionRoutes);
 
 // Import the images
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
