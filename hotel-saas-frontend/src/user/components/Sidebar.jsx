@@ -21,7 +21,7 @@ const Sidebar = () => {
   };
 
   const canAccess = (key) => {
-    if (key === 'settings') return true;
+    if (key === 'settings' || key === 'dashboard') return true;
     return isCompanyAdmin || permissions?.[key]?.tab;
   };
 
@@ -36,10 +36,10 @@ const Sidebar = () => {
     { path: '/user-role-management', label: 'User Role Management', icon: 'role.svg', key: 'user_role_management' },
     { path: '/billing', label: 'Billing', icon: 'billing.svg', key: 'billing' },
     { path: '/support-tickets', label: 'Support', icon: 'support.svg', key: 'support_ticket' },
-    { path: '/settings', label: 'Settings', icon: 'settings.svg', key: 'settings' },
     { path: '/bookings', label: 'Bookings', icon: 'Bookings.svg', key: 'bookings' },
-    { path: '/competitor-data', label: 'Competitor Data', icon: 'CompetitorData.svg', key: 'competitordata' },
+    { path: '/competitor-data', label: 'Competitor Data', icon: 'CompetitorData.svg', key: 'competitor-data' },
     { path: '/str-ocr-reports', label: 'STR/OCR Reports', icon: 'StrOcreports.svg', key: 'str-ocr-reports' },
+    { path: '/settings', label: 'Settings', icon: 'settings.svg', key: 'settings' },
   ];
 
   return (

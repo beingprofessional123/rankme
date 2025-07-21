@@ -129,7 +129,7 @@ const STROCRReportPage = () => {
                     <div className="row breadcrumbrow">
                         <div className="col-md-12">
                             <div className="breadcrumb-sec">
-                                <h2>STROCR Report</h2>
+                                <h2>STR/OCR Report</h2>
                                 <nav aria-label="breadcrumb">
                                     <ol className="breadcrumb">
                                         <li className="breadcrumb-item"><Link to="">Home</Link></li>
