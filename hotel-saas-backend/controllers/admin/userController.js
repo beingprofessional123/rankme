@@ -42,65 +42,86 @@ const userController = {
 
   // GET /api/admin/user-management-list
   getUsers: async (req, res) => {
-    try {
-      const users = await db.User.findAll({
-        where: {
-          '$Role.name$': { [Op.ne]: 'super_admin' }, // ✅ Exclude 'admin' roles
+  try {
+    const users = await db.User.findAll({
+      where: {
+        '$Role.name$': { [Op.ne]: 'super_admin' },
+      },
+      include: [
+        {
+          model: db.Company,
+          as: 'Company',
+          attributes: ['name'],
         },
-        include: [
-          {
-            model: db.Company,
-            as: 'Company',
-            attributes: ['name'],
-          },
-          {
-            model: db.Role,
-            attributes: ['name'],
-          },
-          {
-            model: db.Country,
-            as: 'Country',
-            attributes: ['phonecode'], // Add 'name' if you want full country name
-          },
-        ],
-        order: [['id', 'DESC']],
-      });
+        {
+          model: db.Role,
+          attributes: ['name'],
+        },
+        {
+          model: db.Country,
+          as: 'Country',
+          attributes: ['phonecode'],
+        },
+        {
+          model: db.UserSubscription,
+          as: 'UserSubscriptions', // ⬅️ Include user subscriptions
+          include: [
+            {
+              model: db.SubscriptionPlan,
+              as: 'subscriptionPlan',
+              attributes: ['id', 'name', 'price', 'billing_period'], // Include needed fields
+            },
+          ],
+        },
+      ],
+      order: [['id', 'DESC']],
+    });
 
-       const formattedUsers = users.map((user) => {
-        const phonecode = user.Country?.phonecode || '';
-        const phone = user.phone || '';
-        return {
-          id: user.id,
-          first_name: user.name?.split(' ')[0] || '',
-          last_name: user.name?.split(' ')[1] || '',
-          email: user.email,
-          phone: phonecode ? `${phonecode} ${phone}`.trim() : phone,
-          role: user.Role?.name || 'N/A',
-          profile: user.profile,
-          status: user.is_active ? '1' : '0',
-          created_at: user.createdAt,
-          company_id: user.company_id,
-          company_name: user.Company?.name || 'No Company',
-        };
-      });
+    const formattedUsers = users.map((user) => {
+      const phonecode = user.Country?.phonecode || '';
+      const phone = user.phone || '';
+      const subscription = user.UserSubscriptions?.[0]?.subscriptionPlan; // Assuming latest or first is enough
 
-      res.status(200).json({
-        status: 'success',
-        status_code: 200,
-        status_message: 'OK',
-        message: 'Users fetched successfully',
-        results: formattedUsers,
-      });
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      res.status(500).json({
-        status: 'error',
-        status_code: 500,
-        status_message: 'INTERNAL_SERVER_ERROR',
-        message: 'Error fetching users',
-        results: null,
-      });
-    }
+      return {
+        id: user.id,
+        first_name: user.name?.split(' ')[0] || '',
+        last_name: user.name?.split(' ')[1] || '',
+        email: user.email,
+        phone: phonecode ? `${phonecode} ${phone}`.trim() : phone,
+        role: user.Role?.name || 'N/A',
+        profile: user.profile,
+        status: user.is_active ? '1' : '0',
+        created_at: user.createdAt,
+        company_id: user.company_id,
+        company_name: user.Company?.name || 'No Company',
+        subscription_plan: subscription
+          ? {
+              id: subscription.id,
+              name: subscription.name,
+              price: subscription.price,
+              billing_period: subscription.billing_period,
+            }
+          : null,
+      };
+    });
+
+    res.status(200).json({
+      status: 'success',
+      status_code: 200,
+      status_message: 'OK',
+      message: 'Users fetched successfully',
+      results: formattedUsers,
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({
+      status: 'error',
+      status_code: 500,
+      status_message: 'INTERNAL_SERVER_ERROR',
+      message: 'Error fetching users',
+      results: null,
+    });
+  }
   },
 
   // GET /api/admin/user-management/:id

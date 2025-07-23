@@ -11,8 +11,9 @@ import PlanManagementIndex from '../pages/PlanManagement/Index';
 import PlanManagementCreate from '../pages/PlanManagement/create';
 import PlanManagementEdit from '../pages/PlanManagement/edit';
 import PlanManagementView from '../pages/PlanManagement/view';
+import TransactionManagementIndex from '../pages/Transaction/Index';
 import Script from '../layouts/Script';
-
+  
 
 // Route guards
 import ProtectedRoute from './ProtectedRoute';
@@ -39,6 +40,8 @@ const AdminAppRoutes = () => {
         <Route path="/admin/plan-management/create" element={<ProtectedRoute><AdminLayout><PlanManagementCreate /></AdminLayout></ProtectedRoute> }/>
         <Route path="/admin/plan-management/:id/edit" element={<ProtectedRoute><AdminLayout><PlanManagementEdit /></AdminLayout></ProtectedRoute> }/>
         <Route path="/admin/plan-management/:id" element={<ProtectedRoute><AdminLayout><PlanManagementView /></AdminLayout></ProtectedRoute> }/>
+        
+        <Route path="/admin/transaction-management" element={<ProtectedRoute><AdminLayout><TransactionManagementIndex /></AdminLayout></ProtectedRoute> }/>
      
       </Routes>
     </Router>
