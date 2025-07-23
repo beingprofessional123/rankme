@@ -24,12 +24,13 @@ module.exports = (sequelize, DataTypes) => {
     Hotel.belongsTo(models.Company, { foreignKey: 'company_id', as: 'Company' });
     Hotel.hasMany(models.RoomType, { foreignKey: 'hotel_id', as: 'RoomTypes' });
     Hotel.hasMany(models.RateCategory, { foreignKey: 'hotel_id', as: 'RateCategories' });
-    
-    // CHANGE THIS LINE for the ScrapeSourceHotel association (hasMany -> hasOne)
-    Hotel.hasOne(models.ScrapeSourceHotel, {
+
+    // *** THIS IS THE CRITICAL CHANGE: Changed from hasOne to hasMany ***
+    // This correctly establishes that one Hotel can have MULTIPLE ScrapeSourceHotel entries
+    Hotel.hasMany(models.ScrapeSourceHotel, {
       foreignKey: 'hotel_id',
-      as: 'ScrapeSourceHotel', // Use singular alias for hasOne relationships
-      onDelete: 'CASCADE', // Optional: If the Hotel is deleted, also delete its associated ScrapeSourceHotel
+      as: 'ScrapeSourceHotels', // Use plural alias for consistency with hasMany
+      onDelete: 'CASCADE',
     });
   };
 
