@@ -63,7 +63,7 @@ const PricingCalendar = () => {
     return dates;
   };
 
-  useEffect(() => {
+useEffect(() => {
   const fetchCalendarData = async () => {
     if (!selectedHotelIds.length || !dateRange.start || !dateRange.end) return;
 
@@ -73,7 +73,6 @@ const PricingCalendar = () => {
     const userId = user?.id;
     const startDate = dateRange.start;
     const endDate = dateRange.end;
-
     const hotelIdsStr = selectedHotelIds.join(',');
 
     try {
@@ -88,42 +87,120 @@ const PricingCalendar = () => {
       const pricingData = await pricingRes.json();
       const bookingData = await bookingRes.json();
 
-      // Expected data shape:
-      // pricingData.data = { [hotelId]: { [date]: { suggested_price, historical_price, average_price, room_type } } }
-      // bookingData.data = { [hotelId]: { [date]: { occupancy } } }
-
       const allEvents = [];
+      const extractedPriceRanges = [];
+      const bookingCountsMap = {}; // { hotelId: { dateStr: count } }
 
+      // Step 1: Extract pricing ranges
+      for (const item of pricingData?.results || []) {
+        const hotelPropertyId = item.metaData?.hotelPropertyId;
+        const extractedFiles = item.extractedFiles || [];
+
+        for (const file of extractedFiles) {
+          const checkIn = new Date(file.checkIn);
+          const checkOut = new Date(file.checkOut);
+          const rate = parseFloat(file.rate) || 0;
+
+          extractedPriceRanges.push({
+            hotelId: hotelPropertyId,
+            checkIn,
+            checkOut,
+            rate,
+          });
+        }
+      }
+
+      // Step 2: Extract and count bookings per day
+      for (const bookingItem of bookingData?.results || []) {
+        const hotelId = bookingItem.metaData?.hotelPropertyId;
+        if (!selectedHotelIds.includes(hotelId)) continue;
+
+        const extractedFiles = bookingItem.extractedFiles || [];
+
+        for (const file of extractedFiles) {
+          const checkIn = new Date(file.checkIn);
+          const checkOut = new Date(file.checkOut);
+
+          const bookingDates = [];
+
+          if (file.checkIn === file.checkOut) {
+            bookingDates.push(file.checkIn);
+          } else {
+            let curr = new Date(checkIn);
+            while (curr < new Date(checkOut)) {
+              bookingDates.push(curr.toISOString().split('T')[0]);
+              curr.setDate(curr.getDate() + 1);
+            }
+          }
+
+          for (const dateStr of bookingDates) {
+            if (!bookingCountsMap[hotelId]) bookingCountsMap[hotelId] = {};
+            if (!bookingCountsMap[hotelId][dateStr]) bookingCountsMap[hotelId][dateStr] = 0;
+            bookingCountsMap[hotelId][dateStr] += 1;
+          }
+        }
+      }
+
+      // Step 3: Create calendar events with occupancy calculation
       for (const hotelId of selectedHotelIds) {
         const hotel = hotels.find(h => h.id === hotelId);
         if (!hotel) continue;
 
-        const priceByDate = pricingData?.data?.[hotelId] || {};
-        const bookingByDate = bookingData?.data?.[hotelId] || {};
+        const totalRooms = hotel.total_rooms || 0;
+        const dates = generateDateRange(startDate, endDate); // assume this gives array of YYYY-MM-DD
 
-        const dates = generateDateRange(startDate, endDate);
-        for (const date of dates) {
-          const priceInfo = priceByDate[date] || {};
-          const bookingInfo = bookingByDate[date] || {};
+        for (const dateStr of dates) {
+          const currentDate = new Date(dateStr);
+
+          const matchedRange = extractedPriceRanges.find(range =>
+            range.hotelId === hotelId &&
+            currentDate >= range.checkIn &&
+            currentDate < range.checkOut
+          );
+
+          const averageRate = matchedRange?.rate || 0;
+          const suggestedPrice = averageRate + 10;
+          const historicalPrice = Math.max(0, averageRate - 10);
+
+          const bookedRooms = bookingCountsMap[hotelId]?.[dateStr] || 0;
+          const availableRooms = Math.max(0, totalRooms - bookedRooms);
+          const occupancyPercent = totalRooms > 0
+            ? `${Math.round((bookedRooms / totalRooms) * 100)}%`
+            : '0%';
+
+          const isFullOccupancy = totalRooms > 0 && bookedRooms >= totalRooms;
+
+          const backgroundColor = isFullOccupancy
+            ? '#FF4C4C' // 🔴 Red for 100% occupancy
+            : matchedRange
+              ? '#2CCDD9' // 🟦 Blue for available pricing
+              : '#E5E5E5'; // ⚪ Gray for no pricing
+
+          const borderColor = backgroundColor;
+          const textColor = isFullOccupancy ? '#FFFFFF' : '#000000';
 
           allEvents.push({
             title: hotel.name,
-            date,
-            backgroundColor: '#E5E5E5',
-            borderColor: '#E5E5E5',
-            textColor: '#000000',
+            date: dateStr,
+            backgroundColor,
+            borderColor,
+            textColor,
             extendedProps: {
               hotel_id: hotel.id,
               hotel_name: hotel.name,
-              suggested_price: priceInfo.suggested_price || 0,
-              historical_price: priceInfo.historical_price || 0,
-              average_price: priceInfo.average_price || 0,
-              predicted_occupancy: bookingInfo.occupancy || '0%',
+              totalRooms,
+              booked_rooms: bookedRooms,
+              available_rooms: availableRooms,
+              predicted_occupancy: occupancyPercent,
+              average_price: averageRate,
+              suggested_price: suggestedPrice,
+              historical_price: historicalPrice,
             },
           });
         }
       }
 
+      console.log(allEvents);
       setCalendarEvents(allEvents);
     } catch (error) {
       console.error(error);
@@ -133,7 +210,6 @@ const PricingCalendar = () => {
 
   fetchCalendarData();
 }, [selectedHotelIds, dateRange, hotels]);
-
 
   const handleEventClick = async (info) => {
     setSelectedDate(info.event.start);

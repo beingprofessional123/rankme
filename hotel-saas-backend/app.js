@@ -9,10 +9,14 @@ const hotelNRooms = require('./routes/hotelNRooms');
 const userRoleRoutes = require('./routes/userRoleRoutes');
 const PricingCalendarRoutes = require('./routes/PricingCalendarRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
+const competitorDataRoutes = require('./routes/competitorDataRoutes');
+const strocrReportRoutes = require('./routes/strocrReportRoutes');
 
 
 const adminUserRoutes = require('./routes/admin/userRoutes');
 const adminPlanRoutes = require('./routes/admin/planRoutes');
+const adminTransactionRoutes = require('./routes/admin/transactionRoutes');
 
 const path = require('path');
 
@@ -35,10 +39,14 @@ app.use('/api', hotelNRooms);
 app.use('/api', userRoleRoutes);
 app.use('/api/pricing-calendar', PricingCalendarRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/competitorData', competitorDataRoutes);
+app.use('/api/strocrReport', strocrReportRoutes);
 
 // Admin Routes
 app.use('/api/admin', adminUserRoutes);
 app.use('/api/admin', adminPlanRoutes);
+app.use('/api/admin/transaction', adminTransactionRoutes);
 
 // Import the images
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
