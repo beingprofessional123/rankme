@@ -13,7 +13,11 @@ exports.getScrapedHotelDetail = async (req, res) => {
     }
 
     try {
-        const scrapeSourceHotels = await ScrapeSourceHotel.findAll();
+        const scrapeSourceHotels = await ScrapeSourceHotel.findAll({
+            where: {
+                source_type: 'Booking.com'
+            }
+        });
         if (!scrapeSourceHotels || scrapeSourceHotels.length === 0) {
             console.log("No scraped source hotels found.");
             return res.status(404).json({ message: "No scraped source hotels found." });
@@ -72,6 +76,7 @@ exports.getScrapedHotelDetail = async (req, res) => {
                             userId: userID,
                             companyId: companyID,
                             fileType: 'property_price_data', // Specific to this type of scrape
+                            plateform: 'booking.com',
                         },
                         include: [{
                             model: MetaUploadData,
@@ -80,6 +85,7 @@ exports.getScrapedHotelDetail = async (req, res) => {
                                 hotelPropertyId: hotelPropertyId,
                                 fromDate: checkinDate,
                                 toDate: checkoutDate,
+                                plateform: 'booking.com',
                             },
                             required: true // Ensures it only returns UploadData records that *have* a matching MetaUploadData
                         }]
@@ -99,6 +105,7 @@ exports.getScrapedHotelDetail = async (req, res) => {
                                 userId: userID,
                                 checkIn: checkinDate,
                                 checkOut: checkoutDate,
+                                platform: 'booking.com' // Match platform
                             },
                             order: [['updatedAt', 'DESC']]
                         });
@@ -128,6 +135,7 @@ exports.getScrapedHotelDetail = async (req, res) => {
                             companyId: companyID,
                             fileType: 'property_price_data',
                             status: 'saved',
+                            plateform: 'booking.com',
                         });
                         console.log("New UploadData entry created successfully:", newUploadDataEntry.toJSON());
 
@@ -137,6 +145,7 @@ exports.getScrapedHotelDetail = async (req, res) => {
                             hotelPropertyId: hotelPropertyId,
                             fromDate: checkinDate,
                             toDate: checkoutDate,
+                            plateform: 'booking.com',
                         });
                         console.log("New MetaData entry created successfully:", newMetaDataEntry.toJSON());
                     }
@@ -209,6 +218,7 @@ exports.getScrapedHotelDetail = async (req, res) => {
                                 userId: userID,
                                 checkIn: checkinDate,
                                 checkOut: checkoutDate,
+                                platform: 'booking.com'
                             }
                         });
                         console.log(`Deleted ${deleteResult} existing UploadedExtractDataFile entries for UploadData ID: ${newUploadDataEntry.id}, dates ${checkinDate}-${checkoutDate}.`);
