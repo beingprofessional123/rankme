@@ -663,17 +663,6 @@ const HotelsAndRoomsList = () => {
                                                         />
                                                         <div className="card-body">
                                                             <h5 className="card-title">{expediaScrapedData.name || 'N/A'}</h5>
-                                                            <p className="card-text">
-                                                                <strong>URL:</strong>{' '}
-                                                                <a href={expediaScrapedData.url} target="_blank" rel="noopener noreferrer">
-                                                                    {expediaScrapedData.url}
-                                                                </a>
-                                                            </p>
-                                                            {/* Add description if your backend scrapes it */}
-                                                            <p className="card-text">
-                                                                <strong>Description:</strong>{' '}
-                                                                <span>{expediaScrapedData.description || 'No description available.'}</span>
-                                                            </p>
                                                             <button
                                                                 type="button"
                                                                 className="btn btn-info w-100"
