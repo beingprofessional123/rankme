@@ -75,8 +75,8 @@ const CompetitorDataPage = () => {
                 item.extractedFiles.map(file => ({
                     competitor_hotel: file.competitorHotel,
                     date: file.date,
-                    room_type: file.roomType,
                     rate: file.rate,
+                    platform: file.platform,
                 }))
             ) || [];
 
@@ -102,8 +102,8 @@ const CompetitorDataPage = () => {
     const columns = [
         { name: 'competitor_hotel', label: 'Competitor Hotel' },
         { name: 'date', label: 'Date' },
-        { name: 'room_type', label: 'Room Type' },
         { name: 'rate', label: 'Rate' },
+        { name: 'platform', label: 'Platform' },
     ];
 
     const options = {
