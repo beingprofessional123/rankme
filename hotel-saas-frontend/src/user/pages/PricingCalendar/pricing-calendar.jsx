@@ -88,10 +88,10 @@ useEffect(() => {
       const bookingData = await bookingRes.json();
 
       const allEvents = [];
-      const extractedPriceRanges = [];
-      const bookingCountsMap = {}; // { hotelId: { dateStr: count } }
+      const priceMap = {}; // hotelId => { date => [rates] }
+      const bookingCountsMap = {}; // hotelId => { date => count }
 
-      // Step 1: Extract pricing ranges
+      // Step 1: Extract pricing per day per hotel
       for (const item of pricingData?.results || []) {
         const hotelPropertyId = item.metaData?.hotelPropertyId;
         const extractedFiles = item.extractedFiles || [];
@@ -101,16 +101,18 @@ useEffect(() => {
           const checkOut = new Date(file.checkOut);
           const rate = parseFloat(file.rate) || 0;
 
-          extractedPriceRanges.push({
-            hotelId: hotelPropertyId,
-            checkIn,
-            checkOut,
-            rate,
-          });
+          let current = new Date(checkIn);
+          while (current < new Date(checkOut)) {
+            const dateStr = current.toISOString().split('T')[0];
+            if (!priceMap[hotelPropertyId]) priceMap[hotelPropertyId] = {};
+            if (!priceMap[hotelPropertyId][dateStr]) priceMap[hotelPropertyId][dateStr] = [];
+            priceMap[hotelPropertyId][dateStr].push(rate);
+            current.setDate(current.getDate() + 1);
+          }
         }
       }
 
-      // Step 2: Extract and count bookings per day
+      // Step 2: Count bookings per day
       for (const bookingItem of bookingData?.results || []) {
         const hotelId = bookingItem.metaData?.hotelPropertyId;
         if (!selectedHotelIds.includes(hotelId)) continue;
@@ -122,7 +124,6 @@ useEffect(() => {
           const checkOut = new Date(file.checkOut);
 
           const bookingDates = [];
-
           if (file.checkIn === file.checkOut) {
             bookingDates.push(file.checkIn);
           } else {
@@ -141,27 +142,15 @@ useEffect(() => {
         }
       }
 
-      // Step 3: Create calendar events with occupancy calculation
+      // Step 3: Create events with lowest pricing logic
       for (const hotelId of selectedHotelIds) {
         const hotel = hotels.find(h => h.id === hotelId);
         if (!hotel) continue;
 
         const totalRooms = hotel.total_rooms || 0;
-        const dates = generateDateRange(startDate, endDate); // assume this gives array of YYYY-MM-DD
+        const dates = generateDateRange(startDate, endDate); // assumes array of 'YYYY-MM-DD' strings
 
         for (const dateStr of dates) {
-          const currentDate = new Date(dateStr);
-
-          const matchedRange = extractedPriceRanges.find(range =>
-            range.hotelId === hotelId &&
-            currentDate >= range.checkIn &&
-            currentDate < range.checkOut
-          );
-
-          const averageRate = matchedRange?.rate || 0;
-          const suggestedPrice = averageRate + 10;
-          const historicalPrice = Math.max(0, averageRate - 10);
-
           const bookedRooms = bookingCountsMap[hotelId]?.[dateStr] || 0;
           const availableRooms = Math.max(0, totalRooms - bookedRooms);
           const occupancyPercent = totalRooms > 0
@@ -170,11 +159,17 @@ useEffect(() => {
 
           const isFullOccupancy = totalRooms > 0 && bookedRooms >= totalRooms;
 
+          // ✅ Get lowest rate instead of average
+          const ratesForDate = priceMap[hotelId]?.[dateStr] || [];
+          const minRate = ratesForDate.length ? Math.min(...ratesForDate) : 0;
+          const suggestedPrice = minRate + 10;
+          const historicalPrice = Math.max(0, minRate - 10);
+
           const backgroundColor = isFullOccupancy
-            ? '#FF4C4C' // 🔴 Red for 100% occupancy
-            : matchedRange
-              ? '#2CCDD9' // 🟦 Blue for available pricing
-              : '#E5E5E5'; // ⚪ Gray for no pricing
+            ? '#FF4C4C'
+            : ratesForDate.length
+              ? '#2CCDD9'
+              : '#E5E5E5';
 
           const borderColor = backgroundColor;
           const textColor = isFullOccupancy ? '#FFFFFF' : '#000000';
@@ -192,7 +187,7 @@ useEffect(() => {
               booked_rooms: bookedRooms,
               available_rooms: availableRooms,
               predicted_occupancy: occupancyPercent,
-              average_price: averageRate,
+              average_price: minRate,
               suggested_price: suggestedPrice,
               historical_price: historicalPrice,
             },
