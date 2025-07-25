@@ -50,6 +50,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATEONLY,
       allowNull: true,
     },
+    plateform: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   }, {
     timestamps: true,
   });

@@ -40,6 +40,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('booking', 'competitor', 'str_ocr_report', 'property_price_data'),
       allowNull: false,
     },
+    plateform: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     status: { // e.g., 'uploaded', 'processing', 'extracted', 'saved', 'failed'
       type: DataTypes.ENUM('uploaded', 'processing', 'extracted', 'saved', 'failed'),
       defaultValue: 'uploaded',

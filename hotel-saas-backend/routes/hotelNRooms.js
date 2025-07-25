@@ -14,6 +14,8 @@ router.get('/hotels/:id', hotelRoomsController.getHotelDetails); // :id will be 
 router.delete('/hotels/delete/:id', hotelRoomsController.deleteHotelDetails); // :id will be the hotel ID
 router.get('/hotels/scraped-hotel-detail/:id', hotelRoomsController.getScrapedHotelDetails); // :id will be the hotel ID
 router.post('/scrape-source-hotels/save', hotelRoomsController.saveScrapeSourceHotel);
+router.post('/hotels/get-scrape-expedia-url-detail', hotelRoomsController.getScrapeExpediaURLDetail);
+router.post('/scrape-expedia-source-hotels/save', hotelRoomsController.saveExpediaScrapeSourceHotel);
 
 
 

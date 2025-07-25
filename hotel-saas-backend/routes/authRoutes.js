@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const scrapedHotelRoomDetailController = require('../controllers/scrapedHotelRoomDetailController');
+const scrapeExpediaHotelDetailController = require('../controllers/scrapeExpediaHotelDetailController');
 const { authenticate } = require('../middlewares/auth');
 const { authorizeRoles } = require('../middlewares/authorize');
 const { signupValidation, loginValidation } = require('../validators/authValidator');
@@ -35,9 +36,9 @@ router.post('/reset-password', authController.resetPassword);
 router.get('/country-list', authController.getAllCountries);
 router.get('/user-permissions', authenticate, authController.getUserPermissions);
 
-
 // Script
 router.get('/scraped-hotel-room-details', scrapedHotelRoomDetailController.getScrapedHotelDetail);
+router.get('/expedia-scrape-hotel-room-detail', scrapeExpediaHotelDetailController.scrapeExpediaHotelDetail);
 
 
 // // SuperAdmin Routes
