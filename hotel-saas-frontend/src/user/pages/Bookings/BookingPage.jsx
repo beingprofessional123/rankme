@@ -106,7 +106,6 @@ const BookingPage = () => {
     const columns = [
         { name: 'check_in', label: 'Check-in' },
         { name: 'check_out', label: 'Check-out' },
-        { name: 'room_type', label: 'Room Type' },
         { name: 'rate', label: 'Rate' },
         { name: 'source', label: 'Source' },
     ];

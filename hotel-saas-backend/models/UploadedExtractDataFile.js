@@ -87,6 +87,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
     },
+    compAvg: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
      // New column for 'platform'
     platform: {
       type: DataTypes.STRING,
