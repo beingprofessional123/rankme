@@ -45,7 +45,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
     },
     status: { // e.g., 'uploaded', 'processing', 'extracted', 'saved', 'failed'
-      type: DataTypes.ENUM('uploaded', 'processing', 'extracted', 'saved', 'failed'),
+      type: DataTypes.ENUM('uploaded', 'processing', 'extracted', 'saved', 'failed', 'partially_extracted_with_errors'),
       defaultValue: 'uploaded',
       allowNull: false,
     },
