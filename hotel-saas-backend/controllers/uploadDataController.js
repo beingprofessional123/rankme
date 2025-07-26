@@ -242,7 +242,7 @@ exports.extractAndPreviewData = async (req, res) => {
                             finalData.push({
                                 uploadDataId: uploadDataRecord.id,
                                 userId: user.id,
-                                competitorHotel: myActualHotelName, // Use the actual hotel name
+                                // competitorHotel: myActualHotelName,
                                 rate: myRate,
                                 checkIn: formattedDate,
                                 compAvg: parseFloat(row[2]) || null, // compAvg can be null if invalid
