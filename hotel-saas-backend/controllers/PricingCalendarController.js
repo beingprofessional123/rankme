@@ -49,11 +49,7 @@ exports.getPropertyPrice = async (req, res) => {
           model: UploadedExtractDataFile,
           as: 'extractedFiles',
           required: false,
-          where: {
-            checkIn: { [Op.lte]: endDate },
-            checkOut: { [Op.gte]: startDate },
-          },
-          attributes: ['checkIn', 'checkOut', 'roomType', 'rate', 'platform', 'remarks'],
+          attributes: ['checkIn', 'checkOut', 'rate', 'platform', 'remarks'],
         },
       ],
       order: [['createdAt', 'DESC']],

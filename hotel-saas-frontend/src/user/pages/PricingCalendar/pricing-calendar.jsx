@@ -91,18 +91,21 @@ useEffect(() => {
       const priceMap = {}; // hotelId => { date => [rates] }
       const bookingCountsMap = {}; // hotelId => { date => count }
 
-      // Step 1: Extract pricing per day per hotel
+      // Step 1: Extract pricing per day per hotel (including checkOut === null)
       for (const item of pricingData?.results || []) {
         const hotelPropertyId = item.metaData?.hotelPropertyId;
         const extractedFiles = item.extractedFiles || [];
 
         for (const file of extractedFiles) {
           const checkIn = new Date(file.checkIn);
-          const checkOut = new Date(file.checkOut);
+          const checkOut = file.checkOut ? new Date(file.checkOut) : null;
           const rate = parseFloat(file.rate) || 0;
 
           let current = new Date(checkIn);
-          while (current < new Date(checkOut)) {
+          const end = checkOut ? new Date(checkOut) : new Date(checkIn); // single day if checkOut is null
+          end.setDate(end.getDate() + (checkOut ? 0 : 1)); // add 1 day only if checkOut is null
+
+          while (current < end) {
             const dateStr = current.toISOString().split('T')[0];
             if (!priceMap[hotelPropertyId]) priceMap[hotelPropertyId] = {};
             if (!priceMap[hotelPropertyId][dateStr]) priceMap[hotelPropertyId][dateStr] = [];
