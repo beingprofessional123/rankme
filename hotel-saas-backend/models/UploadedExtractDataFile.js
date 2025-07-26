@@ -96,6 +96,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true, // Assuming it can be null if not present in all data types
     },
+    compAvg: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     remarks: {
       type: DataTypes.STRING,
       allowNull: true, // Assuming it can be null if not present in all data types

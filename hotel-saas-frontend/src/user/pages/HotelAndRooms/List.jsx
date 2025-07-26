@@ -531,7 +531,7 @@ const HotelsAndRoomsList = () => {
                                 data-bs-dismiss="modal"
                                 aria-label="Close"
                                 onClick={() => setShowScrapeModal(false)}
-                            ></button>
+                            >×</button>
                         </div>
                         <div className="modal-body">
                             {/* Collapse div for source selection */}
