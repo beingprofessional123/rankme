@@ -508,7 +508,7 @@ exports.extractAndPreviewData = async (req, res) => {
 exports.confirmAndSaveData = async (req, res) => {
     const t = await db.sequelize.transaction();
     try {
-        const { uploadId, dateRangeFrom, dataSourceName, hotelPropertyId } = req.body;
+        const { uploadId, dateRangeFrom, dateRangeTo, dataSourceName, hotelPropertyId } = req.body;
 
         if (!uploadId) {
             return res.status(400).json({ message: 'Missing upload ID for confirmation.' });
