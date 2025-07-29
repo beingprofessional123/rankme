@@ -91,7 +91,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
     },
-     // New column for 'platform'
+    property: {
+      type: DataTypes.ENUM('myproperty', 'competitor'),
+      allowNull: true,  // default is null
+    },
     platform: {
       type: DataTypes.STRING,
       allowNull: true, // Assuming it can be null if not present in all data types

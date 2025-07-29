@@ -19,27 +19,30 @@ const alwaysAllowedModules = ['dashboard', 'settings'];
 const ProtectedRoute = ({ children, module, requiredPermission = 'tab' }) => {
   const location = useLocation();
   const { permissions, role, isLoading } = useContext(PermissionContext);
+  const rawUser = localStorage.getItem('user');
+  const user = rawUser ? JSON.parse(rawUser) : null;
 
   if (isLoading) {
-    return  <div className="d-flex justify-content-center align-items-center vh-100 bg-light">
-      <div className="text-center">
-        <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
-          <span className="visually-hidden">Loading...</span>
+    return (
+      <div className="d-flex justify-content-center align-items-center vh-100 bg-light">
+        <div className="text-center">
+          <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-3">Loading, please wait...</p>
         </div>
-        <p className="mt-3">Loading, please wait...</p>
       </div>
-    </div>;
+    );
   }
 
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;
   }
 
-  if (role?.name === 'company_admin') {
-    return children;
+  if (role?.name === 'company_admin' || user?.role === 'company_admin') {
+    return children; // Full access
   }
 
-  // Skip permission check if it's a globally allowed module
   if (alwaysAllowedModules.includes(module)) {
     return children;
   }
