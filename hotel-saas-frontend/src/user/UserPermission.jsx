@@ -6,6 +6,7 @@ export const PermissionProvider = ({ children }) => {
   const [permissions, setPermissions] = useState({});
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
+  const [isLoading, setIsLoading] = useState(true); // NEW
 
   const fetchUserPermissions = async () => {
     try {
@@ -25,20 +26,22 @@ export const PermissionProvider = ({ children }) => {
         if (user && user.is_active === false) {
           localStorage.removeItem('user');
           localStorage.removeItem('token');
-          window.location.href = '/inactive?status=true'; // Pass status=true in URL
+          window.location.href = '/inactive?status=true';
         }
       }
     } catch (error) {
       console.error('Failed to fetch permissions:', error);
+    } finally {
+      setIsLoading(false); // Ensure loading is false even on error
     }
   };
 
   useEffect(() => {
-    fetchUserPermissions(); // Always fetch fresh permissions on load
+    fetchUserPermissions();
   }, []);
 
   return (
-    <PermissionContext.Provider value={{ permissions, user, role }}>
+    <PermissionContext.Provider value={{ permissions, user, role, isLoading }}>
       {children}
     </PermissionContext.Provider>
   );

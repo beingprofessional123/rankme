@@ -8,7 +8,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { PermissionContext } from '../../UserPermission';
 
 const UserRoleManagementPage = () => {
-    const { permissions, user,role } = useContext(PermissionContext);
+    const { permissions, user, role } = useContext(PermissionContext);
     const isCompanyAdmin = role?.name === 'company_admin';
     const canAccess = (action) => {
         if (isCompanyAdmin) return true;
@@ -65,12 +65,12 @@ const UserRoleManagementPage = () => {
             .replace(/\b\w/g, char => char.toUpperCase());
     };
 
-   useEffect(() => {
-    if (user?.company_id) {
-        fetchUsers();
-    }
+    useEffect(() => {
+        if (user?.company_id) {
+            fetchUsers();
+        }
     }, [user]);
-    
+
     const handleDelete = (user) => {
         setSelectedUserToDelete(user);
     };
@@ -111,6 +111,10 @@ const UserRoleManagementPage = () => {
         }
     };
 
+    const hasEditPermission = canAccess('edit');
+    const hasDeletePermission = canAccess('delete');
+    const showActionColumn = hasEditPermission || hasDeletePermission;
+
     const columns = [
         { name: 'name', label: 'Name' },
         { name: 'email', label: 'Email Address' },
@@ -127,10 +131,9 @@ const UserRoleManagementPage = () => {
         {
             name: 'phonecode',
             options: {
-                display: false // hide column, used for rendering only
+                display: false
             }
         },
-
         {
             name: 'role_name',
             label: 'Role',
@@ -149,39 +152,42 @@ const UserRoleManagementPage = () => {
                 )
             }
         },
-        {
-            name: 'id',
-            label: 'Action',
-            options: {
-                filter: false,
-                sort: false,
-                empty: true,
-                customBodyRender: (value, tableMeta) => {
-                    const rowIndex = tableMeta.rowIndex;
-                    const user = tableData[rowIndex];
-                    return (
-                        <div className="tdaction">
-                            {canAccess('edit') && (
-                                <Link to={`/user-role-management-edit/${value}`} state={{ user: user }}>
-                                    <img src={`/user/images/edit.svg`} className="img-fluid" alt="edit" />
-                                </Link>
-                            )}
-                            {canAccess('delete') && (
-                                <a
-                                    href="#!"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#mydeleteuserModal"
-                                    onClick={() => handleDelete(user)}
-                                >
-                                    <img src={`/user/images/deletetd.svg`} className="img-fluid" alt="delete" />
-                                </a>
-                            )}
-                        </div>
-                    );
+        ...(showActionColumn ? [
+            {
+                name: 'id',
+                label: 'Action',
+                options: {
+                    filter: false,
+                    sort: false,
+                    empty: true,
+                    customBodyRender: (value, tableMeta) => {
+                        const rowIndex = tableMeta.rowIndex;
+                        const user = tableData[rowIndex];
+                        return (
+                            <div className="tdaction">
+                                {hasEditPermission && (
+                                    <Link to={`/user-role-management-edit/${value}`} state={{ user }}>
+                                        <img src={`/user/images/edit.svg`} className="img-fluid" alt="edit" />
+                                    </Link>
+                                )}
+                                {hasDeletePermission && (
+                                    <a
+                                        href="#!"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#mydeleteuserModal"
+                                        onClick={() => handleDelete(user)}
+                                    >
+                                        <img src={`/user/images/deletetd.svg`} className="img-fluid" alt="delete" />
+                                    </a>
+                                )}
+                            </div>
+                        );
+                    }
                 }
             }
-        }
+        ] : [])
     ];
+
 
     const options = {
         selectableRows: 'none',
@@ -247,7 +253,7 @@ const UserRoleManagementPage = () => {
                                 </div>
                             </div>
                         </div>
-                        
+
                     )}
                 </div>
             </div>

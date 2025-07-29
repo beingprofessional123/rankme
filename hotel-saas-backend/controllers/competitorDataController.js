@@ -50,9 +50,7 @@ exports.getAllCompetitorData = async (req, res) => {
                 [Op.between]: [startDate, endDate],
               },
             }),
-            competitorHotel: {
-              [Op.ne]: null, // 👈 Ensures competitorHotel is NOT NULL
-            },
+            property: 'competitor',
           },
           attributes: ['competitorHotel', 'checkIn', 'rate','platform','compAvg'],
         },
