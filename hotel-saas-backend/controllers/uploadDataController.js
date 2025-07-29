@@ -86,7 +86,7 @@ exports.extractAndPreviewData = async (req, res) => {
             return res.status(401).json({ message: 'Authentication error: User ID or Company ID missing from token.' });
         }
 
-        const { fileType } = req.body;
+        const { fileType, hotel_property_name } = req.body; // Destructure hotel_property_name from req.body
         if (!fileType || !['booking', 'competitor', 'str_ocr_report', 'property_price_data'].includes(fileType)) {
             return res.status(400).json({ message: 'Invalid or missing fileType in request body. Must be "booking", "competitor", "str_ocr_report", or "property_price_data".' });
         }
@@ -173,8 +173,10 @@ exports.extractAndPreviewData = async (req, res) => {
                 const dateRowErrors = [];
 
                 const dateColIndex = 0; // Assuming date is always the first column
-                const myPropertyNameFromHeader = headerRow[1] || 'My Property'; // "My Property"
-                const myActualHotelName = actualHotelNamesRow[1] || myPropertyNameFromHeader; // "Baymont by Wyndham Adairsville"
+                const myPropertyNameFromHeader = headerRow[1] || null; // "My Property"
+
+                // HERE IS THE CHANGE: Use req.body.hotel_property_name as fallback
+                const myActualHotelName = (actualHotelNamesRow[1] && actualHotelNamesRow[1].trim() !== '') ? actualHotelNamesRow[1].trim() : (hotel_property_name || null);
 
                 const sourceValue = 'Online';
                 const platform = 'Online';
@@ -242,7 +244,7 @@ exports.extractAndPreviewData = async (req, res) => {
                             finalData.push({
                                 uploadDataId: uploadDataRecord.id,
                                 userId: user.id,
-                                competitorHotel: myActualHotelName, // Use the actual hotel name
+                                competitorHotel: myActualHotelName, // Use the potentially fallback name here
                                 rate: myRate,
                                 checkIn: formattedDate,
                                 compAvg: parseFloat(row[2]) || null, // compAvg can be null if invalid
