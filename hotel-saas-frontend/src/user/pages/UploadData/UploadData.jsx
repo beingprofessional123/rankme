@@ -1,4 +1,3 @@
-// UploadData.js
 import React, { useState, useCallback, useEffect } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import Tabs from './Tabs';
@@ -28,6 +27,8 @@ const UploadData = () => {
     const [dateRangeFrom, setDateRangeFrom] = useState('');
     const [dateRangeTo, setDateRangeTo] = useState('');
     const [hotelProperties, setHotelProperties] = useState([]);
+    // NEW state to store the selected hotel property name
+    const [selectedHotelPropertyName, setSelectedHotelPropertyName] = useState('');
 
     useEffect(() => {
         const fetchHotelProperties = async () => {
@@ -66,6 +67,17 @@ const UploadData = () => {
         fetchHotelProperties();
     }, []);
 
+    // NEW useEffect to update selectedHotelPropertyName when hotelPropertyId changes
+    useEffect(() => {
+        if (hotelPropertyId) {
+            const selectedProperty = hotelProperties.find(prop => String(prop.id) === String(hotelPropertyId));
+            setSelectedHotelPropertyName(selectedProperty ? selectedProperty.name : '');
+        } else {
+            setSelectedHotelPropertyName('');
+        }
+    }, [hotelPropertyId, hotelProperties]);
+
+
     const handleFileExtracted = useCallback((data, fileInfo, uploadIdFromApi) => {
         setExtractedData(data);
         setUploadId(uploadIdFromApi);
@@ -82,17 +94,16 @@ const UploadData = () => {
         setHotelPropertyId('');
         setDateRangeFrom('');
         setDateRangeTo('');
+        setSelectedHotelPropertyName(''); // Also clear the name
     }, []);
 
     const getFileTypeForApi = (tabName) => {
         switch (tabName) {
             case 'Booking Data':
                 return 'booking';
-            case 'Competitor Data':
-                return 'competitor';
             case 'STR/OCR Reports':
                 return 'str_ocr_report';
-            case 'Property Price': // Added for the new tab
+            case 'Property Price':
                 return 'property_price_data';
             default:
                 return 'unknown';
@@ -104,9 +115,12 @@ const UploadData = () => {
             setError('No data to confirm. Please upload a file first.');
             return;
         }
-        if (!dataSourceName || !hotelPropertyId || !dateRangeFrom || !dateRangeTo) {
-            setError('Please fill in all data source details (Name, Property, Date Range).');
-            return;
+
+        if (activeTab === 'Property Price') {
+            if (!dataSourceName || !hotelPropertyId || !dateRangeFrom || !dateRangeTo) {
+                setError('Please fill in all data source details (Name, Property, Date Range) for Property Price data.');
+                return;
+            }
         }
 
         setLoading(true);
@@ -126,10 +140,11 @@ const UploadData = () => {
                 },
                 body: JSON.stringify({
                     uploadId,
-                    dataSourceName,
-                    hotelPropertyId,
-                    dateRangeFrom,
-                    dateRangeTo,
+                    dataSourceName: activeTab === 'Property Price' ? dataSourceName : undefined,
+                    hotelPropertyId: activeTab === 'Property Price' ? hotelPropertyId : undefined,
+                    dateRangeFrom: activeTab === 'Property Price' ? dateRangeFrom : undefined,
+                    dateRangeTo: activeTab === 'Property Price' ? dateRangeTo : undefined,
+                    // No need to send hotelProperty Name to confirm-save, as ID is sufficient for backend
                 }),
             });
 
@@ -174,11 +189,9 @@ const UploadData = () => {
         switch (tabName) {
             case 'Booking Data':
                 return 'Booking Data Preview';
-            case 'Competitor Data':
-                return 'Competitor Data Preview';
             case 'STR/OCR Reports':
                 return 'STR/OCR Reports Preview';
-            case 'Property Price': // Added for the new tab
+            case 'Property Price':
                 return 'Property Price Data Preview';
             default:
                 return 'Data Preview';
@@ -188,9 +201,8 @@ const UploadData = () => {
     const handleDownloadTemplate = () => {
         const apiFileType = {
             'Booking Data': 'booking',
-            'Competitor Data': 'competitor',
             'STR/OCR Reports': 'str_ocr_report',
-            'Property Price': 'property_price_data' // Added for the new tab
+            'Property Price': 'property_price_data'
         }[activeTab] || 'unknown';
 
         const headers = csvTemplates[apiFileType];
@@ -203,8 +215,17 @@ const UploadData = () => {
     };
 
     useEffect(() => {
-        handleClearFile();
-    }, [activeTab, handleClearFile]);
+        // Clear all relevant states when tab changes
+        setFileName('');
+        setExtractedData([]);
+        setUploadId(null);
+        setError(null);
+        setDataSourceName('');
+        setHotelPropertyId('');
+        setDateRangeFrom('');
+        setDateRangeTo('');
+        setSelectedHotelPropertyName(''); // Ensure this is also cleared
+    }, [activeTab]);
 
 
     return (
@@ -233,16 +254,77 @@ const UploadData = () => {
                                     <div className="form-design">
                                         <div className="d-flex justify-content-between align-items-center mb-3">
                                             <h4>Upload Your Data</h4>
-                                            
-                                            <img src={`/user/images/download.svg`} alt="" onClick={handleDownloadTemplate} />
-                                            
+                                            <img src={`/user/images/download.svg`} alt="Download Template" onClick={handleDownloadTemplate} style={{ cursor: 'pointer' }} />
                                         </div>
+
+                                        {/* Conditional rendering for meta fields */}
+                                        {activeTab === 'Property Price' && (
+                                            <div className="row">
+                                                <div className="col-md-4">
+                                                    <div className="form-group">
+                                                        <label htmlFor="dataSourceName" className="form-label">Data Source Name</label>
+                                                        <input
+                                                            type="text"
+                                                            className="form-control"
+                                                            id="dataSourceName"
+                                                            placeholder="Data Source Name"
+                                                            value={dataSourceName}
+                                                            onChange={(e) => setDataSourceName(e.target.value)}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="col-md-4">
+                                                    <div className="form-group">
+                                                        <label htmlFor="hotelProperty" className="form-label">Hotel Property</label>
+                                                        <select
+                                                            className="form-select form-control"
+                                                            id="hotelProperty"
+                                                            value={hotelPropertyId}
+                                                            onChange={(e) => setHotelPropertyId(e.target.value)}
+                                                        >
+                                                            <option value="">Select Hotel Property</option>
+                                                            {hotelProperties.map((prop) => (
+                                                                <option key={prop.id} value={prop.id}>{prop.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div className="col-md-4">
+                                                    <div className="form-group">
+                                                        <label htmlFor="dateRangeFrom" className="form-label">Date Range</label>
+                                                        <div className="daterange">
+                                                            <input
+                                                                type="date"
+                                                                className="form-control"
+                                                                id="dateRangeFrom"
+                                                                value={dateRangeFrom}
+                                                                onChange={(e) => setDateRangeFrom(e.target.value)}
+                                                            />
+                                                            <span>-</span>
+                                                            <input
+                                                                type="date"
+                                                                className="form-control"
+                                                                id="dateRangeTo"
+                                                                value={dateRangeTo}
+                                                                onChange={(e) => setDateRangeTo(e.target.value)}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* FileUploadSection comes after the above fields (conditionally rendered or not) */}
                                         <FileUploadSection
                                             onFileExtracted={handleFileExtracted}
                                             setLoading={setLoading}
                                             setError={setError}
                                             fileName={fileName}
-                                            fileType={getFileTypeForApi(activeTab)}
+                                            fileType={getFileTypeForApi(activeTab)} // Pass the active tab's file type
+                                            hotelPropertyId={hotelPropertyId}      // Pass the selected hotel property ID
+                                            selectedHotelPropertyName={selectedHotelPropertyName} // NEW: Pass the hotel property name
                                         />
                                         {error && (
                                             <div className="alert alert-danger alert-dismissible fade show d-flex justify-content-between align-items-center" role="alert">
@@ -263,71 +345,15 @@ const UploadData = () => {
 
                                         {loading && <div className="text-center text-primary mb-4">Processing file...</div>}
 
+                                        {/* DataTable only shows if extractedData is available */}
                                         {extractedData.length > 0 && (
-                                            <>
-                                                <div className="row">
-                                                    <div className="col-md-4">
-                                                        <div className="form-group">
-                                                            <label htmlFor="dataSourceName" className="form-label">Data Source Name</label>
-                                                            <input
-                                                                type="text"
-                                                                className="form-control"
-                                                                id="dataSourceName"
-                                                                placeholder="Data Source Name"
-                                                                value={dataSourceName}
-                                                                onChange={(e) => setDataSourceName(e.target.value)}
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="col-md-4">
-                                                        <div className="form-group">
-                                                            <label htmlFor="hotelProperty" className="form-label">Hotel Property</label>
-                                                            <select
-                                                                className="form-select form-control"
-                                                                id="hotelProperty"
-                                                                value={hotelPropertyId}
-                                                                onChange={(e) => setHotelPropertyId(e.target.value)}
-                                                            >
-                                                                <option value="">Select Hotel Property</option>
-                                                                {hotelProperties.map((prop) => (
-                                                                    <option key={prop.id} value={prop.id}>{prop.name}</option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="col-md-4">
-                                                        <div className="form-group">
-                                                            <label htmlFor="dateRangeFrom" className="form-label">Date Range</label>
-                                                            <div className="daterange">
-                                                                <input
-                                                                    type="date"
-                                                                    className="form-control"
-                                                                    id="dateRangeFrom"
-                                                                    value={dateRangeFrom}
-                                                                    onChange={(e) => setDateRangeFrom(e.target.value)}
-                                                                />
-                                                                <span>-</span>
-                                                                <input
-                                                                    type="date"
-                                                                    className="form-control"
-                                                                    id="dateRangeTo"
-                                                                    value={dateRangeTo}
-                                                                    onChange={(e) => setDateRangeTo(e.target.value)}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <DataTable
-                                                    data={extractedData}
-                                                    title={getTableTitle(activeTab)}
-                                                    onConfirm={handleConfirmUpload}
-                                                    onCancel={handleCancel}
-                                                    activeTab={activeTab}
-                                                />
-                                            </>
+                                            <DataTable
+                                                data={extractedData}
+                                                title={getTableTitle(activeTab)}
+                                                onConfirm={handleConfirmUpload}
+                                                onCancel={handleCancel}
+                                                activeTab={activeTab}
+                                            />
                                         )}
                                     </div>
                                 </form>
