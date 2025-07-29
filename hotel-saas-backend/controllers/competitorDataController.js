@@ -22,7 +22,7 @@ exports.getAllCompetitorData = async (req, res) => {
       });
     }
 
-    const fileType = 'competitor';
+    const fileType = 'property_price_data';
 
     const data = await UploadData.findAll({
       where: {
@@ -44,16 +44,19 @@ exports.getAllCompetitorData = async (req, res) => {
           model: UploadedExtractDataFile,
           as: 'extractedFiles',
           required: false,
-          where:
-            startDate && endDate
-              ? {
-                  date: {
-                    [Op.between]: [startDate, endDate],
-                  },
-                }
-              : {},
-          attributes: ['competitorHotel', 'date', 'roomType', 'rate'],
+          where: {
+            ...(startDate && endDate && {
+              checkIn: {
+                [Op.between]: [startDate, endDate],
+              },
+            }),
+            competitorHotel: {
+              [Op.ne]: null, // 👈 Ensures competitorHotel is NOT NULL
+            },
+          },
+          attributes: ['competitorHotel', 'checkIn', 'rate','platform','compAvg'],
         },
+
       ],
       order: [['createdAt', 'DESC']], // ✅ fixed typo here
     });

@@ -89,7 +89,6 @@ const STROCRReportPage = () => {
     const columns = [
         { name: 'report_type', label: 'Report Type' },
         { name: 'date', label: 'Date' },
-        { name: 'room_type', label: 'Room Type' },
         { name: 'rate', label: 'Rate' },
         { name: 'occupancy', label: 'Occupancy' },
         { name: 'adr', label: 'ADR (USD)' },

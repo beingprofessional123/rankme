@@ -24,7 +24,7 @@ module.exports = (sequelize, DataTypes) => {
       },
     },
     source_hotel_id: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: false,
     },
     source_type: { // 'Booking.com', 'Expedia', etc.
