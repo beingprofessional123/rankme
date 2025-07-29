@@ -1,4 +1,3 @@
-// DataTable.js
 import React, { useMemo } from 'react';
 import MUIDataTable from 'mui-datatables';
 import { saveAs } from 'file-saver';
@@ -7,10 +6,9 @@ import csvTemplates from '../../utils/csvTemplates';
 
 const DataTable = ({ data, title = 'Data Preview', onConfirm, onCancel, activeTab }) => {
 
-    // Helper map for activeTab to API fileType (moved up for use in getDisplayHeadersForTab)
+    // Helper map for activeTab to API fileType
     const activeTabToFileType = {
         'Booking Data': 'booking',
-        'Competitor Data': 'competitor',
         'STR/OCR Reports': 'str_ocr_report',
         'Property Price': 'property_price_data'
     };
@@ -20,21 +18,26 @@ const DataTable = ({ data, title = 'Data Preview', onConfirm, onCancel, activeTa
         const apiFileType = activeTabToFileType[tab] || null;
 
         if (apiFileType && csvTemplates[apiFileType]) {
-            // These are the *display* headers from the template
+            // For Property Price, we want specific backend keys to be displayed
+            if (tab === 'Property Price') {
+                // These are the *backend field names* that should be displayed
+                return ['checkIn', 'competitorHotel', 'rate', 'compAvg'];
+            }
+
+            // For other tabs, use the template headers, and convert them to camelCase
             return csvTemplates[apiFileType].map(header => {
-                // Map template header to the actual backend field name if it differs
-                if (apiFileType === 'property_price_data' && header.toLowerCase() === 'price') {
-                    return 'rate'; // The 'price' column in the template corresponds to the 'rate' field in the data
-                }
+                // Specific mapping for STR/OCR if needed, otherwise general camelCase
                 if (header === 'ADR (USD)') return 'adrUsd';
                 if (header === 'RevPAR (USD)') return 'revParUsd';
-                // Convert spaces to camelCase for general headers (e.g., "Room Type" -> "roomType")
+                if (header === 'Room Type') return 'roomType'; // Example, ensure consistency
+
+                // Convert original header (e.g., "Check In Date") to camelCase (e.g., "checkInDate")
                 return header.replace(/([ (])-([a-zA-Z])/g, (match, p1, p2) => p2.toUpperCase())
                              .replace(/[^a-zA-Z0-9]+(.)?/g, (match, chr) => chr ? chr.toUpperCase() : '')
                              .replace(/^./, (str) => str.toLowerCase());
             });
         }
-        // Fallback: If no specific template, try to derive from data
+        // Fallback: If no specific template, or tab not found, try to derive from data
         return data.length > 0 ? Object.keys(data[0]).filter(key =>
             !['id', 'metaUploadDataId', 'uploadDataId', 'userId', 'createdAt', 'updatedAt', 'isValid', 'validationErrors'].includes(key)
         ) : [];
@@ -49,42 +52,52 @@ const DataTable = ({ data, title = 'Data Preview', onConfirm, onCancel, activeTa
         if (header === 'roomType') return 'Room Type';
         if (header === 'rate' && activeTab === 'Property Price') return 'Price'; // Specific for Property Price
         if (header === 'platform') return 'Platform';
+        if (header === 'checkIn') return 'Check In Date'; // Explicitly map 'checkIn' to 'Check In Date'
+        if (header === 'competitorHotel') return 'Competitor Hotel';
+        if (header === 'compAvg') return 'Comp Avg';
 
-        // General camelCase to Title Case formatting
+        // General camelCase to Title Case formatting for other headers
         return header.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
     };
 
     const columns = useMemo(() => displayHeaders.map(header => ({
-        name: header, // This is the key in your data object (e.g., 'rate', 'date', 'platform')
-        label: formatHeader(header), // This is what the user sees (e.g., 'Price', 'Date', 'Platform')
+        name: header, // This is the key in your data object (e.g., 'rate', 'checkIn', 'competitorHotel')
+        label: formatHeader(header), // This is what the user sees (e.g., 'Price', 'Check In Date', 'Competitor Hotel')
         options: {
             customBodyRenderLite: (dataIndex) => {
                 const row = data[dataIndex];
-                const cellData = row[header]; // This will now correctly access row.rate for the 'price' column
+                let cellData = row[header]; // This will now correctly access row.rate for the 'rate' column, etc.
+
+                // --- NEW CODE START ---
+                // Add dollar symbol for 'rate' and 'compAvg' fields in 'Property Price' tab
+                if (activeTab === 'Property Price') {
+                    if (header === 'rate' || header === 'compAvg') {
+                        // Ensure cellData is a number before formatting
+                        const numericValue = parseFloat(cellData);
+                        if (!isNaN(numericValue)) {
+                            cellData = `$${numericValue.toFixed(2)}`; // Format to 2 decimal places and add dollar sign
+                        } else {
+                            cellData = 'N/A'; // Or whatever you want for non-numeric values
+                        }
+                    }
+                }
+                // --- NEW CODE END ---
 
                 const hasError = row.validationErrors &&
                     row.validationErrors.some(err => {
-                        // The error 'field' name from backend should match the *original template header* or the *display label*
-                        const originalTemplateHeader = csvTemplates[activeTabToFileType[activeTab] || 'unknown']?.find(
-                            templateH => formatHeader(header).toLowerCase() === templateH.toLowerCase() ||
-                                         header.toLowerCase() === templateH.toLowerCase()
-                        );
-
-                        return err.field.toLowerCase() === formatHeader(header).toLowerCase() ||
-                               err.field.toLowerCase() === header.toLowerCase() ||
-                               (originalTemplateHeader && err.field.toLowerCase() === originalTemplateHeader.toLowerCase());
+                        const formattedLabel = formatHeader(header);
+                        return err.field.toLowerCase() === header.toLowerCase() ||
+                               err.field.toLowerCase() === formattedLabel.toLowerCase() ||
+                               (activeTab === 'Property Price' && header === 'rate' && err.field.toLowerCase().includes('comp #'));
                     });
 
                 const errorMessage = hasError
                     ? row.validationErrors
                         .filter(err => {
-                            const originalTemplateHeader = csvTemplates[activeTabToFileType[activeTab] || 'unknown']?.find(
-                                templateH => formatHeader(header).toLowerCase() === templateH.toLowerCase() ||
-                                             header.toLowerCase() === templateH.toLowerCase()
-                            );
-                            return err.field.toLowerCase() === formatHeader(header).toLowerCase() ||
-                                   err.field.toLowerCase() === header.toLowerCase() ||
-                                   (originalTemplateHeader && err.field.toLowerCase() === originalTemplateHeader.toLowerCase());
+                            const formattedLabel = formatHeader(header);
+                            return err.field.toLowerCase() === header.toLowerCase() ||
+                                   err.field.toLowerCase() === formattedLabel.toLowerCase() ||
+                                   (activeTab === 'Property Price' && header === 'rate' && err.field.toLowerCase().includes('comp #'));
                         })
                         .map(err => err.message)
                         .join(', ')
@@ -159,6 +172,11 @@ const DataTable = ({ data, title = 'Data Preview', onConfirm, onCancel, activeTa
     return (
         <div className="data-uploadtable">
             <div className="data-uploadtop d-flex justify-content-between align-items-center">
+                <h2>{title}</h2>
+                    <span>
+                        <img src={`/user/images/download.svg`} className="img-fluid mr-2" alt="Download Template"
+                            onClick={handleDownloadTemplate} style={{ cursor: 'pointer' }} />
+                    </span>
             </div>
 
             <div className="tabledesign">
