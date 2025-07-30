@@ -9,13 +9,6 @@ const csvTemplates = {
     "Source",
     // Add any other specific booking fields your backend expects or are common
   ],
-  competitor: [
-    "Competitor Hotel",
-    "Date",
-    "Room Type",
-    "Rate",
-    // Add any other specific competitor fields
-  ],
   str_ocr_report: [
     "Report Type",
     "Date",
@@ -26,11 +19,14 @@ const csvTemplates = {
     "RevPAR (USD)", // Use the exact header you provided in your CSV
   ],
   property_price_data: [ // ADD THIS NEW ENTRY
-    'Check-in',
-    'Check-out',
-    'room_type',
-    'price',
-    'platform',
+    'Date', // Assuming this is derived from the first column if the first row is metadata
+    'My Property',
+    'Comp Avg',
+    'Comp #1',
+    'Comp #2',
+    'Comp #3',
+    'Comp #4',
+    'Comp #5',
   ],
 };
 
