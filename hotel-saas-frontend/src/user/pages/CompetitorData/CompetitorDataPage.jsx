@@ -74,9 +74,10 @@ const CompetitorDataPage = () => {
             const extractedRows = response.data?.results?.flatMap(item =>
                 item.extractedFiles.map(file => ({
                     competitor_hotel: file.competitorHotel,
-                    date: file.date,
-                    room_type: file.roomType,
+                    checkIn: file.checkIn,
+                    compAvg: file.compAvg,
                     rate: file.rate,
+                    platform: file.platform,
                 }))
             ) || [];
 
@@ -100,11 +101,38 @@ const CompetitorDataPage = () => {
     };
 
     const columns = [
-        { name: 'competitor_hotel', label: 'Competitor Hotel' },
-        { name: 'date', label: 'Date' },
-        { name: 'room_type', label: 'Room Type' },
-        { name: 'rate', label: 'Rate' },
-    ];
+    { name: 'competitor_hotel', label: 'Competitor Hotel' },
+    {
+        name: 'checkIn',
+        label: 'Date',
+        options: {
+            customBodyRender: (value) =>
+                new Date(value).toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                }),
+        },
+    },
+    {
+        name: 'rate',
+        label: 'Rate',
+        options: {
+            customBodyRender: (value) =>
+                value !== null && value !== undefined ? `$${value}` : '-',
+        },
+    },
+    {
+        name: 'compAvg',
+        label: 'Comp Avg',
+        options: {
+            customBodyRender: (value) =>
+                value !== null && value !== undefined ? `$${value}` : '-',
+        },
+    },
+    { name: 'platform', label: 'Platform' },
+];
+
 
     const options = {
         selectableRows: 'none',

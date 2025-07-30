@@ -9,7 +9,13 @@ const {
 
 exports.getPropertyPrice = async (req, res) => {
   try {
-    const { user_id: userId, company_id: companyId, hotel_id: hotelId, start_date: startDate, end_date: endDate } = req.query;
+    const {
+      user_id: userId,
+      company_id: companyId,
+      hotel_id: hotelId,
+      start_date: startDate,
+      end_date: endDate,
+    } = req.query;
 
     if (!userId || !companyId || !hotelId) {
       return res.status(400).json({
@@ -24,7 +30,7 @@ exports.getPropertyPrice = async (req, res) => {
     // ✅ Support comma-separated hotel IDs
     let hotelIds = hotelId;
     if (typeof hotelId === 'string') {
-      hotelIds = hotelId.split(',').map(id => id.trim());
+      hotelIds = hotelId.split(',').map((id) => id.trim());
     }
 
     const data = await UploadData.findAll({
@@ -50,10 +56,11 @@ exports.getPropertyPrice = async (req, res) => {
           as: 'extractedFiles',
           required: false,
           where: {
-            checkIn: { [Op.lte]: endDate },
-            checkOut: { [Op.gte]: startDate },
+            competitorHotel: {
+              [Op.is]: null, // ✅ Ensures competitorHotel IS NULL
+            },
           },
-          attributes: ['checkIn', 'checkOut', 'roomType', 'rate', 'platform', 'remarks'],
+          attributes: ['checkIn', 'checkOut', 'rate', 'platform', 'remarks'],
         },
       ],
       order: [['createdAt', 'DESC']],
@@ -80,6 +87,7 @@ exports.getPropertyPrice = async (req, res) => {
     });
   }
 };
+
 
 
 exports.getBookingData = async (req, res) => {

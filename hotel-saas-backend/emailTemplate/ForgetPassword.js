@@ -37,7 +37,7 @@ const getForgotPasswordEmail = (userName, resetLink) => {
             <p style="font-weight: 500;font-size: 16px;line-height: 24px;color: #fff;margin-bottom: 22px;margin-top: 0px;">You recently requested to reset your password for your account. Click the button below to reset it:</p>
 
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background-color: #458dfc; color: white; border-radius: 5px; text-decoration: none; font-size: 16px; font-weight: 600;">
+              <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background:linear-gradient(50deg, rgba(90, 192, 93, 1)); color: white; border-radius: 5px; text-decoration: none; font-size: 16px; font-weight: 600;">
                 Reset Your Password
               </a>
             </div>
