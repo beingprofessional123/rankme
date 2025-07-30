@@ -241,16 +241,17 @@ exports.extractAndPreviewData = async (req, res) => {
                     if (isDateRowValid) {
                         const myRate = parseFloat(row[1]);
                         if (!isNaN(myRate) && myRate >= 0) {
-                            finalData.push({
-                                uploadDataId: uploadDataRecord.id,
-                                userId: user.id,
-                                competitorHotel: myActualHotelName, // Use the potentially fallback name here
-                                rate: myRate,
-                                checkIn: formattedDate,
-                                compAvg: parseFloat(row[2]) || null, // compAvg can be null if invalid
-                                platform,
-                                source: sourceValue
-                            });
+                                finalData.push({
+                                    uploadDataId: uploadDataRecord.id,
+                                    userId: user.id,
+                                    competitorHotel: myActualHotelName, // Use the potentially fallback name here
+                                    rate: myRate,
+                                    checkIn: formattedDate,
+                                    compAvg: parseFloat(row[2]) || null, // compAvg can be null if invalid
+                                    platform,
+                                    source: sourceValue,
+                                    property: 'myproperty' 
+                                });
                         } else {
                             currentRecordErrors.push(`Invalid 'My Property' rate at row ${rowIndex}. Value: '${row[1]}'`);
                         }
@@ -269,7 +270,8 @@ exports.extractAndPreviewData = async (req, res) => {
                                         checkIn: formattedDate,
                                         compAvg: parseFloat(row[2]) || null, // compAvg can be null if invalid
                                         platform,
-                                        source: sourceValue
+                                        source: sourceValue,
+                                        property: 'competitor' 
                                     });
                                 }
                             } else {

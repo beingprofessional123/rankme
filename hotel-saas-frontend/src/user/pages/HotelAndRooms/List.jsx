@@ -319,7 +319,7 @@ const HotelsAndRoomsList = () => {
 
 
             const saveApiUrl = `${process.env.REACT_APP_API_BASE_URL}/api/scrape-expedia-source-hotels/save`; // Use your specific route for Expedia
-            
+
             let requestBody;
 
             if (source === 'booking.com') {
@@ -366,7 +366,7 @@ const HotelsAndRoomsList = () => {
         }
     };
 
-    const columns = [
+    const baseColumns = [
         {
             name: 'S.No.',
             label: 'S.No.',
@@ -387,7 +387,13 @@ const HotelsAndRoomsList = () => {
             label: 'Total Room',
             options: { filter: false, sort: true },
         },
-        {
+    ];
+
+    const showActions =
+        canAccess('view') || canAccess('edit') || canAccess('connect') || canAccess('delete');
+
+    if (showActions) {
+        baseColumns.push({
             name: 'Actions',
             label: 'Actions',
             options: {
@@ -402,10 +408,12 @@ const HotelsAndRoomsList = () => {
                 },
                 customBodyRenderLite: (dataIndex) => {
                     const hotel = hotels[dataIndex];
-                    // Determine connection status for each source
-                    const isBookingComConnected = hotel.ScrapeSourceHotels?.some(s => s.source_type === 'Booking.com');
-                    const isExpediaConnected = hotel.ScrapeSourceHotels?.some(s => s.source_type === 'Expedia');
-                    // const isAnySourceConnected = isBookingComConnected || isExpediaConnected; // Already covered by below logic
+                    const isBookingComConnected = hotel.ScrapeSourceHotels?.some(
+                        (s) => s.source_type === 'Booking.com'
+                    );
+                    const isExpediaConnected = hotel.ScrapeSourceHotels?.some(
+                        (s) => s.source_type === 'Expedia'
+                    );
 
                     let connectionStatusText = '';
                     if (isBookingComConnected && isExpediaConnected) {
@@ -419,36 +427,78 @@ const HotelsAndRoomsList = () => {
                     return (
                         <>
                             {canAccess('view') && (
-                                <a href="#" onClick={() => handleView(hotel.id)} className="action-icon" title="View Details">
-                                    <img src={`/user/images/view.svg`} alt="View" className="mx-1" />
+                                <a
+                                    href="#"
+                                    onClick={() => handleView(hotel.id)}
+                                    className="action-icon"
+                                    title="View Details"
+                                >
+                                    <img
+                                        src={`/user/images/view.svg`}
+                                        alt="View"
+                                        className="mx-1"
+                                    />
                                 </a>
                             )}
                             {canAccess('edit') && (
-                                <a href="#" onClick={() => handleEdit(hotel.id)} className="action-icon" title="Edit Hotel">
-                                    <img src={`/user/images/edit.svg`} alt="Edit" className="mx-1" />
+                                <a
+                                    href="#"
+                                    onClick={() => handleEdit(hotel.id)}
+                                    className="action-icon"
+                                    title="Edit Hotel"
+                                >
+                                    <img
+                                        src={`/user/images/edit.svg`}
+                                        alt="Edit"
+                                        className="mx-1"
+                                    />
                                 </a>
                             )}
-                            {canAccess('connect') && ( // Only show connect button if user has permission
-                                // Show connect if NOT connected to Booking.com OR NOT connected to Expedia
-                                (!isBookingComConnected || !isExpediaConnected) ? (
-                                    <a href="#" onClick={() => handleConnectClick(hotel)} className="action-icon" title="Connect to Scrape Source">
-                                        <img src="/user/images/link.svg" alt="Connect" className="mx-1" style={{ width: '20px', height: '20px' }} />
+                            {canAccess('connect') &&
+                                (!isBookingComConnected || !isExpediaConnected ? (
+                                    <a
+                                        href="#"
+                                        onClick={() => handleConnectClick(hotel)}
+                                        className="action-icon"
+                                        title="Connect to Scrape Source"
+                                    >
+                                        <img
+                                            src="/user/images/link.svg"
+                                            alt="Connect"
+                                            className="mx-1"
+                                            style={{ width: '20px', height: '20px' }}
+                                        />
                                     </a>
-                                ) : ( // If both are connected, show status text
-                                    <span className="text-success small mx-1" title={connectionStatusText}>{connectionStatusText}</span>
-                                )
-                            )}
+                                ) : (
+                                    <span
+                                        className="text-success small mx-1"
+                                        title={connectionStatusText}
+                                    >
+                                        {connectionStatusText}
+                                    </span>
+                                ))}
                             {canAccess('delete') && (
-                                <a href="#" onClick={() => handleDelete(hotel.id)} className="action-icon" title="Delete Hotel">
-                                    <img src={`/user/images/deletetd.svg`} alt="Delete" className="mx-1" />
+                                <a
+                                    href="#"
+                                    onClick={() => handleDelete(hotel.id)}
+                                    className="action-icon"
+                                    title="Delete Hotel"
+                                >
+                                    <img
+                                        src={`/user/images/deletetd.svg`}
+                                        alt="Delete"
+                                        className="mx-1"
+                                    />
                                 </a>
                             )}
                         </>
                     );
                 },
             },
-        },
-    ];
+        });
+    }
+
+    const columns = baseColumns;
 
     const options = {
         selectableRows: 'none',

@@ -34,10 +34,8 @@ import SettingsPage from '../pages/Settings/SettingsPage';
 import BookingPage from '../pages/Bookings/BookingPage';
 import CompetitorDataPage from '../pages/CompetitorData/CompetitorDataPage';
 import STROCRReportPage from '../pages/STROCRReport/STROCRReportPage';
-import InactivePage from '.././error/InactivePage';
-
-
-
+import InactivePage from '../error/InactivePage';
+import AccessDeniedPage from '../error/AccessDeniedPage';
 
 const AppRoutes = () => {
   return (
@@ -46,44 +44,47 @@ const AppRoutes = () => {
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/inactive" element={<InactivePage />} />
+        <Route path="/access-denied" element={<AccessDeniedPage />} />
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/signup" element={<CompanySignup />} />
 
-        {/* ForgotPassword */}
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/password-reset-success" element={<PasswordResetSuccess />} />
 
-        {/* Protected Routes */}
         <Route path="/subscription" element={<ProtectedRoute><SubscriptionPlan /></ProtectedRoute>} />
         <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
         <Route path="/setup/setup-wizard" element={<ProtectedRoute><SetupWizard /></ProtectedRoute>} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/pricing-calendar" element={<ProtectedRoute><PricingCalendar /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute module="dashboard" requiredPermission="tab"><Dashboard /></ProtectedRoute>} />
+
+        <Route path="/pricing-calendar" element={<ProtectedRoute module="pricing_calendar" requiredPermission="tab"><PricingCalendar /></ProtectedRoute>} />
         <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
         <Route path="/upgrade-plan/:currentplanId" element={<ProtectedRoute><UpgradePlan /></ProtectedRoute>} />
         <Route path="/invoice-history" element={<ProtectedRoute><InvoiceHistory /></ProtectedRoute>} />
-        <Route path="/upload-data" element={<ProtectedRoute><UploadData  /></ProtectedRoute>} />
-        <Route path="/hotels-and-rooms" element={<ProtectedRoute><HotelsAndRoomsList /></ProtectedRoute>} /> 
-        <Route path="/hotels-and-rooms/add" element={<ProtectedRoute><HotelAndRoomCreate /></ProtectedRoute>} /> 
-        <Route path="/hotels-and-rooms/:id" element={<ProtectedRoute><HotelAndRoomDetails /></ProtectedRoute>} /> 
-        <Route path="/hotels-and-rooms/edit/:id" element={<ProtectedRoute><HotelAndRoomEdit /></ProtectedRoute>} /> 
-        <Route path="/forecast" element={<ProtectedRoute><ForecastPage /></ProtectedRoute>} /> 
-        <Route path="/reports" element={<ProtectedRoute><ReportPage /></ProtectedRoute>} /> 
-        <Route path="/competitor-rate" element={<ProtectedRoute><CompetitorRatesPage /></ProtectedRoute>} /> 
-        <Route path="/user-role-management" element={<ProtectedRoute><UserRoleManagementPage /></ProtectedRoute>} /> 
-        <Route path="/user-role-management-add" element={<ProtectedRoute><UserRoleManagementAddPage /></ProtectedRoute>} /> 
-        <Route path="/user-role-management-edit/:id" element={<ProtectedRoute><UserRoleManagementEditPage /></ProtectedRoute>} /> 
-        <Route path="/support-tickets" element={<ProtectedRoute><SupportTicketPage /></ProtectedRoute>} /> 
-        <Route path="/support-tickets-add" element={<ProtectedRoute><SupportTicketAddPage /></ProtectedRoute>} /> 
-        <Route path="/support-tickets-edit/:id" element={<ProtectedRoute><SupportTicketEditPage /></ProtectedRoute>} /> 
-        <Route path="/support-tickets-view/:id" element={<ProtectedRoute><SupportTicketViewPage /></ProtectedRoute>} /> 
-        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} /> 
-        <Route path="/bookings" element={<ProtectedRoute><BookingPage /></ProtectedRoute>} /> 
-        <Route path="/competitor-data" element={<ProtectedRoute><CompetitorDataPage /></ProtectedRoute>} /> 
-        <Route path="/str-ocr-reports" element={<ProtectedRoute><STROCRReportPage /></ProtectedRoute>} /> 
+        <Route path="/upload-data" element={<ProtectedRoute module="upload_data" requiredPermission="tab"><UploadData /></ProtectedRoute>} />
 
-        {/* Add more routes later */}
+        <Route path="/hotels-and-rooms" element={<ProtectedRoute module="hotels_rooms" requiredPermission="tab"><HotelsAndRoomsList /></ProtectedRoute>} />
+        <Route path="/hotels-and-rooms/add" element={<ProtectedRoute module="hotels_rooms" requiredPermission="add"><HotelAndRoomCreate /></ProtectedRoute>} />
+        <Route path="/hotels-and-rooms/:id" element={<ProtectedRoute module="hotels_rooms" requiredPermission="view"><HotelAndRoomDetails /></ProtectedRoute>} />
+        <Route path="/hotels-and-rooms/edit/:id" element={<ProtectedRoute module="hotels_rooms" requiredPermission="edit"><HotelAndRoomEdit /></ProtectedRoute>} />
+
+        <Route path="/forecast" element={<ProtectedRoute module="forecasts" requiredPermission="tab"><ForecastPage /></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute module="reports" requiredPermission="tab"><ReportPage /></ProtectedRoute>} />
+        <Route path="/competitor-rate" element={<ProtectedRoute module="competitor_rates" requiredPermission="tab"><CompetitorRatesPage /></ProtectedRoute>} />
+
+        <Route path="/user-role-management" element={<ProtectedRoute module="user_role_management" requiredPermission="tab"><UserRoleManagementPage /></ProtectedRoute>} />
+        <Route path="/user-role-management-add" element={<ProtectedRoute module="user_role_management" requiredPermission="add"><UserRoleManagementAddPage /></ProtectedRoute>} />
+        <Route path="/user-role-management-edit/:id" element={<ProtectedRoute module="user_role_management" requiredPermission="edit"><UserRoleManagementEditPage /></ProtectedRoute>} />
+
+        <Route path="/support-tickets" element={<ProtectedRoute module="support_ticket" requiredPermission="tab"><SupportTicketPage /></ProtectedRoute>} />
+        <Route path="/support-tickets-add" element={<ProtectedRoute module="support_ticket" requiredPermission="add"><SupportTicketAddPage /></ProtectedRoute>} />
+        <Route path="/support-tickets-edit/:id" element={<ProtectedRoute module="support_ticket" requiredPermission="edit"><SupportTicketEditPage /></ProtectedRoute>} />
+        <Route path="/support-tickets-view/:id" element={<ProtectedRoute module="support_ticket" requiredPermission="view"><SupportTicketViewPage /></ProtectedRoute>} />
+
+        <Route path="/settings" element={<ProtectedRoute module="settings" requiredPermission="tab"><SettingsPage /></ProtectedRoute>} />
+        <Route path="/bookings" element={<ProtectedRoute module="bookings" requiredPermission="tab"><BookingPage /></ProtectedRoute>} />
+        <Route path="/competitor-data" element={<ProtectedRoute module="competitor-data" requiredPermission="tab"><CompetitorDataPage /></ProtectedRoute>} />
+        <Route path="/str-ocr-reports" element={<ProtectedRoute module="str-ocr-reports" requiredPermission="tab"><STROCRReportPage /></ProtectedRoute>} />
       </Routes>
     </Router>
   );

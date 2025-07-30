@@ -5,9 +5,9 @@ import DashboardLayout from '../../components/DashboardLayout';
 import MUIDataTable from 'mui-datatables';
 
 // Chart.js imports (keep them if you plan to use react-chartjs-2 later)
-// import { Line } from 'react-chartjs-2';
-// import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
-// ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+import { Line,Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 
 const ForecastPage = () => {
@@ -191,10 +191,10 @@ const ForecastPage = () => {
                                 </div>
                                 <div className="canvasbody">
                                     {/* Conditional rendering for Chart.js if you enable it */}
-                                    {/* {occupancyChartData.labels && occupancyChartData.labels.length > 0 && (
+                                    {occupancyChartData.labels && occupancyChartData.labels.length > 0 && (
                                         <Line data={occupancyChartData} options={{ responsive: true, plugins: { legend: { position: 'top' }} }} />
-                                    )} */}
-                                    <img src={`/user/images/canvas3.png`} className="img-fluid" alt="Occupancy Rate Chart" style={{ width: '100%' }} />
+                                    )}
+                                    {/* <img src={`/user/images/canvas3.png`} className="img-fluid" alt="Occupancy Rate Chart" style={{ width: '100%' }} /> */}
                                 </div>
                             </div>
                             <div className="col-md-6">
@@ -214,10 +214,10 @@ const ForecastPage = () => {
                                 </div>
                                 <div className="canvasbody">
                                     {/* Conditional rendering for Chart.js if you enable it */}
-                                    {/* {revparChartData.labels && revparChartData.labels.length > 0 && (
+                                    {revparChartData.labels && revparChartData.labels.length > 0 && (
                                         <Line data={revparChartData} options={{ responsive: true, plugins: { legend: { position: 'top' }} }} />
-                                    )} */}
-                                    <img src={`/user/images/canvas4.png`} className="img-fluid" alt="RevPAR Chart" style={{ width: '100%' }} />
+                                    )}
+                                    {/* <img src={`/user/images/canvas4.png`} className="img-fluid" alt="RevPAR Chart" style={{ width: '100%' }} /> */}
                                 </div>
                             </div>
                             <div className="col-md-12">
@@ -237,10 +237,10 @@ const ForecastPage = () => {
                                 </div>
                                 <div className="canvasbody">
                                     {/* Conditional rendering for Chart.js if you enable it */}
-                                    {/* {adrChartData.labels && adrChartData.labels.length > 0 && (
-                                        <Line data={adrChartData} options={{ responsive: true, plugins: { legend: { position: 'top' }} }} />
-                                    )} */}
-                                    <img src={`/user/images/canvas5.png`} className="img-fluid" alt="ADR Chart" style={{ width: '100%' }} />
+                                    {adrChartData.labels && adrChartData.labels.length > 0 && (
+                                        <Bar data={adrChartData} options={{ responsive: true, plugins: { legend: { position: 'top' }} }} />
+                                    )}
+                                    {/* <img src={`/user/images/canvas5.png`} className="img-fluid" alt="ADR Chart" style={{ width: '100%' }} /> */}
                                 </div>
                             </div>
                         </div>

@@ -45,7 +45,10 @@ const HotelInfo = ({ onHotelCreated, editInitialData }) => {
     }
     if (!location.trim()) newErrors.location = 'Please enter a location.';
     if (!hotelType.trim()) newErrors.hotel_type = 'Please select a hotel type.';
-    if (!totalRooms) newErrors.totalRooms = 'Please enter total numbers of rooms';
+
+    if (String(totalRooms).trim() === '' || isNaN(totalRooms) || Number(totalRooms) <= 0) {
+      newErrors.totalRooms = 'Please enter a valid number of rooms.';
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);

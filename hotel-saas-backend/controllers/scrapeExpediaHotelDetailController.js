@@ -311,6 +311,7 @@ exports.scrapeExpediaHotelDetail = async (req, res) => {
                                 checkIn: formattedCheckin,
                                 checkOut: formattedCheckout,
                                 platform: 'Expedia',
+                                property: 'myproperty',
                                 roomType: roomName,
                                 roomTypeId: roomTypeEntry.id, // Associate with the RoomType
                                 rate: price,

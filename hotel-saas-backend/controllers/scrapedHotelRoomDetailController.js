@@ -279,6 +279,7 @@ exports.getScrapedHotelDetail = async (req, res) => {
                                 checkIn: checkinDate,
                                 checkOut: checkoutDate,
                                 platform: 'booking.com',
+                                property: 'myproperty',
                                 roomType: lowestPriceRoom.room_name,
                                 roomTypeId: roomTypeEntry.id,
                                 rate: lowestPriceRoom.price,

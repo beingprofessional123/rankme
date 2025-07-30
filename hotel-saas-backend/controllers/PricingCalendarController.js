@@ -56,9 +56,7 @@ exports.getPropertyPrice = async (req, res) => {
           as: 'extractedFiles',
           required: false,
           where: {
-            competitorHotel: {
-              [Op.is]: null, // ✅ Ensures competitorHotel IS NULL
-            },
+            property: 'myproperty'
           },
           attributes: ['checkIn', 'checkOut', 'rate', 'platform', 'remarks'],
         },
