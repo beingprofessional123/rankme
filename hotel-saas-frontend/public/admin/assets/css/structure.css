@@ -321,14 +321,13 @@ code {
     border-radius: 6px; }
 
 .navbar .navbar-item .nav-item.theme-logo {
-  /*margin-left: 25px;*/
   margin-right: 65px; 
-    margin-left: 65px;
+    margin-left: 48px;
 }
   .navbar .navbar-item .nav-item.theme-logo a img {
-    width: 56px;
+    width: 120px;
     height: 56px;
-      
+    object-fit: contain;
   }
 
 .navbar .navbar-item .nav-item.dropdown.notification-dropdown .nav-link, .navbar .navbar-item .nav-item.dropdown.message-dropdown .nav-link {
@@ -2019,6 +2018,102 @@ ul.app-managementview li {
 
 
 
+.tabledesign .MuiPaper-root {
+    background: none !important;
+    box-shadow: none !important;
+    border-radius: 0px !important;
+}
+.tabledesign .MuiToolbar-root {
+    padding: 0px;
+}
+.tabledesign thead tr th {
+    font-size: 15px;
+    font-weight: 500;
+    color: #333;
+    padding: 10px 15px;
+    vertical-align: middle;
+    line-height: 19px;
+    border: none !important;
+}
+.tabledesign thead tr th button {
+    padding: 0px !important;
+    justify-content: flex-start;
+}
+.tabledesign tbody tr td {
+    color: #333;
+    font-size: 14px;
+    font-weight: 400;
+    padding: 17px 15px;
+    vertical-align: middle;
+    background: none;
+    border: none !important;
+}
+.tabledesign tbody tr:nth-child(odd) {
+    background-color: #F3F7F9;
+}
+.tabledesign tbody tr:hover:nth-child(odd) {
+    background-color: #F3F7F9 !important;
+}
+.tabledesign tbody tr:hover {
+    background: none !important;
+}
+.tabledesign thead tr th button span.MuiTouchRipple-root span{
+    background: none !important;
+}
+.tabledesign .MuiTable-root tfoot tr td {
+    border: none;
+}
+.tabledesign .MuiTable-root tfoot tr td .MuiTablePagination-toolbar p {
+    margin: 0px;
+}
+span.room-type {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    padding-right: 20px;
+}
+.blue-room-type{
+    color:white;
+}
+.fc-daygrid-day-events .fc-daygrid-event-harness {
+    margin-bottom: 5px;
+}
+.fc-daygrid-event {
+    border-radius: 6px !important;
+}
+.tippy-box {
+    border-radius: 10px !important; 
+    font-size: 13px !important;
+    padding: 12px !important;
+}
+
+.basic-multi-select .select__control {
+    background-color: #F3F7F9;
+    border: 1px solid #F3F7F9;
+    min-height: 50px;
+    border-radius: 8px;
+    padding: 3px 8px;
+    font-size: 15px;
+    outline: none !important;
+    box-shadow: none !important;
+}
+.dflexpermession {
+    display: inline-block;
+    margin-right: 40px;
+}
 
 
+.MuiPaper-root.MuiPopover-paper {
+    padding: 15px 20px;
+}
+.MuiPaper-root.MuiPopover-paper label.MuiFormControlLabel-root {
+    margin: 0px;
+}
+.MuiPaper-root.MuiPopover-paper label.MuiFormControlLabel-root .MuiCheckbox-root {
+    padding-left: 0px;
+}
+ 
 
