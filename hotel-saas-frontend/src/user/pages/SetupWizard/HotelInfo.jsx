@@ -72,16 +72,16 @@ const HotelInfo = ({ onHotelCreated }) => {
           },
         }
       );
-      localStorage.setItem(
-        'hotel_info',
-        JSON.stringify({
-          hotel_id: response.data.hotel.id,
-          name: hotelName,
-          location,
-          hotel_type: hotelType,
-          total_rooms:totalRooms
-        })
-      );
+      // localStorage.setItem(
+      //   'hotel_info',
+      //   JSON.stringify({
+      //     hotel_id: response.data.hotel.id,
+      //     name: hotelName,
+      //     location,
+      //     hotel_type: hotelType,
+      //     total_rooms:totalRooms
+      //   })
+      // );
       navigate('/dashboard');
       // onHotelCreated(response.data); // Proceed to next step
     } catch (error) {
@@ -149,8 +149,6 @@ const HotelInfo = ({ onHotelCreated }) => {
           />
           {errors.totalRooms && <div className="invalid-feedback">{errors.totalRooms}</div>}
         </div>
-
-        
       </div>
       <input
         type="button"
