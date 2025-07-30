@@ -171,7 +171,7 @@ const CompanySignup = () => {
           <div className="form-design">
             <form onSubmit={handleSubmit}>
               {generalError && (
-                <div className="text-red-600 text-sm mb-4 text-center">
+                <div className="text-red-600 text-sm mb-4 text-center alert alert-danger">
                   {generalError}
                 </div>
               )}

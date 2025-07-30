@@ -121,7 +121,6 @@ const PlanManagementIndex = () => {
                                     component={Link}
                                     to={`/admin/plan-management/${plan.id}`}
                                     size="small"
-                                    color="primary"
                                 >
                                     <Visibility />
                                 </IconButton>
@@ -131,7 +130,6 @@ const PlanManagementIndex = () => {
                                     component={Link}
                                     to={`/admin/plan-management/${plan.id}/edit`}
                                     size="small"
-                                    color="warning"
                                 >
                                     <Edit />
                                 </IconButton>
@@ -184,13 +182,15 @@ const PlanManagementIndex = () => {
                 <div className="row layout-top-spacing" id="cancel-row">
                     <div className="col-xl-12 col-lg-12 col-sm-12 layout-spacing">
                         <div className="widget-content widget-content-area br-6">
-                            <div className="table-responsive mb-4">
-                                <MUIDataTable
-                                    title="Plan List"
-                                    data={plans}
-                                    columns={columns}
-                                    options={options}
-                                />
+                            <div className="tabledesign">
+                                <div className="table-responsive">
+                                    <MUIDataTable
+                                        title="Plan List"
+                                        data={plans}
+                                        columns={columns}
+                                        options={options}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>

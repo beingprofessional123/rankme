@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import MUIDataTable from 'mui-datatables';
+import { IconButton, Tooltip } from '@mui/material';
+import { Visibility, Edit, Delete } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 
 const TransactionManagementIndex = () => {
@@ -32,63 +34,64 @@ const TransactionManagementIndex = () => {
     }
   };
 
-const columns = [
-  { name: 'userName', label: 'User Name' },
-  { name: 'userEmail', label: 'Email' },
-  { name: 'userPhone', label: 'Phone' },
-  { name: 'subscriptionName', label: 'Subscription' },
-  {
-    name: 'amount',
-    label: 'Amount',
-    options: {
-      filter: false,
-      customBodyRender: (value) => `$${parseFloat(value).toFixed(2)}`,
-    },
-  },
+  const columns = [
+    { name: 'userName', label: 'User Name' },
+    { name: 'userEmail', label: 'Email' },
+    { name: 'userPhone', label: 'Phone' },
+    { name: 'subscriptionName', label: 'Subscription' },
     {
-    name: 'createdAt',
-    label: 'Date',
-    options: {
-      filter: false,
-      customBodyRender: (val) => new Date(val).toLocaleString(),
-    },
-  },
-   {
-    name: 'status',
-    label: 'Status',
-    options: {
-      customBodyRender: (value) => {
-        const isPaid = value?.toLowerCase() === 'success';
-        return (
-          <span className={`badge ${isPaid ? 'bg-success' : 'bg-danger'}`}>
-            {isPaid ? 'success' : value}
-          </span>
-        );
+      name: 'amount',
+      label: 'Amount',
+      options: {
+        filter: false,
+        customBodyRender: (value) => `$${parseFloat(value).toFixed(2)}`,
       },
     },
-  },
-  {
-    name: 'invoice_url',
-    label: 'Invoice',
-    options: {
-      filter: false,
-      customBodyRender: (value) =>
-        value ? (
-          <a
-            href={value}
-            target="_blank"
-            rel="noreferrer"
-            className="btn btn-sm btn-primary"
-          >
-            View
-          </a>
-        ) : (
-          'N/A'
-        ),
+    {
+      name: 'createdAt',
+      label: 'Date',
+      options: {
+        filter: false,
+        customBodyRender: (val) => new Date(val).toLocaleString(),
+      },
     },
-  },
+    {
+      name: 'status',
+      label: 'Status',
+      options: {
+        customBodyRender: (value) => {
+          const isPaid = value?.toLowerCase() === 'success';
+          return (
+            <span className={`badge ${isPaid ? 'bg-success' : 'bg-danger'}`}>
+              {isPaid ? 'success' : value}
+            </span>
+          );
+        },
+      },
+    },
+    {
+      name: 'invoice_url',
+      label: 'Invoice',
+      options: {
+        filter: false,
+        customBodyRender: (value) =>
+          value ? (
+            <Tooltip title="View Invoice">
+              <IconButton
+                component={Link}
+                to={value}
+                size="small"
+              >
+                <Visibility />
+              </IconButton>
+            </Tooltip>
+          ) : (
+            'N/A'
+          ),
+      },
+    },
 
-];
+  ];
 
 
 
@@ -121,13 +124,15 @@ const columns = [
         <div className="row layout-top-spacing" id="cancel-row">
           <div className="col-xl-12 col-lg-12 col-sm-12 layout-spacing">
             <div className="widget-content widget-content-area br-6">
-              <div className="table-responsive mb-4">
-                <MUIDataTable
-                  title="Transaction List"
-                  data={transactions}
-                  columns={columns}
-                  options={options}
-                />
+              <div className="tabledesign">
+                <div className="table-responsive">
+                  <MUIDataTable
+                    title="Transaction List"
+                    data={transactions}
+                    columns={columns}
+                    options={options}
+                  />
+                </div>
               </div>
             </div>
           </div>

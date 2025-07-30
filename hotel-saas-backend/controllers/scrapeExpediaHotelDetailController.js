@@ -102,7 +102,7 @@ exports.scrapeExpediaHotelDetail = async (req, res) => {
             const companyID = company.company_id;
             console.log(`Processing Expedia for User ID: ${userID}, Company ID: ${companyID}, Hotel URL: ${hotelUrl}`);
 
-            const numberOfDaysToScrape = 14; 
+            const numberOfDaysToScrape = 2; 
             const today = new Date();
 
             for (let i = 0; i < numberOfDaysToScrape; i++) {
