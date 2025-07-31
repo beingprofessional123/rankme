@@ -56,7 +56,10 @@ exports.getPropertyPrice = async (req, res) => {
           as: 'extractedFiles',
           required: false,
           where: {
-            property: 'myproperty'
+            property: 'myproperty',
+            checkIn: {
+              [Op.between]: [startDate, endDate],
+            },
           },
           attributes: ['checkIn', 'checkOut', 'rate', 'platform', 'remarks'],
         },
@@ -141,10 +144,12 @@ exports.getBookingData = async (req, res) => {
           as: 'extractedFiles',
           required: false,
           where: {
-            checkIn: { [Op.lte]: endDate },
-            checkOut: { [Op.gte]: startDate },
+            property: 'myproperty',
+            checkIn: {
+              [Op.between]: [startDate, endDate],
+            },
           },
-          attributes: ['checkIn', 'checkOut', 'roomType', 'rate', 'source', 'remarks'],
+          attributes: ['checkIn', 'occupancy'],
         },
       ],
       order: [['createdAt', 'DESC']],

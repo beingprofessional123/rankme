@@ -77,12 +77,10 @@ const BookingPage = () => {
                 response.data?.results?.flatMap(item =>
                     item.extractedFiles.map(file => ({
                         check_in: file.checkIn,
-                        check_out: file.checkOut,
-                        room_type: file.roomType,
-                        rate: file.rate,
-                        source: file.source,
+                        occupancy: file.occupancy,
                     }))
                 ) || [];
+
 
             setBookingData(extractedRows);
         } catch (err) {
@@ -104,11 +102,17 @@ const BookingPage = () => {
     };
 
     const columns = [
-        { name: 'check_in', label: 'Check-in' },
-        { name: 'check_out', label: 'Check-out' },
-        { name: 'rate', label: 'Rate' },
-        { name: 'source', label: 'Source' },
+        { name: 'check_in', label: 'Date' },
+        {
+            name: 'occupancy',
+            label: 'Occupancy (%)',
+            options: {
+                customBodyRender: (value) => `${value}%`,
+            },
+        },
     ];
+
+
 
     const options = {
         selectableRows: 'none',
