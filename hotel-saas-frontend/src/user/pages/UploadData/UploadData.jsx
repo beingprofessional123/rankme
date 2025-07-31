@@ -116,12 +116,14 @@ const UploadData = () => {
             return;
         }
 
-        if (activeTab === 'Property Price') {
+        if (activeTab === 'Property Price' || activeTab === 'Booking Data') {
             if (!dataSourceName || !hotelPropertyId || !dateRangeFrom || !dateRangeTo) {
-                setError('Please fill in all data source details (Name, Property, Date Range) for Property Price data.');
+                const typeLabel = activeTab === 'Property Price' ? 'Property Price' : 'Booking Data';
+                setError(`Please fill in all data source details (Name, Property, Date Range) for ${typeLabel}.`);
                 return;
             }
         }
+
 
         setLoading(true);
         setError(null);
@@ -140,10 +142,10 @@ const UploadData = () => {
                 },
                 body: JSON.stringify({
                     uploadId,
-                    dataSourceName: activeTab === 'Property Price' ? dataSourceName : undefined,
-                    hotelPropertyId: activeTab === 'Property Price' ? hotelPropertyId : undefined,
-                    dateRangeFrom: activeTab === 'Property Price' ? dateRangeFrom : undefined,
-                    dateRangeTo: activeTab === 'Property Price' ? dateRangeTo : undefined,
+                    dataSourceName: activeTab === 'Property Price' || activeTab === 'Booking Data' ? dataSourceName : undefined,
+                    hotelPropertyId: activeTab === 'Property Price' || activeTab === 'Booking Data' ? hotelPropertyId : undefined,
+                    dateRangeFrom: activeTab === 'Property Price' || activeTab === 'Booking Data' ? dateRangeFrom : undefined,
+                    dateRangeTo: activeTab === 'Property Price' || activeTab === 'Booking Data' ? dateRangeTo : undefined,
                     // No need to send hotelProperty Name to confirm-save, as ID is sufficient for backend
                 }),
             });
@@ -258,7 +260,7 @@ const UploadData = () => {
                                         </div>
 
                                         {/* Conditional rendering for meta fields */}
-                                        {activeTab === 'Property Price' && (
+                                        {(activeTab === 'Property Price' || activeTab === 'Booking Data') && (
                                             <div className="row">
                                                 <div className="col-md-4">
                                                     <div className="form-group">

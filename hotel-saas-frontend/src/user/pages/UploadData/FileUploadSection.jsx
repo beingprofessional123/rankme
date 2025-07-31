@@ -18,7 +18,8 @@ const FileUploadSection = ({ onFileExtracted, setLoading, setError, fileName, fi
     const handleUpload = async (file) => {
         
         // Determine if hotel property selection is required for the *current* tab
-        const requiresHotelProperty = fileType === 'property_price_data';
+        const requiresHotelProperty = fileType === 'property_price_data' || fileType === 'booking';
+
 
         // --- Conditional Validation: Only apply if requiresHotelProperty is true ---
         if (requiresHotelProperty && !hotelPropertyId) {
@@ -70,7 +71,6 @@ const FileUploadSection = ({ onFileExtracted, setLoading, setError, fileName, fi
         }
         try {
             const token = localStorage.getItem('token');
-
             const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/upload/extract-preview`, {
                 method: 'POST',
                 headers: {
@@ -103,7 +103,7 @@ const FileUploadSection = ({ onFileExtracted, setLoading, setError, fileName, fi
     const handleDragEnter = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const requiresHotelProperty = fileType === 'property_price_data';
+        const requiresHotelProperty = fileType === 'property_price_data' || fileType === 'booking';
         // Only allow highlight if not disabled by validation
         if (!requiresHotelProperty || hotelPropertyId) {
             setHighlight(true);
@@ -119,7 +119,7 @@ const FileUploadSection = ({ onFileExtracted, setLoading, setError, fileName, fi
     const handleDragOver = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const requiresHotelProperty = fileType === 'property_price_data';
+        const requiresHotelProperty = fileType === 'property_price_data' || fileType === 'booking';
         // Only allow highlight if not disabled by validation
         if (!requiresHotelProperty || hotelPropertyId) {
             setHighlight(true);
@@ -130,7 +130,7 @@ const FileUploadSection = ({ onFileExtracted, setLoading, setError, fileName, fi
         e.preventDefault();
         e.stopPropagation();
         setHighlight(false);
-        const requiresHotelProperty = fileType === 'property_price_data';
+        const requiresHotelProperty = fileType === 'property_price_data' || fileType === 'booking';
         // Prevent drop action if hotel property validation fails for the specific tab
         if (requiresHotelProperty && !hotelPropertyId) {
             setShowCannotUploadMessage(true);
@@ -143,7 +143,7 @@ const FileUploadSection = ({ onFileExtracted, setLoading, setError, fileName, fi
     };
 
     const handleFileSelect = (e) => {
-        const requiresHotelProperty = fileType === 'property_price_data';
+        const requiresHotelProperty = fileType === 'property_price_data' || fileType === 'booking';
         // Prevent file selection if hotel property validation fails for the specific tab
         if (requiresHotelProperty && !hotelPropertyId) {
             setShowCannotUploadMessage(true);
@@ -192,7 +192,8 @@ const FileUploadSection = ({ onFileExtracted, setLoading, setError, fileName, fi
 
     // This variable controls disabling the upload area and showing tooltips/messages
     // It is true ONLY for 'Property Price' tab AND if no hotelPropertyId is selected
-    const shouldDisableUploadArea = fileType === 'property_price_data' && !hotelPropertyId;
+    const shouldDisableUploadArea = (fileType === 'property_price_data' || fileType === 'booking') && !hotelPropertyId;
+
 
     return (
         <div className="form-group">

@@ -149,6 +149,134 @@ exports.extractAndPreviewData = async (req, res) => {
             }
             return null;
         };
+        
+        if (fileType === 'booking') {
+            try {
+                const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                if (!worksheet) throw new Error('Sheet is empty.');
+
+                const rawRows = xlsx.utils.sheet_to_json(worksheet, { header: 1, raw: true });
+
+                if (rawRows.length < 3) {
+                    await t.rollback();
+                    return res.status(400).json({ message: 'Booking file must have at least 3 rows: property, header, and data.' });
+                }
+
+                const propertyRow = rawRows[0];     // ["Property", "XYZ Hotel"]
+                const headerRow = rawRows[1];       // ["Date", "Occupancy"]
+                const dataRows = rawRows.slice(2);  // Actual records
+
+                const propertyName = propertyRow[1];
+                if (!propertyName) {
+                    await t.rollback();
+                    return res.status(400).json({ message: 'Missing property name in row 1.' });
+                }
+
+                const dateIndex = headerRow.findIndex(h => h.toLowerCase().includes("date"));
+                const occIndex = headerRow.findIndex(h => h.toLowerCase().includes("occupancy"));
+
+                if (dateIndex === -1 || occIndex === -1) {
+                    await t.rollback();
+                    return res.status(400).json({ message: 'Missing expected headers: Date or Occupancy.' });
+                }
+
+                const bookingData = [];
+                const rowErrors = [];
+
+                for (let i = 0; i < dataRows.length; i++) {
+                    const row = dataRows[i];
+                    const rowIndex = i + 3;
+
+                    const rawDate = row[dateIndex];
+                    const rawOcc = row[occIndex];
+
+                    // Parse date
+                    let formattedDate = null;
+                    if (typeof rawDate === 'number') {
+                        const parsedDate = xlsx.SSF.parse_date_code(rawDate);
+                        if (parsedDate) {
+                            formattedDate = `${parsedDate.y}-${String(parsedDate.m).padStart(2, '0')}-${String(parsedDate.d).padStart(2, '0')}`;
+                        }
+                    } else if (typeof rawDate === 'string') {
+                        const parsed = new Date(rawDate);
+                        if (!isNaN(parsed.getTime())) {
+                            formattedDate = parsed.toISOString().split('T')[0];
+                        }
+                    }
+
+                    // Clean occupancy
+                    let occupancy = null;
+
+                    if (typeof rawOcc === 'number') {
+                        occupancy = rawOcc <= 1 ? rawOcc * 100 : rawOcc;
+                    } else if (typeof rawOcc === 'string') {
+                        if (rawOcc.includes('%')) {
+                            rowErrors.push({
+                                row: rowIndex,
+                                error: `Occupancy should not include %, use numeric only. Value: '${rawOcc}'`
+                            });
+                            continue;
+                        }
+
+                        const parsedOcc = parseFloat(rawOcc);
+                        if (!isNaN(parsedOcc)) {
+                            occupancy = parsedOcc <= 1 ? parsedOcc * 100 : parsedOcc;
+                        }
+                    }
+
+                    if (!formattedDate || occupancy === null || isNaN(occupancy)) {
+                        rowErrors.push({
+                            row: rowIndex,
+                            error: `Invalid date or occupancy at row ${rowIndex}. Date='${rawDate}', Occupancy='${rawOcc}'`
+                        });
+                        continue;
+                    }
+
+                    bookingData.push({
+                        uploadDataId: uploadDataRecord.id,
+                        userId: user.id,
+                        checkIn: formattedDate,
+                        occupancy: Number(occupancy.toFixed(2)), // Store 2 decimal points max
+                        property: 'myproperty',
+                    });
+                }
+
+                if (!bookingData.length) {
+                    await t.rollback();
+                    return res.status(400).json({
+                        message: 'No valid rows in booking file.',
+                        errors: rowErrors,
+                    });
+                }
+
+                await UploadedExtractDataFile.bulkCreate(bookingData, { transaction: t });
+                await t.commit();
+
+                return res.status(200).json({
+                    message: '✅ Booking data extracted and saved successfully.',
+                    uploadId: uploadDataRecord.id,
+                    fileType: uploadDataRecord.fileType,
+                    previewData: bookingData,
+                    totalRows: dataRows.length,
+                    savedCount: bookingData.length,
+                    errors: rowErrors
+                });
+
+            } catch (error) {
+                await t.rollback();
+                console.error('❌ Error in booking upload handler:', error);
+                return res.status(500).json({
+                    message: '🚨 Internal server error while processing booking data.',
+                    error: error.message,
+                    trace: error.stack,
+                });
+            }
+        }
+
+
+
 
         if (fileType === 'property_price_data') {
             try {
@@ -241,17 +369,17 @@ exports.extractAndPreviewData = async (req, res) => {
                     if (isDateRowValid) {
                         const myRate = parseFloat(row[1]);
                         if (!isNaN(myRate) && myRate >= 0) {
-                                finalData.push({
-                                    uploadDataId: uploadDataRecord.id,
-                                    userId: user.id,
-                                    competitorHotel: myActualHotelName, // Use the potentially fallback name here
-                                    rate: myRate,
-                                    checkIn: formattedDate,
-                                    compAvg: parseFloat(row[2]) || null, // compAvg can be null if invalid
-                                    platform,
-                                    source: sourceValue,
-                                    property: 'myproperty' 
-                                });
+                            finalData.push({
+                                uploadDataId: uploadDataRecord.id,
+                                userId: user.id,
+                                competitorHotel: myActualHotelName, // Use the potentially fallback name here
+                                rate: myRate,
+                                checkIn: formattedDate,
+                                compAvg: parseFloat(row[2]) || null, // compAvg can be null if invalid
+                                platform,
+                                source: sourceValue,
+                                property: 'myproperty'
+                            });
                         } else {
                             currentRecordErrors.push(`Invalid 'My Property' rate at row ${rowIndex}. Value: '${row[1]}'`);
                         }
@@ -271,7 +399,7 @@ exports.extractAndPreviewData = async (req, res) => {
                                         compAvg: parseFloat(row[2]) || null, // compAvg can be null if invalid
                                         platform,
                                         source: sourceValue,
-                                        property: 'competitor' 
+                                        property: 'competitor'
                                     });
                                 }
                             } else {
