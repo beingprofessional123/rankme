@@ -45,6 +45,7 @@ const HotelInfo = ({ onHotelCreated, editInitialData }) => {
     }
     if (!location.trim()) newErrors.location = 'Please enter a location.';
     if (!hotelType.trim()) newErrors.hotel_type = 'Please select a hotel type.';
+
     if (String(totalRooms).trim() === '' || isNaN(totalRooms) || Number(totalRooms) <= 0) {
       newErrors.totalRooms = 'Please enter a valid number of rooms.';
     }
@@ -84,16 +85,16 @@ const HotelInfo = ({ onHotelCreated, editInitialData }) => {
       );
 
       // Save to localStorage for persistence
-      localStorage.setItem(
-        'hotel_info',
-        JSON.stringify({
-          hotel_id: response.data.hotel.id,
-          name: hotelName,
-          location,
-          hotel_type: hotelType,
-          total_rooms:totalRooms
-        })
-      );
+      // localStorage.setItem(
+      //   'hotel_info',
+      //   JSON.stringify({
+      //     hotel_id: response.data.hotel.id,
+      //     name: hotelName,
+      //     location,
+      //     hotel_type: hotelType,
+      //     total_rooms:totalRooms
+      //   })
+      // );
        navigate('/hotels-and-rooms');
       // onHotelCreated(response.data);
     } catch (error) {
