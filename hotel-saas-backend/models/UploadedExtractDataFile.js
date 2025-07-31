@@ -107,6 +107,14 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true, // Assuming it can be null if not present in all data types
     },
+    totalRevenue: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      validate: {
+        isDecimal: true,
+        min: 0,
+      },
+    },
     // Field to track if this row had validation issues
     isValid: {
       type: DataTypes.BOOLEAN,

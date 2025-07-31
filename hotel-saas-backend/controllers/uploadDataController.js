@@ -52,17 +52,20 @@ const parseFile = async (fileBuffer, originalname, mimeType) => {
             originalname.endsWith('.xls')
         ) {
             try {
-                // Use { dateNf: true } to automatically format Excel dates into 'YYYY-MM-DD' strings
-                // and { raw: false } (which is default) to allow SheetJS to infer cell types.
-                const workbook = xlsx.read(fileBuffer, { type: 'buffer', dateNf: true });
+                // For Excel, dateNf: true will automatically format Excel dates into 'YYYY-MM-DD' strings for sheet_to_json.
+                // However, for 'str_ocr_report' we need raw: true to get the header as an array for manual mapping.
+                // So, we won't use dateNf here, and will handle date conversion for dates when raw:true is used.
+                const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
                 const sheetName = workbook.SheetNames[0];
                 if (!sheetName) return reject(new Error('Excel file is empty or has no accessible sheets.'));
 
                 const worksheet = workbook.Sheets[sheetName];
                 if (!worksheet) return reject(new Error('Excel worksheet could not be read.'));
 
-                // sheet_to_json with dateNf: true will convert dates to YYYY-MM-DD strings
-                const jsonData = xlsx.utils.sheet_to_json(worksheet, { raw: false, dateNf: true });
+                // For generic Excel parsing (not property_price_data or str_ocr_report which handle raw data),
+                // use sheet_to_json to get objects directly.
+                // Note: If you want dates here as YYYY-MM-DD, you'd use dateNf: true
+                const jsonData = xlsx.utils.sheet_to_json(worksheet); // { raw: false, dateNf: true } could be added here if needed
 
                 resolve(jsonData);
             } catch (error) {
@@ -95,30 +98,7 @@ exports.extractAndPreviewData = async (req, res) => {
         const originalname = req.file.originalname;
         const mimeType = req.file.mimetype;
 
-        let parsedData;
-        try {
-            parsedData = await parseFile(fileBuffer, originalname, mimeType);
-        } catch (parseError) {
-            await t.rollback(); // Rollback on parsing error
-            return res.status(400).json({ message: `File parsing error: ${parseError.message}` });
-        }
-
-        if (!parsedData.length) {
-            await t.rollback(); // Rollback if no data
-            return res.status(400).json({ message: 'Uploaded file is empty or contains no valid data rows after parsing.' });
-        }
-
-        const uploadDataRecord = await UploadData.create({
-            userId: user.id,
-            companyId: user.company_id,
-            originalFileName: originalname,
-            filePath: null, // filePath will be handled by a storage service, or removed if not needed.
-            fileType: fileType,
-            status: 'extracted',
-        }, { transaction: t });
-
-        const extractedDataRows = [];
-        const errors = [];
+        let parsedData; // This will hold the parsed data from parseFile for generic cases.
 
         // Helper function to get value robustly, considering various header formats
         const getValue = (rowObject, fields) => {
@@ -149,11 +129,22 @@ exports.extractAndPreviewData = async (req, res) => {
             }
             return null;
         };
+        const uploadDataRecord = await UploadData.create({
+            userId: user.id,
+            companyId: user.company_id,
+            originalFileName: originalname,
+            filePath: null, // filePath will be handled by a storage service, or removed if not needed.
+            fileType: fileType,
+            status: 'extracted',
+        }, { transaction: t });
 
+        const extractedDataRows = [];
+        const errors = [];
+
+        // Special handling for property_price_data and str_ocr_report due to specific Excel structure
         if (fileType === 'property_price_data') {
             try {
                 // Re-read with header: 1 to get raw array of arrays and handle headers manually.
-                // Then manually parse dates for this specific format.
                 const workbook = xlsx.read(fileBuffer, { type: 'buffer' }); // Read raw for manual processing
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
@@ -176,7 +167,7 @@ exports.extractAndPreviewData = async (req, res) => {
                 const myPropertyNameFromHeader = headerRow[1] || null; // "My Property"
 
                 // HERE IS THE CHANGE: Use req.body.hotel_property_name as fallback
-                const myActualHotelName = (actualHotelNamesRow[1] && actualHotelNamesRow[1].trim() !== '') ? actualHotelNamesRow[1].trim() : (hotel_property_name || null);
+                const myActualHotelName = (actualHotelNamesRow[1] && actualHotelNamesRow[1].trim() !== '') ? actualHotelNames[1].trim() : (hotel_property_name || null);
 
                 const sourceValue = 'Online';
                 const platform = 'Online';
@@ -241,17 +232,17 @@ exports.extractAndPreviewData = async (req, res) => {
                     if (isDateRowValid) {
                         const myRate = parseFloat(row[1]);
                         if (!isNaN(myRate) && myRate >= 0) {
-                                finalData.push({
-                                    uploadDataId: uploadDataRecord.id,
-                                    userId: user.id,
-                                    competitorHotel: myActualHotelName, // Use the potentially fallback name here
-                                    rate: myRate,
-                                    checkIn: formattedDate,
-                                    compAvg: parseFloat(row[2]) || null, // compAvg can be null if invalid
-                                    platform,
-                                    source: sourceValue,
-                                    property: 'myproperty' 
-                                });
+                            finalData.push({
+                                uploadDataId: uploadDataRecord.id,
+                                userId: user.id,
+                                competitorHotel: myActualHotelName, // Use the potentially fallback name here
+                                rate: myRate,
+                                checkIn: formattedDate,
+                                compAvg: parseFloat(row[2]) || null, // compAvg can be null if invalid
+                                platform,
+                                source: sourceValue,
+                                property: 'myproperty'
+                            });
                         } else {
                             currentRecordErrors.push(`Invalid 'My Property' rate at row ${rowIndex}. Value: '${row[1]}'`);
                         }
@@ -271,7 +262,7 @@ exports.extractAndPreviewData = async (req, res) => {
                                         compAvg: parseFloat(row[2]) || null, // compAvg can be null if invalid
                                         platform,
                                         source: sourceValue,
-                                        property: 'competitor' 
+                                        property: 'competitor'
                                     });
                                 }
                             } else {
@@ -323,9 +314,219 @@ exports.extractAndPreviewData = async (req, res) => {
                     trace: error.stack,
                 });
             }
-        } else {
-            // Original logic for other file types remains the same,
-            // but dates in parsedData will now be YYYY-MM-DD strings due to parseFile changes.
+        }else if (fileType === 'str_ocr_report') {
+                try {
+                    const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    if (!worksheet) {
+                        await t.rollback();
+                        return res.status(400).json({ message: 'Sheet is empty or could not be read.' });
+                    }
+
+                    // Get raw data (array of arrays).
+                    // {header: 1} means the first row will be returned as the first element of the outer array.
+                    // {raw: true} means dates will be raw Excel serial numbers.
+                    const rawRows = xlsx.utils.sheet_to_json(worksheet, { header: 1, raw: true });
+                    if (rawRows.length < 2) { // Need at least 2 rows for the two header lines
+                        await t.rollback();
+                        return res.status(400).json({ message: 'STR OCR report file must contain at least 2 rows: property name and headers.' });
+                    }
+
+                    // Extract the actual data headers from the second row of the rawRows array
+                    const headers = rawRows[1].map(h => String(h).trim()); // Convert headers to strings and trim
+                    const dataRows = rawRows.slice(2); // Actual data starts from the third row (index 2)
+
+                    const extractedDataRows = []; // Renamed from processedStrOcrData for clarity with your existing logic
+                    const errors = []; // Renamed from strOcrErrors to match your existing logic for errors array
+
+                    // Define expected headers and their corresponding DB fields
+                    const fieldMappings = {
+                        'Date': 'checkIn', // Renaming 'Date' to 'checkIn' for DB
+                        'HOTEL OCCUPANCY': 'occupancy',
+                        'HOTEL ADR': 'adrUsd',
+                        'REVPAR': 'revParUsd',
+                        'TOTAL REVENUE': 'totalRevenue' // New field
+                    };
+
+                    // Create a mapping from header name to its index for efficient lookup
+                    const headerIndexMap = {};
+                    headers.forEach((header, index) => {
+                        headerIndexMap[header] = index;
+                    });
+
+                    // Helper function to convert Excel serial date to YYYY-MM-DD string
+                    const excelSerialDateToYYYYMMDD = (serial) => {
+                        const date = new Date(Math.round((serial - 25569) * 86400 * 1000));
+                        // Handle potential time zone issues by getting UTC date components
+                        const year = date.getFullYear();
+                        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                        const day = date.getDate().toString().padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                    };
+
+                    // Helper function to parse "Month DD, YYYY" string to YYYY-MM-DD
+                    const parseMonthDayYearToYYYYMMDD = (dateString) => {
+                        const months = {
+                            'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06',
+                            'Jul': '07', 'Aug': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+                        };
+                        const parts = dateString.match(/(\w{3})\s(\d{1,2}),\s(\d{4})/);
+                        if (parts && parts.length === 4) {
+                            const month = months[parts[1]];
+                            const day = parts[2].padStart(2, '0');
+                            const year = parts[3];
+                            return `${year}-${month}-${day}`;
+                        }
+                        return null;
+                    };
+
+
+                    for (let i = 0; i < dataRows.length; i++) {
+                        const row = dataRows[i];
+                        const rowIndex = i + 3; // 1-based index, accounting for two header rows
+                        let currentRowErrors = [];
+                        let isValidRow = true;
+
+                        // Skip empty rows that might be present due to `raw: true` parsing
+                        if (row.length === 0 || row.every(cell => cell === null || cell === undefined || String(cell).trim() === '')) {
+                            continue; // Skip completely empty rows
+                        }
+
+                        let rowData = {
+                            uploadDataId: uploadDataRecord.id,
+                            userId: user.id,
+                            reportType: 'STR_OCR', // Assuming a static report type
+                            checkIn: null,
+                            occupancy: null,
+                            adrUsd: null,
+                            revParUsd: null,
+                            totalRevenue: null, // Initialize new field
+                            platform: 'Manual Upload', // Example default
+                            source: 'STR OCR Report' // Example default
+                        };
+
+                        // Process 'Date' column first
+                        const dateColIdx = headerIndexMap['Date'];
+                        if (dateColIdx !== undefined && row[dateColIdx] !== undefined && row[dateColIdx] !== null) {
+                            let dateValue = row[dateColIdx];
+                            let parsedDate = null;
+
+                            if (typeof dateValue === 'number') {
+                                // Convert Excel serial date number to JavaScript Date
+                                parsedDate = excelSerialDateToYYYYMMDD(dateValue);
+                            } else if (typeof dateValue === 'string') {
+                                // Remove day of week in parentheses like "(Sun)", "(Mon)"
+                                const cleanedDateString = String(dateValue).trim().replace(/\s*\(\w+\)/g, '');
+                                parsedDate = parseMonthDayYearToYYYYMMDD(cleanedDateString);
+                            }
+
+                            if (parsedDate) {
+                                rowData.checkIn = parsedDate;
+                            } else {
+                                currentRowErrors.push({ field: 'Date', message: `Invalid date format at row ${rowIndex}. Value: '${row[dateColIdx]}'` });
+                                isValidRow = false;
+                            }
+                        } else {
+                            currentRowErrors.push({ field: 'Date', message: `Missing Date at row ${rowIndex}.` });
+                            isValidRow = false;
+                        }
+
+                        // Process other numeric fields
+                        const fieldsToProcess = [
+                            { header: 'HOTEL OCCUPANCY', dbField: 'occupancy' },
+                            { header: 'HOTEL ADR', dbField: 'adrUsd' },
+                            { header: 'REVPAR', dbField: 'revParUsd' },
+                            { header: 'TOTAL REVENUE', dbField: 'totalRevenue' }
+                        ];
+
+                        fieldsToProcess.forEach(({ header, dbField }) => {
+                            const colIdx = headerIndexMap[header];
+                            if (colIdx !== undefined && row[colIdx] !== undefined && row[colIdx] !== null) {
+                                const value = parseFloat(row[colIdx]);
+                                if (!isNaN(value) && value >= 0) {
+                                    if (dbField === 'occupancy') {
+                                        rowData[dbField] = value * 100; // Store as 64.08 instead of 0.6408
+                                    } else {
+                                        rowData[dbField] = value;
+                                    }
+                                } else {
+                                    currentRowErrors.push({ field: header, message: `Invalid ${header} format at row ${rowIndex}. Value: '${row[colIdx]}'` });
+                                    isValidRow = false;
+                                }
+                            } else {
+                                if (headerIndexMap[header] !== undefined) { // Only if header exists in the sheet
+                                    currentRowErrors.push({ field: header, message: `Missing ${header} at row ${rowIndex}.` });
+                                    isValidRow = false;
+                                }
+                            }
+                        });
+
+                        // Only add to extractedDataRows if the row is valid
+                        if (isValidRow) {
+                            extractedDataRows.push({
+                                ...rowData,
+                                isValid: true,
+                                validationErrors: []
+                            });
+                        } else {
+                            // Store errors for invalid rows
+                            errors.push({ rowIndex, errors: currentRowErrors });
+                        }
+                    } // End of for loop for dataRows
+
+                    if (extractedDataRows.length === 0 && errors.length > 0) {
+                        await t.rollback();
+                        return res.status(400).json({
+                            message: 'No valid data found to save. All rows had errors.',
+                            errors: errors,
+                        });
+                    } else if (extractedDataRows.length === 0) {
+                        await t.rollback();
+                        return res.status(400).json({
+                            message: 'No valid data found.',
+                            errors: ['Empty or invalid sheet content.'],
+                        });
+                    }
+
+                    await UploadedExtractDataFile.bulkCreate(extractedDataRows, { transaction: t });
+                    await t.commit();
+
+                    return res.status(200).json({
+                        message: '✅ STR OCR Report data extracted and saved successfully.',
+                        uploadId: uploadDataRecord.id,
+                        fileType: uploadDataRecord.fileType,
+                        previewData: extractedDataRows,
+                        totalRows: dataRows.length,
+                        savedCount: extractedDataRows.length,
+                        errors: errors
+                    });
+
+                } catch (error) {
+                    await t.rollback();
+                    console.error('❌ Error in str_ocr_report handler:', error);
+                    return res.status(500).json({
+                        message: '🚨 Internal server error while processing STR OCR Report data.',
+                        error: error.message,
+                        trace: error.stack,
+                    });
+                }
+            } else { // Generic handling for booking, competitor, etc., using parseFile
+            try {
+                parsedData = await parseFile(fileBuffer, originalname, mimeType);
+            } catch (parseError) {
+                await t.rollback(); // Rollback on parsing error
+                return res.status(400).json({ message: `File parsing error: ${parseError.message}` });
+            }
+
+            if (!parsedData.length) {
+                await t.rollback();
+                return res.status(400).json({ message: 'Uploaded file is empty or contains no valid data rows after parsing.' });
+            }
+
+            // At this point, `parsedData` should be an array of objects for 'booking' or 'competitor'
+            // and `getValue` function can be used.
+
             for (const [index, row] of parsedData.entries()) {
                 const rowIndex = index + 1; // 1-based index for user readability
                 let rowErrors = [];
@@ -427,44 +628,6 @@ exports.extractAndPreviewData = async (req, res) => {
                             ...rowData,
                             competitorHotel: competitorHotel || null,
                             date: competitorDate || null,
-                        };
-                        break;
-
-                    case 'str_ocr_report':
-                        const reportType = getValue(row, ['Report Type', 'report_type', 'ReportType']);
-                        const reportDate = getValue(row, ['Date', 'date']);
-                        const occupancy = getValue(row, ['Occupancy', 'occupancy']);
-                        const adrUsd = getValue(row, ['ADR (USD)', 'adr_usd', 'ADRUSD']);
-                        const revParUsd = getValue(row, ['RevPAR (USD)', 'rev_par_usd', 'RevPARUSD']);
-
-                        if (!reportType) {
-                            rowErrors.push({ field: 'Report Type', message: 'Missing Report Type.' });
-                            isValidRow = false;
-                        }
-                        if (!reportDate || !/^\d{4}-\d{2}-\d{2}$/.test(reportDate)) {
-                            rowErrors.push({ field: 'Date', message: 'Missing or invalid Date (YYYY-MM-DD).' });
-                            isValidRow = false;
-                        }
-                        if (!occupancy) {
-                            rowErrors.push({ field: 'Occupancy', message: 'Missing Occupancy.' });
-                            isValidRow = false;
-                        }
-                        if (!adrUsd) {
-                            rowErrors.push({ field: 'ADR (USD)', message: 'Missing ADR (USD).' });
-                            isValidRow = false;
-                        }
-                        if (!revParUsd) {
-                            rowErrors.push({ field: 'RevPAR (USD)', message: 'Missing RevPAR (USD).' });
-                            isValidRow = false;
-                        }
-
-                        rowData = {
-                            ...rowData,
-                            reportType: reportType || null,
-                            date: reportDate || null,
-                            occupancy: occupancy || null,
-                            adrUsd: adrUsd || null,
-                            revParUsd: revParUsd || null,
                         };
                         break;
                     default:
