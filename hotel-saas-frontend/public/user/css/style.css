@@ -1901,3 +1901,12 @@ span.room-type {
     padding-left: 0px;
 }
  
+.alert {
+    font-size: 14px;
+    padding: 10px 15px;
+}
+
+.logo a {
+    display: inline-block;
+    width: 270px;
+}

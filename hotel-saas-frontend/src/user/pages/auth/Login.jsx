@@ -168,7 +168,7 @@ const Login = () => {
         <div className="loginbg-w">
           <h1>Log in to your account</h1>
           {errors.general && (
-            <div className="text-danger small text-center mt-3">{errors.general}</div>
+            <div className="alert alert-danger text-danger small text-center mt-3">{errors.general}</div>
           )}
           <div className="form-design">
             <form id="login-form" onSubmit={handleSubmit}>

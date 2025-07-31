@@ -72,6 +72,7 @@ const HotelInfo = ({ onHotelCreated }) => {
           },
         }
       );
+
       // localStorage.setItem(
       //   'hotel_info',
       //   JSON.stringify({
@@ -82,7 +83,9 @@ const HotelInfo = ({ onHotelCreated }) => {
       //     total_rooms:totalRooms
       //   })
       // );
-      navigate('/dashboard');
+      // navigate('/dashboard');
+      window.location.href = '/dashboard';
+      
       // onHotelCreated(response.data); // Proceed to next step
     } catch (error) {
       console.error('Error creating hotel:', error);

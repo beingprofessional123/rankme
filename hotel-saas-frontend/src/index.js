@@ -4,6 +4,7 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 
 const isAdmin = window.location.pathname.startsWith('/admin');
+
 const cssLinks = isAdmin
   ? [
       'https://fonts.googleapis.com/css?family=Quicksand:400,500,600,700&display=swap',
@@ -30,20 +31,22 @@ const cssLinks = isAdmin
       '/user/css/bootstrap.min.css',
       '/user/css/font-awesome.min.css',
       '/user/css/line-awesome.min.css',
-      '/user/css/owl.carousel.min.css" />',
+      '/user/css/owl.carousel.min.css',
       '/user/css/responsive.css',
       '/user/css/style.css',
     ];
 
 const jsScripts = isAdmin
-  ? [] // add admin JS here if needed
-  : ['/user/js/bootstrap.bundle.min.js'];
-  
-const loadAssets = (links, scripts, onComplete) => {
-  let total = links.length + scripts.length;
-  let loaded = 0;
+  ? [
+      // Add more admin JS files here if needed
+    ]
+  : [
+      '/user/js/bootstrap.bundle.min.js'
+    ];
 
-  if (total === 0) return onComplete();
+const loadAssets = (links, scripts, onComplete) => {
+  let total = links.length + scripts.length + 1; // +1 for custom inline script
+  let loaded = 0;
 
   const markLoaded = () => {
     loaded++;
@@ -67,6 +70,22 @@ const loadAssets = (links, scripts, onComplete) => {
     script.onerror = markLoaded;
     document.head.appendChild(script);
   });
+
+  // Add your jQuery toggle script here
+  const customScript = document.createElement('script');
+  customScript.innerHTML = `
+    document.addEventListener('DOMContentLoaded', function () {
+      const menuIcon = document.getElementById('menuicon');
+      const addClassElem = document.getElementById('addclass');
+      if (menuIcon && addClassElem) {
+        menuIcon.addEventListener('click', function () {
+          addClassElem.classList.toggle('open');
+        });
+      }
+    });
+  `;
+  document.body.appendChild(customScript);
+  markLoaded();
 };
 
 document.getElementById('root').style.display = 'none';
@@ -75,11 +94,6 @@ loadAssets(cssLinks, jsScripts, () => {
   document.getElementById('root').style.display = 'block';
 
   const root = ReactDOM.createRoot(document.getElementById('root'));
-  root.render(
-    // <React.StrictMode>
-    <App />
-    // </React.StrictMode>
-  );
-
+  root.render(<App />);
   reportWebVitals();
 });
