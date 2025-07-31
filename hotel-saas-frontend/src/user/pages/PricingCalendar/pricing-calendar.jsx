@@ -18,6 +18,7 @@ const PricingCalendar = () => {
   const [hotels, setHotels] = useState([]);
   const [selectedHotelIds, setSelectedHotelIds] = useState([]);
   const [calendarEvents, setCalendarEvents] = useState([]);
+  const [showOccupancy, setShowOccupancy] = useState(true);
   const [dateRange, setDateRange] = useState({
     start: format(new Date(), 'yyyy-MM-dd'),
     end: format(addDays(new Date(), 14), 'yyyy-MM-dd'),
@@ -63,151 +64,120 @@ const PricingCalendar = () => {
     return dates;
   };
 
-useEffect(() => {
-  const fetchCalendarData = async () => {
-    if (!selectedHotelIds.length || !dateRange.start || !dateRange.end) return;
+  useEffect(() => {
+    const fetchCalendarData = async () => {
+      if (!selectedHotelIds.length || !dateRange.start || !dateRange.end) return;
 
-    const token = localStorage.getItem('token');
-    const user = JSON.parse(localStorage.getItem('user'));
-    const companyId = user?.company_id;
-    const userId = user?.id;
-    const startDate = dateRange.start;
-    const endDate = dateRange.end;
-    const hotelIdsStr = selectedHotelIds.join(',');
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user'));
+      const companyId = user?.company_id;
+      const userId = user?.id;
+      const startDate = dateRange.start;
+      const endDate = dateRange.end;
+      const hotelIdsStr = selectedHotelIds.join(',');
 
-    try {
-      const apiUrlPricing = `${process.env.REACT_APP_API_BASE_URL}/api/pricing-calendar/property-price?company_id=${companyId}&user_id=${userId}&hotel_id=${hotelIdsStr}&start_date=${startDate}&end_date=${endDate}`;
-      const apiUrlBooking = `${process.env.REACT_APP_API_BASE_URL}/api/pricing-calendar/booking-data?company_id=${companyId}&user_id=${userId}&hotel_id=${hotelIdsStr}&start_date=${startDate}&end_date=${endDate}`;
+      try {
+        const apiUrlPricing = `${process.env.REACT_APP_API_BASE_URL}/api/pricing-calendar/property-price?company_id=${companyId}&user_id=${userId}&hotel_id=${hotelIdsStr}&start_date=${startDate}&end_date=${endDate}`;
+        const apiUrlBooking = `${process.env.REACT_APP_API_BASE_URL}/api/pricing-calendar/booking-data?company_id=${companyId}&user_id=${userId}&hotel_id=${hotelIdsStr}&start_date=${startDate}&end_date=${endDate}`;
 
-      const [pricingRes, bookingRes] = await Promise.all([
-        fetch(apiUrlPricing, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(apiUrlBooking, { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
+        const [pricingRes, bookingRes] = await Promise.all([
+          fetch(apiUrlPricing, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(apiUrlBooking, { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
 
-      const pricingData = await pricingRes.json();
-      const bookingData = await bookingRes.json();
+        const pricingData = await pricingRes.json();
+        const bookingData = await bookingRes.json();
 
-      const allEvents = [];
-      const priceMap = {}; // hotelId => { date => [rates] }
-      const bookingCountsMap = {}; // hotelId => { date => count }
+        const allEvents = [];
+        const priceMap = {}; // hotelId => { date => [rates] }
+        const occupancyMap = {}; // hotelId => { date => occupancy }
 
-      // Step 1: Extract pricing per day per hotel (including checkOut === null)
-      for (const item of pricingData?.results || []) {
-        const hotelPropertyId = item.metaData?.hotelPropertyId;
-        const extractedFiles = item.extractedFiles || [];
+        // Step 1: Extract pricing per day per hotel
+        for (const item of pricingData?.results || []) {
+          const hotelPropertyId = item.metaData?.hotelPropertyId;
+          const extractedFiles = item.extractedFiles || [];
 
-        for (const file of extractedFiles) {
-          const checkIn = new Date(file.checkIn);
-          const checkOut = file.checkOut ? new Date(file.checkOut) : null;
-          const rate = parseFloat(file.rate) || 0;
+          for (const file of extractedFiles) {
+            const checkIn = new Date(file.checkIn);
+            const checkOut = file.checkOut ? new Date(file.checkOut) : null;
+            const rate = parseFloat(file.rate) || 0;
 
-          let current = new Date(checkIn);
-          const end = checkOut ? new Date(checkOut) : new Date(checkIn); // single day if checkOut is null
-          end.setDate(end.getDate() + (checkOut ? 0 : 1)); // add 1 day only if checkOut is null
+            let current = new Date(checkIn);
+            const end = checkOut ? new Date(checkOut) : new Date(checkIn);
+            end.setDate(end.getDate() + (checkOut ? 0 : 1));
 
-          while (current < end) {
-            const dateStr = current.toISOString().split('T')[0];
-            if (!priceMap[hotelPropertyId]) priceMap[hotelPropertyId] = {};
-            if (!priceMap[hotelPropertyId][dateStr]) priceMap[hotelPropertyId][dateStr] = [];
-            priceMap[hotelPropertyId][dateStr].push(rate);
-            current.setDate(current.getDate() + 1);
-          }
-        }
-      }
-
-      // Step 2: Count bookings per day
-      for (const bookingItem of bookingData?.results || []) {
-        const hotelId = bookingItem.metaData?.hotelPropertyId;
-        if (!selectedHotelIds.includes(hotelId)) continue;
-
-        const extractedFiles = bookingItem.extractedFiles || [];
-
-        for (const file of extractedFiles) {
-          const checkIn = new Date(file.checkIn);
-          const checkOut = new Date(file.checkOut);
-
-          const bookingDates = [];
-          if (file.checkIn === file.checkOut) {
-            bookingDates.push(file.checkIn);
-          } else {
-            let curr = new Date(checkIn);
-            while (curr < new Date(checkOut)) {
-              bookingDates.push(curr.toISOString().split('T')[0]);
-              curr.setDate(curr.getDate() + 1);
+            while (current < end) {
+              const dateStr = current.toISOString().split('T')[0];
+              if (!priceMap[hotelPropertyId]) priceMap[hotelPropertyId] = {};
+              if (!priceMap[hotelPropertyId][dateStr]) priceMap[hotelPropertyId][dateStr] = [];
+              priceMap[hotelPropertyId][dateStr].push(rate);
+              current.setDate(current.getDate() + 1);
             }
           }
+        }
 
-          for (const dateStr of bookingDates) {
-            if (!bookingCountsMap[hotelId]) bookingCountsMap[hotelId] = {};
-            if (!bookingCountsMap[hotelId][dateStr]) bookingCountsMap[hotelId][dateStr] = 0;
-            bookingCountsMap[hotelId][dateStr] += 1;
+        // Step 2: Extract occupancy directly
+        for (const item of bookingData?.results || []) {
+          const hotelPropertyId = item.metaData?.hotelPropertyId;
+          const extractedFiles = item.extractedFiles || [];
+
+          for (const file of extractedFiles) {
+            const dateStr = new Date(file.checkIn).toISOString().split('T')[0];
+            const occupancy = Number(file.occupancy);
+            if (!occupancyMap[hotelPropertyId]) occupancyMap[hotelPropertyId] = {};
+            occupancyMap[hotelPropertyId][dateStr] = occupancy;
           }
         }
-      }
 
-      // Step 3: Create events with lowest pricing logic
-      for (const hotelId of selectedHotelIds) {
-        const hotel = hotels.find(h => h.id === hotelId);
-        if (!hotel) continue;
+        // Step 3: Create calendar events
+        for (const hotelId of selectedHotelIds) {
+          const hotel = hotels.find(h => h.id === hotelId);
+          if (!hotel) continue;
 
-        const totalRooms = hotel.total_rooms || 0;
-        const dates = generateDateRange(startDate, endDate); // assumes array of 'YYYY-MM-DD' strings
+          const dates = generateDateRange(startDate, endDate);
 
-        for (const dateStr of dates) {
-          const bookedRooms = bookingCountsMap[hotelId]?.[dateStr] || 0;
-          const availableRooms = Math.max(0, totalRooms - bookedRooms);
-          const occupancyPercent = totalRooms > 0
-            ? `${Math.round((bookedRooms / totalRooms) * 100)}%`
-            : '0%';
+          for (const dateStr of dates) {
+            const occupancy = occupancyMap[hotelId]?.[dateStr] ?? null;
+            const ratesForDate = priceMap[hotelId]?.[dateStr] || [];
+            const minRate = ratesForDate.length ? Math.min(...ratesForDate) : 0;
+            const suggestedPrice = minRate + 10;
+            const historicalPrice = Math.max(0, minRate - 10);
 
-          const isFullOccupancy = totalRooms > 0 && bookedRooms >= totalRooms;
+            const backgroundColor = occupancy === 100
+              ? '#FF4C4C'
+              : ratesForDate.length
+                ? '#2CCDD9'
+                : '#E5E5E5';
 
-          // ✅ Get lowest rate instead of average
-          const ratesForDate = priceMap[hotelId]?.[dateStr] || [];
-          const minRate = ratesForDate.length ? Math.min(...ratesForDate) : 0;
-          const suggestedPrice = minRate + 10;
-          const historicalPrice = Math.max(0, minRate - 10);
+            const textColor = occupancy === 100 ? '#FFFFFF' : '#000000';
 
-          const backgroundColor = isFullOccupancy
-            ? '#FF4C4C'
-            : ratesForDate.length
-              ? '#2CCDD9'
-              : '#E5E5E5';
-
-          const borderColor = backgroundColor;
-          const textColor = isFullOccupancy ? '#FFFFFF' : '#000000';
-
-          allEvents.push({
-            title: hotel.name,
-            date: dateStr,
-            backgroundColor,
-            borderColor,
-            textColor,
-            extendedProps: {
-              hotel_id: hotel.id,
-              hotel_name: hotel.name,
-              totalRooms,
-              booked_rooms: bookedRooms,
-              available_rooms: availableRooms,
-              predicted_occupancy: occupancyPercent,
-              average_price: minRate,
-              suggested_price: suggestedPrice,
-              historical_price: historicalPrice,
-            },
-          });
+            allEvents.push({
+              title: hotel.name,
+              date: dateStr,
+              backgroundColor,
+              borderColor: backgroundColor,
+              textColor,
+              extendedProps: {
+                hotel_id: hotel.id,
+                hotel_name: hotel.name,
+                predicted_occupancy: occupancy !== null ? `${occupancy}%` : '0%',
+                average_price: minRate,
+                suggested_price: suggestedPrice,
+                historical_price: historicalPrice,
+              },
+            });
+          }
         }
+
+        setCalendarEvents(allEvents);
+      } catch (error) {
+        console.error(error);
+        toast.error('Failed to load pricing/booking data');
       }
+    };
 
-      console.log(allEvents);
-      setCalendarEvents(allEvents);
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to load pricing/booking data');
-    }
-  };
-
-  fetchCalendarData();
-}, [selectedHotelIds, dateRange, hotels]);
+    fetchCalendarData();
+  }, [selectedHotelIds, dateRange, hotels]);
 
   const handleEventClick = async (info) => {
     setSelectedDate(info.event.start);
@@ -216,59 +186,57 @@ useEffect(() => {
     modal.show();
   };
 
-  useEffect(() => {
-    const modalElement = document.getElementById('myModal');
-    if (modalElement) {
-      modalElement.addEventListener('hidden.bs.modal', () => {
-        // Re-render tooltips after modal closes
-        if (calendarRef.current) {
-          calendarRef.current.getApi().refetchEvents(); // optional if events change
-          setTimeout(() => {
-            const allEvents = document.querySelectorAll('.fc-event');
-            allEvents.forEach((eventEl) => {
-              const roomSpan = eventEl.querySelector('.room-type');
-              const priceSpan = eventEl.querySelector('.price');
+useEffect(() => {
+  const modalElement = document.getElementById('myModal');
 
-              const occupancy = eventEl.getAttribute('data-occupancy');
-              const suggested = eventEl.getAttribute('data-suggested');
-              const historical = eventEl.getAttribute('data-historical');
+  const handleHidden = () => {
+    if (calendarRef.current) {
+      calendarRef.current.getApi().refetchEvents(); // Optional if events change
 
-              if (roomSpan) {
-                tippy(roomSpan, {
-                  content: `
-                      <div class="">
-                        <div class="mb-2 gap-4 d-flex justify-content-between">
-                          <span>Predicted Occupancy:</span> <strong>${occupancy}</strong>
-                        </div>
-                        <div class="mb-2 gap-4 d-flex justify-content-between">
-                          <span>Suggested Price:</span> <strong>$${suggested}</strong>
-                        </div>
-                        <div class="mb-2 gap-4 d-flex justify-content-between">
-                          <span>Historical Price:</span> <strong>$${historical}</strong>
-                        </div>
-                      </div>
-                    `,
-                  allowHTML: true,
-                  placement: 'top',
-                  animation: 'shift-away',
-                  theme: 'light-border custom-tooltip',
-                });
-              }
+      setTimeout(() => {
+        const allEvents = document.querySelectorAll('.fc-event');
 
-              if (priceSpan) {
-                tippy(priceSpan, {
-                  content: 'Good Pricing',
-                  placement: 'top',
-                  animation: 'scale',
-                  theme: 'material',
-                });
-              }
+        allEvents.forEach((eventEl) => {
+          const roomSpan = eventEl.querySelector('.room-type');
+          const occupancy = eventEl.getAttribute('data-occupancy');
+
+          // Remove any existing tippy instances
+          if (roomSpan && roomSpan._tippy) {
+            roomSpan._tippy.destroy();
+          }
+
+          // Conditionally re-apply tippy only if occupancy display is enabled
+          if (roomSpan && showOccupancy) {
+            tippy(roomSpan, {
+              content: `
+                <div class="">
+                  <div class="mb-2 gap-4 d-flex justify-content-between">
+                    <span>Predicted Occupancy:</span> <strong>${occupancy}</strong>
+                  </div>
+                </div>
+              `,
+              allowHTML: true,
+              placement: 'top',
+              animation: 'shift-away',
+              theme: 'light-border custom-tooltip',
             });
-          }, 100); // short delay to ensure DOM is stable
-        }
-      });
+          }
+        });
+      }, 100); // Ensure DOM is ready
     }
-  }, []);
+  };
+
+  if (modalElement) {
+    modalElement.addEventListener('hidden.bs.modal', handleHidden);
+  }
+
+  // Cleanup on unmount
+  return () => {
+    if (modalElement) {
+      modalElement.removeEventListener('hidden.bs.modal', handleHidden);
+    }
+  };
+}, [showOccupancy]); // Depend on showOccupancy
 
   return (
     <DashboardLayout>
@@ -358,10 +326,15 @@ useEffect(() => {
                   <h2>
                     Occupancy{' '}
                     <label className="switch">
-                      <input type="checkbox" defaultChecked />
+                      <input
+                        type="checkbox"
+                        checked={showOccupancy}
+                        onChange={(e) => setShowOccupancy(e.target.checked)}
+                      />
                       <span className="slider round"></span>
                     </label>
                   </h2>
+
                   <div className="help">
                     <img src={`/user/images/help.svg`} className="img-fluid" alt="Help" />
                   </div>
@@ -429,17 +402,11 @@ useEffect(() => {
                       const roomSpan = info.el.querySelector('.room-type');
                       const priceSpan = info.el.querySelector('.price');
 
-                      if (roomSpan) {
+                    if (roomSpan && showOccupancy) {
                         let tooltipContent = `
                                     <div class="p-1">
                                       <div class="mb-2 gap-4 d-flex justify-content-between">
                                         <span>Predicted Occupancy:</span> <strong>${predicted_occupancy}</strong>
-                                      </div>
-                                      <div class="mb-2 gap-4 d-flex justify-content-between">
-                                        <span>Suggested Price:</span> <strong>$${suggested_price}</strong>
-                                      </div>
-                                      <div class="mb-2 gap-4 d-flex justify-content-between">
-                                        <span>Historical Price:</span> <strong>$${historical_price}</strong>
                                       </div>
                                     </div>
                                   `;
@@ -453,14 +420,14 @@ useEffect(() => {
                         });
                       }
 
-                      if (priceSpan) {
-                        tippy(priceSpan, {
-                          content: 'Good Pricing',
-                          placement: 'top',
-                          animation: 'scale',
-                          theme: 'material',
-                        });
-                      }
+                      // if (priceSpan) {
+                      //   tippy(priceSpan, {
+                      //     content: 'Good Pricing',
+                      //     placement: 'top',
+                      //     animation: 'scale',
+                      //     theme: 'material',
+                      //   });
+                      // }
                     }}
                     dayCellDidMount={(info) => {
                       const el = info.el.querySelector('.fc-daygrid-day-number');
