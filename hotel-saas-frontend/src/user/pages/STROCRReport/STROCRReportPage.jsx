@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext, useCallback } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import MUIDataTable from 'mui-datatables';
 import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import 'react-toastify/dist/ReactToastify.css'; // Corrected import
 import { PermissionContext } from '../../UserPermission';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
@@ -86,13 +86,56 @@ const STROCRReportPage = () => {
         setSelectedHotelId(e.target.value);
     };
 
+    const formatTwoDecimals = (value) => {
+        if (value === null || value === undefined || value === '') return '-';
+        const num = Number(value);
+        if (isNaN(num)) return value;
+        return num.toFixed(2);
+    };
+
+    const usdFormatter = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+    const formatUSD = (value) => {
+        if (value === null || value === undefined || value === '') return '-';
+        const num = Number(value);
+        if (isNaN(num)) return value;
+        return usdFormatter.format(num);
+    };
+
     const columns = [
-        { name: 'report_type', label: 'Report Type' },
         { name: 'date', label: 'Date' },
-        { name: 'rate', label: 'Rate' },
-        { name: 'occupancy', label: 'Occupancy' },
-        { name: 'adr', label: 'ADR (USD)' },
-        { name: 'revpar', label: 'RevPAR (USD)' },
+        {
+            name: 'occupancy',
+            label: 'Occupancy',
+            options: {
+                customBodyRender: (value) => formatTwoDecimals(value),
+            },
+        },
+        {
+            name: 'adr',
+            label: 'ADR (USD)',
+            options: {
+                customBodyRender: (value) => formatUSD(value),
+            },
+        },
+        {
+            name: 'revpar',
+            label: 'RevPAR (USD)',
+            options: {
+                customBodyRender: (value) => formatUSD(value),
+            },
+        },
+        {
+            name: 'total_revanue',
+            label: 'Total Revenue (USD)',
+            options: {
+                customBodyRender: (value) => formatUSD(value),
+            },
+        },
     ];
 
     const options = {

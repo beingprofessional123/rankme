@@ -208,14 +208,35 @@ const UploadData = () => {
         }[activeTab] || 'unknown';
 
 
-
-        const headers = csvTemplates[apiFileType];
-        if (!headers || headers.length === 0) return toast.error('No template defined for this data type.');
-
-        const csvString = headers.map(h => `"${h}"`).join(',') + '\n';
-        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-        saveAs(blob, `${apiFileType}_template.csv`);
-        toast.success(`'${apiFileType}_template.csv' downloaded successfully!`);
+        if (activeTab === 'Property Price') {
+            try {
+                const templatePath = `${process.env.REACT_APP_BASE_URL}/user/file/property_price_template.xlsx`;
+                window.open(templatePath, '_blank');
+                toast.success('Property Price template download initiated!');
+            } catch (err) {
+                console.error('Error downloading Property Price template:', err);
+                toast.error('Failed to download Property Price template.');
+            }
+        } else if(activeTab === 'STR/OCR Reports') {
+            try {
+                const templatePath = `${process.env.REACT_APP_BASE_URL}/user/file/str_ocr_report_template.xlsx`;
+                window.open(templatePath, '_blank');
+                toast.success('STR/OCR template download initiated!');
+            } catch (err) {
+                console.error('Error downloading STR/OCR template:', err);
+                toast.error('Failed to download STR/OCR template.');
+            }
+        }else{
+            const headers = csvTemplates[apiFileType];
+            if (!headers || headers.length === 0) {
+                return toast.error('No template defined for this data type.');
+            }
+            
+            const csvString = headers.map(h => `"${h}"`).join(',') + '\n';
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            saveAs(blob, `${apiFileType}_template.csv`);
+            toast.success(`'${apiFileType}_template.csv' downloaded successfully!`);
+        }
     };
 
     useEffect(() => {
