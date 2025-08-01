@@ -209,6 +209,7 @@ const UploadData = () => {
             'Property Price': 'property_price_data'
         }[activeTab] || 'unknown';
 
+
         if (activeTab === 'Property Price') {
             try {
                 const templatePath = `${process.env.REACT_APP_BASE_URL}/user/file/property_price_template.xlsx`;
@@ -280,7 +281,24 @@ const UploadData = () => {
                                     <div className="form-design">
                                         <div className="d-flex justify-content-between align-items-center mb-3">
                                             <h4>Upload Your Data</h4>
-                                            <img src={`/user/images/download.svg`} alt="Download Template" onClick={handleDownloadTemplate} style={{ cursor: 'pointer' }} />
+                                            {
+                                                activeTab === 'Booking Data' ? (
+                                                    <a href="/xlsxTemplate/bookingTemplate.xlsx">
+                                                        <img
+                                                            src="/user/images/download.svg"
+                                                            alt="Download Template"
+                                                            style={{ cursor: 'pointer' }}
+                                                        />
+                                                    </a>
+                                                ) : (
+                                                    <img
+                                                        src="/user/images/download.svg"
+                                                        alt="Download Template"
+                                                        onClick={handleDownloadTemplate}
+                                                        style={{ cursor: 'pointer' }}
+                                                    />
+                                                )
+                                            }
                                         </div>
 
                                         {/* Conditional rendering for meta fields */}
