@@ -207,6 +207,8 @@ const UploadData = () => {
             'Property Price': 'property_price_data'
         }[activeTab] || 'unknown';
 
+
+
         const headers = csvTemplates[apiFileType];
         if (!headers || headers.length === 0) return toast.error('No template defined for this data type.');
 
@@ -256,7 +258,24 @@ const UploadData = () => {
                                     <div className="form-design">
                                         <div className="d-flex justify-content-between align-items-center mb-3">
                                             <h4>Upload Your Data</h4>
-                                            <img src={`/user/images/download.svg`} alt="Download Template" onClick={handleDownloadTemplate} style={{ cursor: 'pointer' }} />
+                                            {
+                                                activeTab === 'Booking Data' ? (
+                                                    <a href="/xlsxTemplate/bookingTemplate.xlsx">
+                                                        <img
+                                                            src="/user/images/download.svg"
+                                                            alt="Download Template"
+                                                            style={{ cursor: 'pointer' }}
+                                                        />
+                                                    </a>
+                                                ) : (
+                                                    <img
+                                                        src="/user/images/download.svg"
+                                                        alt="Download Template"
+                                                        onClick={handleDownloadTemplate}
+                                                        style={{ cursor: 'pointer' }}
+                                                    />
+                                                )
+                                            }
                                         </div>
 
                                         {/* Conditional rendering for meta fields */}
