@@ -26,6 +26,10 @@ const DataTable = ({ data, title = 'Data Preview', onConfirm, onCancel, activeTa
                 // Specific fields for STR/OCR Reports based on your requirement
                 return ['checkIn', 'occupancy', 'adrUsd', 'revParUsd', 'totalRevenue'];
             }
+             if (tab === 'Booking Data') {
+                // These are the *backend field names* that should be displayed
+                return ['checkIn', 'occupancy'];
+            }
 
             // For other tabs, use the template headers, and convert them to camelCase
             return csvTemplates[apiFileType].map(header => {
@@ -59,6 +63,7 @@ const DataTable = ({ data, title = 'Data Preview', onConfirm, onCancel, activeTa
         if (header === 'checkIn') return 'Date'; // Changed from 'Check In Date' for STR/OCR
         if (header === 'competitorHotel') return 'Competitor Hotel';
         if (header === 'compAvg') return 'Comp Avg';
+        if (header === 'occupancy') return 'occupancy';
 
         // General camelCase to Title Case formatting for other headers
         return header.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
@@ -92,6 +97,18 @@ const DataTable = ({ data, title = 'Data Preview', onConfirm, onCancel, activeTa
                             cellData = header === 'occupancy' ? `${numericValue.toFixed(2)}%` : numericValue.toFixed(2);
                         } else {
                             cellData = 'N/A';
+                        }
+                    }
+                }
+
+                  if (activeTab === 'Booking Data') {
+                    if (header === 'occupancy') {
+                        // Ensure cellData is a number before formatting
+                        const numericValue = parseFloat(cellData);
+                        if (!isNaN(numericValue)) {
+                            cellData = `${numericValue.toFixed(2)}%`; // Format to 2 decimal places and add dollar sign
+                        } else {
+                            cellData = 'N/A'; // Or whatever you want for non-numeric values
                         }
                     }
                 }

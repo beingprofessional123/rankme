@@ -33,7 +33,8 @@ const Login = () => {
       localStorage.setItem('admin_user', JSON.stringify(user));
 
       // Redirect to dashboard or wherever
-      navigate('/admin/dashboard');
+      // navigate('/admin/dashboard');
+      window.location.href = '/admin/dashboard';
 
     } catch (error) {
       console.error('Login error:', error);

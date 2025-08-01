@@ -3,7 +3,7 @@ import DashboardLayout from '../../components/DashboardLayout';
 import Tabs from './Tabs';
 import FileUploadSection from './FileUploadSection';
 import DataTable from './DataTable';
-import csvTemplates from '../../utils/csvTemplates'; // We'll keep this for header definitions
+import csvTemplates from '../../utils/csvTemplates';
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimesCircle } from '@fortawesome/free-solid-svg-icons';
@@ -11,7 +11,7 @@ import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import { Link } from 'react-router-dom';
 import { saveAs } from 'file-saver';
-import * as XLSX from 'xlsx'; // Import the xlsx library
+
 
 const MySwal = withReactContent(Swal);
 
@@ -116,16 +116,14 @@ const UploadData = () => {
             return;
         }
 
-        // Validate meta fields based on the active tab
-        const isPropertyPriceTab = activeTab === 'Property Price';
-        const isBookingOrSTRTabAndDataExtracted = (activeTab === 'Booking Data' || activeTab === 'STR/OCR Reports') && extractedData.length > 0;
-
-        if (isPropertyPriceTab || isBookingOrSTRTabAndDataExtracted) {
+        if (activeTab === 'Property Price' || activeTab === 'Booking Data') {
             if (!dataSourceName || !hotelPropertyId || !dateRangeFrom || !dateRangeTo) {
-                setError('Please fill in all data source details (Name, Property, Date Range).');
+                const typeLabel = activeTab === 'Property Price' ? 'Property Price' : 'Booking Data';
+                setError(`Please fill in all data source details (Name, Property, Date Range) for ${typeLabel}.`);
                 return;
             }
         }
+
 
         setLoading(true);
         setError(null);
@@ -144,10 +142,10 @@ const UploadData = () => {
                 },
                 body: JSON.stringify({
                     uploadId,
-                    dataSourceName, // Always send if available
-                    hotelPropertyId, // Always send if available
-                    dateRangeFrom,   // Always send if available
-                    dateRangeTo,     // Always send if available
+                    dataSourceName: activeTab === 'Property Price' || activeTab === 'Booking Data' ? dataSourceName : undefined,
+                    hotelPropertyId: activeTab === 'Property Price' || activeTab === 'Booking Data' ? hotelPropertyId : undefined,
+                    dateRangeFrom: activeTab === 'Property Price' || activeTab === 'Booking Data' ? dateRangeFrom : undefined,
+                    dateRangeTo: activeTab === 'Property Price' || activeTab === 'Booking Data' ? dateRangeTo : undefined,
                     // No need to send hotelProperty Name to confirm-save, as ID is sufficient for backend
                 }),
             });
@@ -202,7 +200,7 @@ const UploadData = () => {
         }
     };
 
-    const handleDownloadTemplate = async () => {
+    const handleDownloadTemplate = () => {
         const apiFileType = {
             'Booking Data': 'booking',
             'STR/OCR Reports': 'str_ocr_report',
@@ -232,14 +230,11 @@ const UploadData = () => {
             if (!headers || headers.length === 0) {
                 return toast.error('No template defined for this data type.');
             }
-
-            const ws = XLSX.utils.aoa_to_sheet([headers]);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-
-            const fileName = `${apiFileType}_template.xlsx`;
-            XLSX.writeFile(wb, fileName);
-            toast.success(`'${fileName}' downloaded successfully!`);
+            
+            const csvString = headers.map(h => `"${h}"`).join(',') + '\n';
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            saveAs(blob, `${apiFileType}_template.csv`);
+            toast.success(`'${apiFileType}_template.csv' downloaded successfully!`);
         }
     };
 
@@ -256,8 +251,6 @@ const UploadData = () => {
         setSelectedHotelPropertyName(''); // Ensure this is also cleared
     }, [activeTab]);
 
-    // Determine if meta fields should be shown
-    const showMetaFields = activeTab === 'Property Price' || (extractedData.length > 0 && (activeTab === 'Booking Data' || activeTab === 'STR/OCR Reports'));
 
     return (
         <DashboardLayout>
@@ -287,9 +280,10 @@ const UploadData = () => {
                                             <h4>Upload Your Data</h4>
                                             <img src={`/user/images/download.svg`} alt="Download Template" onClick={handleDownloadTemplate} style={{ cursor: 'pointer' }} />
                                         </div>
-                                        {   
-                                            showMetaFields && (
-                                            <div className="row mt-3"> {/* Added mt-3 for some top margin */}
+
+                                        {/* Conditional rendering for meta fields */}
+                                        {(activeTab === 'Property Price' || activeTab === 'Booking Data') && (
+                                            <div className="row">
                                                 <div className="col-md-4">
                                                     <div className="form-group">
                                                         <label htmlFor="dataSourceName" className="form-label">Data Source Name</label>
@@ -345,16 +339,17 @@ const UploadData = () => {
                                                 </div>
                                             </div>
                                         )}
+
+                                        {/* FileUploadSection comes after the above fields (conditionally rendered or not) */}
                                         <FileUploadSection
                                             onFileExtracted={handleFileExtracted}
                                             setLoading={setLoading}
                                             setError={setError}
                                             fileName={fileName}
-                                            fileType={getFileTypeForApi(activeTab)}
-                                            hotelPropertyId={hotelPropertyId}
-                                            selectedHotelPropertyName={selectedHotelPropertyName}
+                                            fileType={getFileTypeForApi(activeTab)} // Pass the active tab's file type
+                                            hotelPropertyId={hotelPropertyId}      // Pass the selected hotel property ID
+                                            selectedHotelPropertyName={selectedHotelPropertyName} // NEW: Pass the hotel property name
                                         />
-                                       
                                         {error && (
                                             <div className="alert alert-danger alert-dismissible fade show d-flex justify-content-between align-items-center" role="alert">
                                                 <div>

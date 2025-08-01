@@ -38,13 +38,14 @@ exports.getAllBookings = async (req, res) => {
           model: UploadedExtractDataFile,
           as: 'extractedFiles',
           required: false,
-          where: startDate && endDate
-            ? {
-                checkIn: { [Op.lte]: endDate },
-                checkOut: { [Op.gte]: startDate },
-              }
-            : {}, // 👈 All data if no date range
-          attributes: ['checkIn', 'checkOut', 'roomType', 'rate', 'source', 'remarks'],
+         where: startDate && endDate
+          ? {
+              checkIn: {
+                [Op.between]: [startDate, endDate],
+              },
+            }
+          : {},// 👈 All data if no date range
+          attributes: ['checkIn','occupancy'],
         },
       ],
       order: [['createdAt', 'DESC']],

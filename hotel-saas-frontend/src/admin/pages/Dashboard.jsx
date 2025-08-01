@@ -4,12 +4,12 @@ import { toast } from 'react-toastify';
 const Dashboard = () => {
   const shownRef = useRef(false);
 
-  useEffect(() => {
-    if (!shownRef.current) {
-      toast.success('WellCome To Admin');
-      shownRef.current = true;
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (!shownRef.current) {
+  //     toast.success('WellCome To Admin');
+  //     shownRef.current = true;
+  //   }
+  // }, []);
 
   return (
     <div>
