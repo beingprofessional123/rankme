@@ -22,6 +22,9 @@ const DataTable = ({ data, title = 'Data Preview', onConfirm, onCancel, activeTa
             if (tab === 'Property Price') {
                 // These are the *backend field names* that should be displayed
                 return ['checkIn', 'competitorHotel', 'rate', 'compAvg'];
+            } else if (tab === 'STR/OCR Reports') {
+                // Specific fields for STR/OCR Reports based on your requirement
+                return ['checkIn', 'occupancy', 'adrUsd', 'revParUsd', 'totalRevenue'];
             }
 
             // For other tabs, use the template headers, and convert them to camelCase
@@ -47,12 +50,13 @@ const DataTable = ({ data, title = 'Data Preview', onConfirm, onCancel, activeTa
 
     const formatHeader = (header) => {
         // These are labels shown to the user, based on the `name` (data key)
-        if (header === 'adrUsd') return 'ADR (USD)';
-        if (header === 'revParUsd') return 'RevPAR (USD)';
-        if (header === 'roomType') return 'Room Type';
+        if (header === 'adrUsd') return 'ADR'; // Changed from 'ADR (USD)'
+        if (header === 'revParUsd') return 'REVPAR'; // Changed from 'RevPAR (USD)'
+        if (header === 'occupancy') return 'Occupancy'; // Added for STR/OCR
+        if (header === 'totalRevenue') return 'Total Revenue'; // Added for STR/OCR
         if (header === 'rate' && activeTab === 'Property Price') return 'Price'; // Specific for Property Price
         if (header === 'platform') return 'Platform';
-        if (header === 'checkIn') return 'Check In Date'; // Explicitly map 'checkIn' to 'Check In Date'
+        if (header === 'checkIn') return 'Date'; // Changed from 'Check In Date' for STR/OCR
         if (header === 'competitorHotel') return 'Competitor Hotel';
         if (header === 'compAvg') return 'Comp Avg';
 
@@ -68,20 +72,29 @@ const DataTable = ({ data, title = 'Data Preview', onConfirm, onCancel, activeTa
                 const row = data[dataIndex];
                 let cellData = row[header]; // This will now correctly access row.rate for the 'rate' column, etc.
 
-                // --- NEW CODE START ---
-                // Add dollar symbol for 'rate' and 'compAvg' fields in 'Property Price' tab
+                // Add dollar symbol and format to 2 decimal places for 'rate' and 'compAvg' in 'Property Price'
                 if (activeTab === 'Property Price') {
                     if (header === 'rate' || header === 'compAvg') {
-                        // Ensure cellData is a number before formatting
                         const numericValue = parseFloat(cellData);
                         if (!isNaN(numericValue)) {
-                            cellData = `$${numericValue.toFixed(2)}`; // Format to 2 decimal places and add dollar sign
+                            cellData = `$${numericValue.toFixed(2)}`;
                         } else {
-                            cellData = 'N/A'; // Or whatever you want for non-numeric values
+                            cellData = 'N/A';
                         }
                     }
                 }
-                // --- NEW CODE END ---
+                // Format specific numeric fields for 'STR/OCR Reports' to 2 decimal places
+                else if (activeTab === 'STR/OCR Reports') {
+                    if (['occupancy', 'adrUsd', 'revParUsd', 'totalRevenue'].includes(header)) {
+                        const numericValue = parseFloat(cellData);
+                        if (!isNaN(numericValue)) {
+                            // Occupancy might be a percentage, others are currency/value
+                            cellData = header === 'occupancy' ? `${numericValue.toFixed(2)}%` : numericValue.toFixed(2);
+                        } else {
+                            cellData = 'N/A';
+                        }
+                    }
+                }
 
                 const hasError = row.validationErrors &&
                     row.validationErrors.some(err => {

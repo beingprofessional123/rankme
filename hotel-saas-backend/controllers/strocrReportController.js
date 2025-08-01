@@ -49,7 +49,7 @@ exports.getAllstrocrReports = async (req, res) => {
                 }
               }
             : {},
-          attributes: ['reportType', 'date', 'roomType', 'rate', 'occupancy', 'adrUsd', 'revParUsd'],
+          attributes: ['reportType', 'checkIn', 'roomType', 'rate', 'occupancy', 'adrUsd', 'revParUsd', 'totalRevenue'],
         },
       ],
       order: [['createdAt', 'DESC']],
@@ -59,12 +59,13 @@ exports.getAllstrocrReports = async (req, res) => {
     const flattenedData = data.flatMap(upload =>
       upload.extractedFiles.map(file => ({
         report_type: file.reportType || '-',
-        date: file.date || '-',
+        date: file.checkIn || '-',
         room_type: file.roomType || '-',
         rate: file.rate || '-',
         occupancy: file.occupancy || '-',
         adr: file.adrUsd || '-',
         revpar: file.revParUsd || '-',
+        total_revanue: file.totalRevenue || '-',
       }))
     );
 

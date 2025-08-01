@@ -218,7 +218,16 @@ const UploadData = () => {
                 console.error('Error downloading Property Price template:', err);
                 toast.error('Failed to download Property Price template.');
             }
-        } else {
+        } else if(activeTab === 'STR/OCR Reports') {
+            try {
+                const templatePath = `${process.env.REACT_APP_BASE_URL}/user/file/str_ocr_report_template.xlsx`;
+                window.open(templatePath, '_blank');
+                toast.success('STR/OCR template download initiated!');
+            } catch (err) {
+                console.error('Error downloading STR/OCR template:', err);
+                toast.error('Failed to download STR/OCR template.');
+            }
+        }else{
             const headers = csvTemplates[apiFileType];
             if (!headers || headers.length === 0) {
                 return toast.error('No template defined for this data type.');
