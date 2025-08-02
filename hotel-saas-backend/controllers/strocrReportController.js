@@ -44,7 +44,7 @@ exports.getAllstrocrReports = async (req, res) => {
           required: false,
           where: startDate && endDate
             ? {
-                date: {
+                checkIn: {
                   [Op.between]: [startDate, endDate]
                 }
               }
