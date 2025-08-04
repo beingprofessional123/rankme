@@ -28,7 +28,7 @@ const PlanManagementIndex = () => {
 
             if (response.data.status_code === 200) {
                 setPlans(response.data.results || []);
-                toast.success(response.data.message);
+                // toast.success(response.data.message);
             } else {
                 toast.error(response.data.message || 'Failed to fetch plans');
             }

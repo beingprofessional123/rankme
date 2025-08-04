@@ -139,7 +139,7 @@ const UserManagementCreate = () => {
                                       <div className="row">
                                         <div className="col-sm-6">
                                           <div className="form-group">
-                                            <label>Company nmae</label>
+                                            <label>Company name</label>
                                             <input
                                               type="text"
                                               name="company_name"
