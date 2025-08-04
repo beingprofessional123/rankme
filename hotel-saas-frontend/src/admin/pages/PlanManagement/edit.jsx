@@ -164,12 +164,12 @@ const PlanManagementEdit = () => {
                               </div>
 
                               {/* Features */}
-                              <div className="col-sm-6">
+                              <div className="col-md-12">
                                 <div className="form-group">
                                   <label>Features</label>
                                   {form.features.map((feature, index) => (
                                     <div key={index} className="row mb-2 align-items-center">
-                                      <div className="col-5">
+                                      <div className="col-md-5 mb-2">
                                         <input
                                           type="text"
                                           className="form-control"
@@ -183,7 +183,7 @@ const PlanManagementEdit = () => {
                                           required
                                         />
                                       </div>
-                                      <div className="col-5">
+                                      <div className="col-md-5 mb-2">
                                         <input
                                           type="text"
                                           className="form-control"
@@ -197,7 +197,7 @@ const PlanManagementEdit = () => {
                                           required
                                         />
                                       </div>
-                                      <div className="col-2">
+                                      <div className="col-md-2 mb-2">
                                         <button
                                           type="button"
                                           className="btn btn-warning"

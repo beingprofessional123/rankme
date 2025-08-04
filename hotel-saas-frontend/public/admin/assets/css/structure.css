@@ -271,7 +271,7 @@ code {
   list-style: none; }
 
 .header-container .sidebarCollapse {
-  color: #ff5453; }
+  color: #1b2780; }
   .header-container .sidebarCollapse svg {
     width: 27px;
     height: 27px; }
@@ -672,7 +672,7 @@ code {
     border-top-right-radius: 4px;
     margin-right: -12px;
     margin-left: -12px;
-    background: #0bc5b7;
+    background: #18247f;
     margin-top: -1px;
     
       
@@ -818,7 +818,7 @@ code {
   height: 100%;
   height: calc(100vh - 79px);
   top: 80px;
-  background: #0bc5b7;
+  background: #18247f;
   width: 250px;
   padding: 20px 10px;
   transition: .3s ease all;
@@ -844,7 +844,7 @@ code {
           color: #fff;
           transition: .300s;
           border-radius: 5px;
-              background: #66666659;
+              background: #091258;
           margin: 2px; 
             
         }
@@ -1038,8 +1038,9 @@ code {
       margin-right: 3px;
       margin-left: 0; }
       .navbar .navbar-item .nav-item.theme-logo a img {
-            width: 56px;
+            /* width: 56px; */
     height: auto;
+        margin-right: 20px;
         }
   /*
       =============
@@ -1827,6 +1828,7 @@ ul.app-managementview li {
 
 .user-profile img {
   width: 120px;
+  height: 120px;
 }
 .user-profile {
   text-align: center;
@@ -2038,6 +2040,9 @@ ul.app-managementview li {
 .tabledesign thead tr th button {
     padding: 0px !important;
     justify-content: flex-start;
+    line-height: 18px;
+    text-align: left;
+    white-space: nowrap;
 }
 .tabledesign tbody tr td {
     color: #333;
@@ -2117,3 +2122,10 @@ span.room-type {
 }
  
 
+.tabledesign thead tr th button:hover {
+    background: none !important;
+}
+
+.user-profile .widget-content-area .user-info-list ul.contacts-block li strong {
+    color: #000;
+}

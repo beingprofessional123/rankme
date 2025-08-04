@@ -69,27 +69,28 @@ const TransactionManagementIndex = () => {
         },
       },
     },
-    {
-      name: 'invoice_url',
-      label: 'Invoice',
-      options: {
-        filter: false,
-        customBodyRender: (value) =>
-          value ? (
-            <Tooltip title="View Invoice">
-              <IconButton
-                component={Link}
-                to={value}
-                size="small"
-              >
-                <Visibility />
-              </IconButton>
-            </Tooltip>
-          ) : (
-            'N/A'
-          ),
-      },
-    },
+   {
+  name: 'invoice_url',
+  label: 'Invoice',
+  options: {
+    filter: false,
+    customBodyRender: (value) => (
+      <Tooltip title={value ? 'View Invoice' : 'Invoice not available'}>
+        <span>
+          <IconButton
+            component={value ? Link : 'button'}
+            to={value || undefined}
+            size="small"
+            disabled={!value}
+          >
+            <Visibility />
+          </IconButton>
+        </span>
+      </Tooltip>
+    ),
+  },
+}
+
 
   ];
 

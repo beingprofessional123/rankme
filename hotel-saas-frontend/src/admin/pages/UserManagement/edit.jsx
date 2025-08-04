@@ -176,7 +176,7 @@ const UserManagementEdit = () => {
                                     <div className="row">
                                       <div className="col-sm-6">
                                           <div className="form-group">
-                                            <label>Company nmae</label>
+                                            <label>Company name</label>
                                             <input type='hidden' name='company_id' value={form.company_id} />
                                             <input
                                               type="text"
