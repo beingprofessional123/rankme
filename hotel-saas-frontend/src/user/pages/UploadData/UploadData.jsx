@@ -116,9 +116,10 @@ const UploadData = () => {
             return;
         }
 
-        if (activeTab === 'Property Price' || activeTab === 'Booking Data') {
+        // MODIFIED: Include 'STR/OCR Reports' in the condition for meta fields
+        if (activeTab === 'Property Price' || activeTab === 'Booking Data' || activeTab === 'STR/OCR Reports') {
             if (!dataSourceName || !hotelPropertyId || !dateRangeFrom || !dateRangeTo) {
-                const typeLabel = activeTab === 'Property Price' ? 'Property Price' : 'Booking Data';
+                const typeLabel = activeTab === 'Property Price' ? 'Property Price' : activeTab === 'Booking Data' ? 'Booking Data' : 'STR/OCR Reports';
                 setError(`Please fill in all data source details (Name, Property, Date Range) for ${typeLabel}.`);
                 return;
             }
@@ -142,10 +143,11 @@ const UploadData = () => {
                 },
                 body: JSON.stringify({
                     uploadId,
-                    dataSourceName: activeTab === 'Property Price' || activeTab === 'Booking Data' ? dataSourceName : undefined,
-                    hotelPropertyId: activeTab === 'Property Price' || activeTab === 'Booking Data' ? hotelPropertyId : undefined,
-                    dateRangeFrom: activeTab === 'Property Price' || activeTab === 'Booking Data' ? dateRangeFrom : undefined,
-                    dateRangeTo: activeTab === 'Property Price' || activeTab === 'Booking Data' ? dateRangeTo : undefined,
+                    // MODIFIED: Include 'STR/OCR Reports' in the condition for sending meta fields to API
+                    dataSourceName: activeTab === 'Property Price' || activeTab === 'Booking Data' || activeTab === 'STR/OCR Reports' ? dataSourceName : undefined,
+                    hotelPropertyId: activeTab === 'Property Price' || activeTab === 'Booking Data' || activeTab === 'STR/OCR Reports' ? hotelPropertyId : undefined,
+                    dateRangeFrom: activeTab === 'Property Price' || activeTab === 'Booking Data' || activeTab === 'STR/OCR Reports' ? dateRangeFrom : undefined,
+                    dateRangeTo: activeTab === 'Property Price' || activeTab === 'Booking Data' || activeTab === 'STR/OCR Reports' ? dateRangeTo : undefined,
                     // No need to send hotelProperty Name to confirm-save, as ID is sufficient for backend
                 }),
             });
@@ -208,14 +210,35 @@ const UploadData = () => {
         }[activeTab] || 'unknown';
 
 
-
-        const headers = csvTemplates[apiFileType];
-        if (!headers || headers.length === 0) return toast.error('No template defined for this data type.');
-
-        const csvString = headers.map(h => `"${h}"`).join(',') + '\n';
-        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-        saveAs(blob, `${apiFileType}_template.csv`);
-        toast.success(`'${apiFileType}_template.csv' downloaded successfully!`);
+        if (activeTab === 'Property Price') {
+            try {
+                const templatePath = `${process.env.REACT_APP_BASE_URL}/user/file/property_price_template.xlsx`;
+                window.open(templatePath, '_blank');
+                toast.success('Property Price template download initiated!');
+            } catch (err) {
+                console.error('Error downloading Property Price template:', err);
+                toast.error('Failed to download Property Price template.');
+            }
+        } else if(activeTab === 'STR/OCR Reports') {
+            try {
+                const templatePath = `${process.env.REACT_APP_BASE_URL}/user/file/str_ocr_report_template.xlsx`;
+                window.open(templatePath, '_blank');
+                toast.success('STR/OCR template download initiated!');
+            } catch (err) {
+                console.error('Error downloading STR/OCR template:', err);
+                toast.error('Failed to download STR/OCR template.');
+            }
+        }else{
+            const headers = csvTemplates[apiFileType];
+            if (!headers || headers.length === 0) {
+                return toast.error('No template defined for this data type.');
+            }
+            
+            const csvString = headers.map(h => `"${h}"`).join(',') + '\n';
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            saveAs(blob, `${apiFileType}_template.csv`);
+            toast.success(`'${apiFileType}_template.csv' downloaded successfully!`);
+        }
     };
 
     useEffect(() => {
@@ -279,7 +302,8 @@ const UploadData = () => {
                                         </div>
 
                                         {/* Conditional rendering for meta fields */}
-                                        {(activeTab === 'Property Price' || activeTab === 'Booking Data') && (
+                                        {/* MODIFIED: Added 'STR/OCR Reports' to the condition */}
+                                        {(activeTab === 'Property Price' || activeTab === 'Booking Data' || activeTab === 'STR/OCR Reports') && (
                                             <div className="row">
                                                 <div className="col-md-4">
                                                     <div className="form-group">
@@ -344,7 +368,7 @@ const UploadData = () => {
                                             setError={setError}
                                             fileName={fileName}
                                             fileType={getFileTypeForApi(activeTab)} // Pass the active tab's file type
-                                            hotelPropertyId={hotelPropertyId}      // Pass the selected hotel property ID
+                                            hotelPropertyId={hotelPropertyId}       // Pass the selected hotel property ID
                                             selectedHotelPropertyName={selectedHotelPropertyName} // NEW: Pass the hotel property name
                                         />
                                         {error && (

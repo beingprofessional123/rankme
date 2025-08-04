@@ -294,7 +294,7 @@ exports.extractAndPreviewData = async (req, res) => {
                 const myPropertyNameFromHeader = headerRow[1] || null; // "My Property"
 
                 // HERE IS THE CHANGE: Use req.body.hotel_property_name as fallback
-                const myActualHotelName = (actualHotelNamesRow[1] && actualHotelNamesRow[1].trim() !== '') ? actualHotelNames[1].trim() : (hotel_property_name || null);
+                const myActualHotelName = (actualHotelNamesRow[1] && actualHotelNamesRow[1].trim() !== '') ? actualHotelNamesRow[1].trim() : (hotel_property_name || null);
 
                 const sourceValue = 'Online';
                 const platform = 'Online';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import MUIDataTable from 'mui-datatables';
 import { ToastContainer, toast } from 'react-toastify';
@@ -19,6 +19,11 @@ const STROCRReportPage = () => {
     const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
     const getAuthToken = () => localStorage.getItem('token');
 
+    const isDateRangeValid = useCallback(() => {
+        if (!dateRange.start || !dateRange.end) return true;
+        return new Date(dateRange.start) <= new Date(dateRange.end);
+    }, [dateRange]);
+
     const fetchHotels = useCallback(async () => {
         try {
             const token = getAuthToken();
@@ -32,10 +37,11 @@ const STROCRReportPage = () => {
                 },
             });
 
+            if (!res.ok) throw new Error(`Failed to fetch hotels (${res.status})`);
             const data = await res.json();
             setHotels(data.hotels || []);
         } catch (err) {
-            toast.error(err.message || 'Failed to fetch hotels');
+            toast.error(err?.message || 'Failed to fetch hotels');
         }
     }, [API_BASE_URL, user]);
 
@@ -43,7 +49,7 @@ const STROCRReportPage = () => {
         if (user?.company_id) fetchHotels();
     }, [fetchHotels, user]);
 
-    const fetchSTROCRData = async () => {
+    const fetchSTROCRData = useCallback(async () => {
         setLoading(true);
         setError(null);
 
@@ -54,17 +60,23 @@ const STROCRReportPage = () => {
                 return;
             }
 
+            if (!isDateRangeValid()) {
+                setError('Start date cannot be after end date.');
+                return;
+            }
+
+            const params = {
+                company_id: user?.company_id,
+                user_id: user?.id,
+                hotel_id: selectedHotelId,
+            };
+
+            if (dateRange.start) params.start_date = dateRange.start;
+            if (dateRange.end) params.end_date = dateRange.end;
+
             const response = await axios.get(`${API_BASE_URL}/api/strocrReport/list`, {
                 headers: { Authorization: `Bearer ${token}` },
-                params: {
-                    company_id: user?.company_id,
-                    user_id: user?.id,
-                    hotel_id: selectedHotelId,
-                    ...(dateRange.start && dateRange.end && {
-                        start_date: dateRange.start,
-                        end_date: dateRange.end,
-                    }),
-                },
+                params,
             });
 
             setReportData(response.data?.results || []);
@@ -74,25 +86,83 @@ const STROCRReportPage = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [API_BASE_URL, selectedHotelId, dateRange, user, isDateRangeValid]);
 
     useEffect(() => {
-        if (user?.company_id && user?.id && selectedHotelId) {
-            fetchSTROCRData();
+        if (!(user?.company_id && user?.id && selectedHotelId)) return;
+        if (!isDateRangeValid()) {
+            return;
         }
-    }, [selectedHotelId, dateRange, user]);
+
+        const handler = setTimeout(() => {
+            fetchSTROCRData();
+        }, 300);
+
+        return () => clearTimeout(handler);
+    }, [selectedHotelId, dateRange, user, fetchSTROCRData, isDateRangeValid]);
 
     const handleHotelChange = (e) => {
         setSelectedHotelId(e.target.value);
     };
 
+    const handleDateChange = (field) => (e) => {
+        setDateRange((prev) => ({ ...prev, [field]: e.target.value }));
+    };
+
+    const formatTwoDecimals = (value) => {
+        if (value === null || value === undefined || value === '') return '-';
+        const num = Number(value);
+        if (isNaN(num)) return value;
+        return num.toFixed(2);
+    };
+
+    const usdFormatter = useMemo(
+        () =>
+            new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }),
+        []
+    );
+    const formatUSD = (value) => {
+        if (value === null || value === undefined || value === '') return '-';
+        const num = Number(value);
+        if (isNaN(num)) return value;
+        return usdFormatter.format(num);
+    };
+
     const columns = [
-        { name: 'report_type', label: 'Report Type' },
         { name: 'date', label: 'Date' },
-        { name: 'rate', label: 'Rate' },
-        { name: 'occupancy', label: 'Occupancy' },
-        { name: 'adr', label: 'ADR (USD)' },
-        { name: 'revpar', label: 'RevPAR (USD)' },
+        {
+            name: 'occupancy',
+            label: 'Occupancy',
+            options: {
+                customBodyRender: (value) => formatTwoDecimals(value),
+            },
+        },
+        {
+            name: 'adr',
+            label: 'ADR (USD)',
+            options: {
+                customBodyRender: (value) => formatUSD(value),
+            },
+        },
+        {
+            name: 'revpar',
+            label: 'RevPAR (USD)',
+            options: {
+                customBodyRender: (value) => formatUSD(value),
+            },
+        },
+        {
+            name: 'total_revanue',
+            label: 'Total Revenue (USD)',
+            options: {
+                customBodyRender: (value) => formatUSD(value),
+            },
+        },
     ];
 
     const options = {
@@ -110,12 +180,24 @@ const STROCRReportPage = () => {
                     !selectedHotelId
                         ? '👉 Please select a hotel to view STROCR report.'
                         : loading
-                            ? '🔄 Loading STROCR report...'
-                            : error
-                                ? `❌ Error: ${error}`
-                                : '📭 No STROCR data found for the selected filters.',
+                        ? '🔄 Loading STROCR report...'
+                        : error
+                        ? `❌ Error: ${error}`
+                        : '📭 No STROCR data found for the selected filters.',
             },
         },
+    };
+
+    const renderDateValidation = () => {
+        if (!dateRange.start || !dateRange.end) return null;
+        if (!isDateRangeValid()) {
+            return (
+                <div className="text-danger small mt-1">
+                    Start date must be before or equal to end date.
+                </div>
+            );
+        }
+        return null;
     };
 
     return (
@@ -123,7 +205,6 @@ const STROCRReportPage = () => {
             <ToastContainer position="top-right" autoClose={5000} />
             <div className="mainbody">
                 <div className="container-fluid">
-
                     {/* Breadcrumb */}
                     <div className="row breadcrumbrow">
                         <div className="col-md-12">
@@ -131,8 +212,12 @@ const STROCRReportPage = () => {
                                 <h2>STR/OCR Report</h2>
                                 <nav aria-label="breadcrumb">
                                     <ol className="breadcrumb">
-                                        <li className="breadcrumb-item"><Link to="">Home</Link></li>
-                                        <li className="breadcrumb-item active" aria-current="page">STROCR Report</li>
+                                        <li className="breadcrumb-item">
+                                            <Link to="">Home</Link>
+                                        </li>
+                                        <li className="breadcrumb-item active" aria-current="page">
+                                            STROCR Report
+                                        </li>
                                     </ol>
                                 </nav>
                             </div>
@@ -152,6 +237,7 @@ const STROCRReportPage = () => {
                                                     className="form-select form-control"
                                                     onChange={handleHotelChange}
                                                     value={selectedHotelId}
+                                                    disabled={loading}
                                                 >
                                                     <option value="">Select Hotel</option>
                                                     {hotels.map((hotel) => (
@@ -170,20 +256,19 @@ const STROCRReportPage = () => {
                                                         type="date"
                                                         className="form-control"
                                                         value={dateRange.start}
-                                                        onChange={(e) =>
-                                                            setDateRange((prev) => ({ ...prev, start: e.target.value }))
-                                                        }
+                                                        onChange={handleDateChange('start')}
+                                                        disabled={loading}
                                                     />
                                                     <span>-</span>
                                                     <input
                                                         type="date"
                                                         className="form-control"
                                                         value={dateRange.end}
-                                                        onChange={(e) =>
-                                                            setDateRange((prev) => ({ ...prev, end: e.target.value }))
-                                                        }
+                                                        onChange={handleDateChange('end')}
+                                                        disabled={loading}
                                                     />
                                                 </div>
+                                                {renderDateValidation()}
                                             </div>
                                         </div>
                                     </div>
