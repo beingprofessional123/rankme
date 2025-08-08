@@ -2076,3 +2076,71 @@ table .badge-success, table .badge-primary, table .badge-warning, table .badge-d
 
 .position-relative {
   position: relative; }
+
+
+  .support-ticket-chat-container {
+    height: 600px; /* Adjust height as needed */
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-thread {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+}
+
+.chat-message {
+    margin-bottom: 10px;
+    display: flex;
+    width: 100%;
+}
+
+.user-message {
+    justify-content: flex-end;
+}
+
+.admin-message {
+    justify-content: flex-start;
+}
+
+.chat-bubble {
+    padding: 10px 15px;
+    border-radius: 20px;
+    max-width: 70%; /* Prevents messages from taking up the full width */
+    word-wrap: break-word;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.user-message .chat-bubble {
+    background-color: #dcf8c6; /* Light green for user messages */
+    color: #000;
+    border-bottom-right-radius: 0;
+}
+
+.admin-message .chat-bubble {
+    background-color: #f1f0f0; /* Light gray for admin messages */
+    color: #000;
+    border-bottom-left-radius: 0;
+}
+
+.message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.message-time {
+    font-size: 0.75rem;
+    color: #888;
+}
+
+.attachment-link {
+    display: block;
+    margin-top: 5px;
+    color: #007bff;
+    text-decoration: underline;
+}

@@ -12,6 +12,8 @@ import PlanManagementCreate from '../pages/PlanManagement/create';
 import PlanManagementEdit from '../pages/PlanManagement/edit';
 import PlanManagementView from '../pages/PlanManagement/view';
 import TransactionManagementIndex from '../pages/Transaction/Index';
+import SupportTicketManagementIndex from '../pages/SupportTicketManagement/Index';
+import SupportTicketManagementEdit from '../pages/SupportTicketManagement/edit';
 import Script from '../layouts/Script';
   
 
@@ -35,13 +37,18 @@ const AdminAppRoutes = () => {
         <Route path="/admin/user-management/create" element={<ProtectedRoute><AdminLayout><UserManagementCreate /></AdminLayout></ProtectedRoute> }/>
         <Route path="/admin/user-management/:id/edit" element={<ProtectedRoute><AdminLayout><UserManagementEdit /></AdminLayout></ProtectedRoute> }/>
         <Route path="/admin/user-management/:id" element={<ProtectedRoute><AdminLayout><UserManagementView /></AdminLayout></ProtectedRoute> }/>
-         {/* Plan Management */}
+        {/* Plan Management */}
         <Route path="/admin/plan-management" element={<ProtectedRoute><AdminLayout><PlanManagementIndex /></AdminLayout></ProtectedRoute> }/>
         <Route path="/admin/plan-management/create" element={<ProtectedRoute><AdminLayout><PlanManagementCreate /></AdminLayout></ProtectedRoute> }/>
         <Route path="/admin/plan-management/:id/edit" element={<ProtectedRoute><AdminLayout><PlanManagementEdit /></AdminLayout></ProtectedRoute> }/>
         <Route path="/admin/plan-management/:id" element={<ProtectedRoute><AdminLayout><PlanManagementView /></AdminLayout></ProtectedRoute> }/>
         
         <Route path="/admin/transaction-management" element={<ProtectedRoute><AdminLayout><TransactionManagementIndex /></AdminLayout></ProtectedRoute> }/>
+
+        {/* Plan Management */}
+        <Route path="/admin/support-ticket-management" element={<ProtectedRoute><AdminLayout><SupportTicketManagementIndex /></AdminLayout></ProtectedRoute> }/>
+        <Route path="/admin/support-ticket-management/:id/edit" element={<ProtectedRoute><AdminLayout><SupportTicketManagementEdit /></AdminLayout></ProtectedRoute> }/>
+
      
       </Routes>
     </Router>

@@ -12,11 +12,13 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const competitorDataRoutes = require('./routes/competitorDataRoutes');
 const strocrReportRoutes = require('./routes/strocrReportRoutes');
+const supportTicketRoutes = require('./routes/supportTicketRoute');
 
 
 const adminUserRoutes = require('./routes/admin/userRoutes');
 const adminPlanRoutes = require('./routes/admin/planRoutes');
 const adminTransactionRoutes = require('./routes/admin/transactionRoutes');
+const adminSupportTicketRoutes = require('./routes/admin/supportTicketRoutes');
 
 const path = require('path');
 
@@ -42,11 +44,13 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/competitorData', competitorDataRoutes);
 app.use('/api/strocrReport', strocrReportRoutes);
+app.use('/api', supportTicketRoutes);
 
 // Admin Routes
 app.use('/api/admin', adminUserRoutes);
 app.use('/api/admin', adminPlanRoutes);
 app.use('/api/admin/transaction', adminTransactionRoutes);
+app.use('/api/admin/support-ticket', adminSupportTicketRoutes);
 
 // Import the images
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
