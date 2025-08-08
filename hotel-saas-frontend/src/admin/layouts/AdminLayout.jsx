@@ -15,7 +15,7 @@ const AdminLayout = ({ children }) => {
         <div className="search-overlay"></div>
 
         <Sidebar />
-        <div id="content" class="main-content">
+        <div id="content" className="main-content">
            {children} {/* Will render nested route content */}
        
         <Footer />  

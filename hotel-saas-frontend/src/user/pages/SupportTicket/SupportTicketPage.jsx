@@ -1,21 +1,12 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import { Link } from 'react-router-dom';
 import MUIDataTable from 'mui-datatables';
 import { PermissionContext } from '../../UserPermission';
+import axios from 'axios';
+import Swal from 'sweetalert2';
 
-const initialTickets = [
-    { id: 1, subject: 'Lorem Ipsum is', category: 'Lorem Ipsum', date: '22/05/2015', status: 'Active' },
-    { id: 2, subject: 'Lorem Ipsum is', category: 'Lorem Ipsum', date: '21/05/2015', status: 'Inactive' },
-    { id: 3, subject: 'Lorem Ipsum is', category: 'Lorem Ipsum', date: '20/05/2015', status: 'Active' },
-    { id: 4, subject: 'Lorem Ipsum is', category: 'Lorem Ipsum', date: '19/05/2015', status: 'Inactive' },
-    { id: 5, subject: 'Lorem Ipsum is', category: 'Lorem Ipsum', date: '18/05/2015', status: 'Active' },
-    { id: 6, subject: 'Lorem Ipsum is', category: 'Lorem Ipsum', date: '17/05/2015', status: 'Active' },
-    { id: 7, subject: 'Lorem Ipsum is', category: 'Lorem Ipsum', date: '16/05/2015', status: 'Inactive' },
-    { id: 8, subject: 'Lorem Ipsum is', category: 'Lorem Ipsum', date: '15/05/2015', status: 'Inactive' },
-    { id: 9, subject: 'Lorem Ipsum is', category: 'Lorem Ipsum', date: '14/05/2015', status: 'Active' },
-    { id: 10, subject: 'Lorem Ipsum is', category: 'Lorem Ipsum', date: '13/05/2015', status: 'Active' }
-];
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000';
 
 const SupportTicketPage = () => {
     const { permissions, role } = useContext(PermissionContext);
@@ -24,31 +15,82 @@ const SupportTicketPage = () => {
         if (isCompanyAdmin) return true;
         return permissions?.support_ticket?.[action] === true;
     };
-    const [tickets, setTickets] = useState(initialTickets);
+
+    const [tickets, setTickets] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [selectedTicket, setSelectedTicket] = useState(null);
+
+    // Function to fetch tickets from the API
+    const fetchTickets = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`${API_BASE_URL}/api/support-ticket/list`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            // Assuming your backend returns data with a `createdAt` field
+            const formattedTickets = response.data.tickets.map(ticket => ({
+                ...ticket,
+                date: new Date(ticket.createdAt).toLocaleDateString(),
+                status: ticket.status.charAt(0).toUpperCase() + ticket.status.slice(1)
+            }));
+
+            setTickets(formattedTickets);
+        } catch (err) {
+            setError('Failed to fetch support tickets. Please try again.');
+            console.error('API Error:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Use useEffect to fetch tickets on component mount
+    useEffect(() => {
+        fetchTickets();
+    }, []);
 
     const handleDelete = (ticket) => {
         setSelectedTicket(ticket);
     };
 
-    const confirmDelete = () => {
+    // Modified confirmDelete to call the API directly
+    const confirmDelete = async () => {
         if (selectedTicket) {
-            setTickets(prev => prev.filter(t => t.id !== selectedTicket.id));
-            setSelectedTicket(null);
+            try {
+                const token = localStorage.getItem('token');
+                await axios.delete(`${API_BASE_URL}/api/support-ticket/delete/${selectedTicket.id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                // After successful API call, update the local state
+                setTickets(prev => prev.filter(t => t.id !== selectedTicket.id));
+                Swal.fire('Deleted!', 'The support ticket has been deleted.', 'success');
+            } catch (err) {
+                Swal.fire('Error!', 'Failed to delete the ticket.', 'error');
+                console.error('API Error:', err);
+            } finally {
+                setSelectedTicket(null);
+            }
         }
     };
 
     const columns = [
-        { name: 'id', label: 'ID' },
+        // ADDED: New column for the ticketNumber
+        { name: 'ticketNumber', label: 'Ticket ID' },
         { name: 'subject', label: 'Subject' },
         { name: 'category', label: 'Category' },
         { name: 'date', label: 'Opened Date' },
         {
-            name: 'status',
-            label: 'Status',
-            options: {
+            name: 'status', label: 'Status', options: {
                 customBodyRender: value => (
-                    <span className={`status-design ${value === 'Active' ? 'status-g' : 'status-r'}`}>
+                    <span className={`status-design ${value === 'Open' ? 'status-g' : 'status-r'}`}>
                         {value}
                     </span>
                 )
@@ -63,11 +105,6 @@ const SupportTicketPage = () => {
                     const rowData = tickets[rowIndex];
                     return (
                         <div className="tdaction">
-                            {canAccess('view') && (
-                                <Link to={`/support-tickets-view/${value}`} state={{ data: rowData }}>
-                                    <img src={`/user/images/view.svg`} className="img-fluid" alt="view" />
-                                </Link>
-                            )}
                             {canAccess('edit') && (
                                 <Link to={`/support-tickets-edit/${value}`} state={{ data: rowData }}>
                                     <img src={`/user/images/edit.svg`} className="img-fluid" alt="edit" />
@@ -129,18 +166,27 @@ const SupportTicketPage = () => {
                             </div>
                         </div>
                     </div>
-
                     <div className="white-bg">
-                        <div className="tabledesign">
-                            <div className="table-responsive">
-                                <MUIDataTable
-                                    title="Support Tickets"
-                                    data={tickets}
-                                    columns={columns}
-                                    options={options}
-                                />
+                        {loading ? (
+                            <div className="text-center p-5">
+                                <p>Loading tickets...</p>
                             </div>
-                        </div>
+                        ) : error ? (
+                            <div className="text-center p-5 text-danger">
+                                <p>{error}</p>
+                            </div>
+                        ) : (
+                            <div className="tabledesign">
+                                <div className="table-responsive">
+                                    <MUIDataTable
+                                        title="Support Tickets"
+                                        data={tickets}
+                                        columns={columns}
+                                        options={options}
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 

@@ -1,227 +1,364 @@
-import React, { useEffect, useState, useContext } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useContext, useRef } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import { PermissionContext } from '../../UserPermission';
+import axios from 'axios';
+import Swal from 'sweetalert2';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000';
 
-const SupportTicketEditPage = () => {
-  const { permissions, role } = useContext(PermissionContext);
-  const isCompanyAdmin = role?.name === 'company_admin';
-  const canAccess = (action) => {
-    if (isCompanyAdmin) return true;
-    return permissions?.support_ticket?.[action] === true;
-  };
-  const location = useLocation();
-  const navigate = useNavigate();
-  const ticket = location.state?.data;
+// Define the static categories here
+const CATEGORY_OPTIONS = [
+    'Technical Issue',
+    'Feature Request',
+    'Billing Inquiry',
+    'General Question',
+    'Bug Report',
+    'Access Problem'
+];
 
-  const [formData, setFormData] = useState({
-    subject: '',
-    category: '',
-    date: '',
-    status: 'Active',
-    description: '',
-    file: null,
-  });
+const loggedInUser = JSON.parse(localStorage.getItem('user'));
+const SupportTicketUnifiedPage = () => {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const { permissions, role, user } = useContext(PermissionContext);
+    const isCompanyAdmin = role?.name === 'company_admin';
+    const canEditTicket = (action) => {
+        if (isCompanyAdmin) return true;
+        return permissions?.support_ticket?.[action] === true;
+    };
 
-  useEffect(() => {
-    if (ticket) {
-      const parseDate = (dateStr) => {
-        if (!dateStr) return '';
-        const parts = dateStr.split('/');
-        if (parts.length !== 3) return '';
-        const [dd, mm, yyyy] = parts;
-        return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
-      };
+    const [ticket, setTicket] = useState(null);
+    const [formData, setFormData] = useState({
+        subject: '',
+        category: '',
+        description: '',
+        status: '',
+        createdAt: '',
+    });
+    const [messageData, setMessageData] = useState({
+        message: '',
+        file: null,
+    });
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const [messageSending, setMessageSending] = useState(false);
+    const [error, setError] = useState(null);
 
-      setFormData({
-        subject: ticket.subject || '',
-        category: ticket.category || '',
-        date: ticket.date ? parseDate(ticket.date) : '',
-        status: ticket.status || 'Active',
-        description: ticket.description || '',
-        file: null, // Can't prefill file inputs for security reasons
-      });
+    const chatboxRef = useRef(null);
+
+    // Function to fetch the existing ticket data
+    const fetchTicket = async () => {
+        if (!id) {
+            setLoading(false);
+            setError('No ticket ID provided.');
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`${API_BASE_URL}/api/support-ticket/${id}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const ticketData = response.data.ticket;
+            setTicket(ticketData);
+
+            setFormData({
+                subject: ticketData.subject || '',
+                category: ticketData.category || '',
+                description: ticketData.description || '',
+                status: ticketData.status || 'Open',
+                createdAt: ticketData.createdAt ? new Date(ticketData.createdAt).toISOString().split('T')[0] : '',
+            });
+        } catch (err) {
+            console.error("Failed to fetch ticket details:", err);
+            setError('Failed to load ticket details.');
+            setTicket(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchTicket();
+    }, [id]);
+
+    useEffect(() => {
+        if (chatboxRef.current) {
+            chatboxRef.current.scrollTop = chatboxRef.current.scrollHeight;
+        }
+    }, [ticket]);
+
+    const handleFormChange = (e) => {
+        const { name, value } = e.target;
+        setFormData((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+    };
+
+    const handleFormSubmit = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+        setError(null);
+
+        try {
+            const token = localStorage.getItem('token');
+            await axios.put(`${API_BASE_URL}/api/support-ticket/${id}`, formData, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            Swal.fire('Success!', 'Ticket updated successfully.', 'success');
+            fetchTicket(); // Refresh the ticket data to reflect changes
+        } catch (err) {
+            console.error('Failed to update ticket:', err);
+            const errorMessage = err.response?.data?.message || 'An unexpected error occurred. Please try again.';
+            Swal.fire('Error!', errorMessage, 'error');
+            setError(errorMessage);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+    
+    const handleMessageChange = (e) => {
+        const { name, value, files } = e.target;
+        if (name === 'file') {
+            setMessageData(prev => ({ ...prev, file: files[0] }));
+        } else {
+            setMessageData(prev => ({ ...prev, [name]: value }));
+        }
+    };
+
+    const handleMessageSubmit = async (e) => {
+        e.preventDefault();
+        setMessageSending(true);
+
+        const data = new FormData();
+        data.append('message', messageData.message);
+        if (messageData.file) {
+            data.append('threadFile', messageData.file);
+        }
+        
+        try {
+            const token = localStorage.getItem('token');
+            await axios.post(`${API_BASE_URL}/api/support-ticket/${id}/message`, data, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            Swal.fire('Success!', 'Message sent successfully.', 'success');
+            setMessageData({ message: '', file: null });
+            fetchTicket(); // Refresh the ticket to show the new message
+        } catch (err) {
+            console.error('Failed to send message:', err);
+            const errorMessage = err.response?.data?.message || 'An unexpected error occurred. Please try again.';
+            Swal.fire('Error!', errorMessage, 'error');
+        } finally {
+            setMessageSending(false);
+        }
+    };
+
+    const getInitials = (name) => {
+        if (!name) return '??';
+        const parts = name.split(' ');
+        if (parts.length > 1) {
+            return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+        }
+        return parts[0][0].toUpperCase();
+    };
+
+    if (loading) {
+        return (
+            <DashboardLayout>
+                <div className="mainbody">
+                    <div className="container-fluid">
+                        <div className="text-center p-5">
+                            <p>Loading ticket details...</p>
+                        </div>
+                    </div>
+                </div>
+            </DashboardLayout>
+        );
     }
-  }, [ticket]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+    if (error || !ticket) {
+        return (
+            <DashboardLayout>
+                <div className="mainbody">
+                    <div className="container-fluid">
+                        <div className="alert alert-danger mt-5">
+                            {error || 'No ticket data found.'} Please go back to the{' '}
+                            <Link to="/support-tickets">Support Tickets</Link> page.
+                        </div>
+                    </div>
+                </div>
+            </DashboardLayout>
+        );
+    }
+    
+    // Check if the ticket is closed
+    const isTicketClosed = ticket.status === 'Closed';
 
-  const handleFileChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      file: e.target.files[0] || null,
-    }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log('Updated Ticket:', formData);
-    // TODO: Submit update via API
-    navigate('/support-tickets');
-  };
-
-  if (!ticket) {
     return (
-      <DashboardLayout>
-        <div className="mainbody">
-          <div className="container-fluid">
-            <div className="alert alert-danger mt-5">
-              No ticket data found. Please go back to the{' '}
-              <a href="/support-tickets">Support Tickets</a> page.
+        <DashboardLayout>
+            <div className="mainbody">
+                <div className="container-fluid">
+                    <div className="row breadcrumbrow">
+                        <div className="col-md-12">
+                            <div className="breadcrumb-sec">
+                                <h2>Edit Support Ticket</h2>
+                                <nav aria-label="breadcrumb">
+                                    <ol className="breadcrumb">
+                                        <li className="breadcrumb-item">
+                                            <Link to="/support-tickets">Home</Link>
+                                        </li>
+                                        <li className="breadcrumb-item active" aria-current="page">
+                                            Edit Ticket
+                                        </li>
+                                    </ol>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                    {/* --- TICKET DETAILS SECTION --- */}
+                    <div className="white-bg p-4 mb-5">
+                        <div className="form-design">
+                            <h4>Ticket Details</h4>
+                            <div className="row">
+                                {/* Subject */}
+                                <div className="col-md-6">
+                                    <div className="form-group">
+                                        <label className="form-label">Subject</label>
+                                        <p className="form-control-static">{ticket.subject}</p>
+                                    </div>
+                                </div>
+                                {/* Category */}
+                                <div className="col-md-6">
+                                    <div className="form-group">
+                                        <label className="form-label">Category</label>
+                                        <p className="form-control-static">{ticket.category}</p>
+                                    </div>
+                                </div>
+                                {/* Date */}
+                                <div className="col-md-6">
+                                    <div className="form-group">
+                                        <label className="form-label">Date</label>
+                                        <p className="form-control-static">
+                                            {ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString() : ''}
+                                        </p>
+                                    </div>
+                                </div>
+                                {/* Status */}
+                                <div className="col-md-6">
+                                    <div className="form-group">
+                                        <label className="form-label">Status</label>
+                                        <p className="form-control-static">{ticket.status}</p>
+                                    </div>
+                                </div>
+                                {/* Description */}
+                                <div className="col-md-12">
+                                    <div className="form-group">
+                                        <label className="form-label">Description</label>
+                                        <p className="form-control-static">{ticket.description}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* --- CHAT SYSTEM SECTION --- */}
+                    <div className="white-bg">
+                        <div className="supportchat">
+                            <div className="supportchat-heading">
+                                <h2>Chat</h2>
+                            </div>
+                            <div className="chatbox" ref={chatboxRef}>
+                                <ul className="chatboxul">
+                                    {ticket.messages && ticket.messages.length > 0 ? (
+                                        ticket.messages.map(message => {
+                                            const isCurrentUser = user && message.sender.id === user.id;
+                                            const senderData = isCurrentUser ? loggedInUser : message.sender;
+                                            const senderName = message.sender.name || 'User';
+                                            const senderInitials = getInitials(senderName);
+                                            const formattedTime = new Date(message.createdAt).toLocaleString();
+                                            
+                                            // Avatar logic
+                                            let avatarContent;
+                                            const avatarUrl = senderData?.company?.logo_url || senderData?.profile_image;
+
+                                            if (avatarUrl) {
+                                                avatarContent = <img src={`${avatarUrl}`} alt={`${senderName} avatar`} />;
+                                            } else {
+                                                avatarContent = <span>{senderInitials}</span>;
+                                            }
+                                            return (
+                                                <li key={message._id} className={`chatbox-li ${isCurrentUser ? 'chatbox-li-right' : ''}`}>
+                                                    <div className="chatbox-admin">
+                                                        {avatarContent}
+                                                    </div>
+                                                    <div className="chatbox-message">
+                                                        <p>{message.message}</p>
+                                                        {message.fileAttachmentPath && (
+                                                            <a href={`${API_BASE_URL}${message.fileAttachmentPath}`} target="_blank" rel="noopener noreferrer" className="attachment-link">
+                                                                <i className="la la-paperclip"></i> Attachment
+                                                            </a>
+                                                        )}
+                                                        <span className="chat-timestamp">{formattedTime}</span>
+                                                    </div>
+                                                </li>
+                                            );
+                                        })
+                                    ) : (
+                                        <li className="text-center text-muted p-3">No messages in this thread yet.</li>
+                                    )}
+                                </ul>
+                            </div>
+                            <div className="textareaboxfix">
+                                {isTicketClosed ? (
+                                    <div className="alert alert-warning text-center m-0">
+                                        This ticket is closed. No further replies can be sent.
+                                    </div>
+                                ) : (
+                                    <div className="textareabox">
+                                        <form onSubmit={handleMessageSubmit} className="input-group">
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                placeholder="Type a message.."
+                                                name="message"
+                                                value={messageData.message}
+                                                onChange={handleMessageChange}
+                                                required
+                                            />
+                                            <label className="btn btn-danger">
+                                                <input
+                                                    type="file"
+                                                    name="file"
+                                                    onChange={handleMessageChange}
+                                                    style={{ display: 'none' }}
+                                                />
+                                                <i className="la la-paperclip"></i>
+                                            </label>
+                                            <button className="btn btn-primary" type="submit" disabled={messageSending}>
+                                                <i className="la la-arrow-up"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
-      </DashboardLayout>
+        </DashboardLayout>
     );
-  }
-
-  return (
-    <DashboardLayout>
-      <div className="mainbody">
-        <div className="container-fluid">
-          <div className="row breadcrumbrow">
-            <div className="col-md-12">
-              <div className="breadcrumb-sec">
-                <h2>Edit Support Ticket</h2>
-                <nav aria-label="breadcrumb">
-                  <ol className="breadcrumb">
-                    <li className="breadcrumb-item">
-                      <a href="/support-tickets">Home</a>
-                    </li>
-                    <li className="breadcrumb-item active" aria-current="page">
-                      Edit Ticket
-                    </li>
-                  </ol>
-                </nav>
-              </div>
-            </div>
-          </div>
-
-          <div className="white-bg">
-            <div className="form-design">
-              <form onSubmit={handleSubmit}>
-                <div className="row">
-
-                  <div className="col-md-6">
-                    <div className="form-group">
-                      <label className="form-label">Subject</label>
-                      <input
-                        type="text"
-                        name="subject"
-                        className="form-control"
-                        value={formData.subject}
-                        onChange={handleChange}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="col-md-6">
-                    <div className="form-group">
-                      <label className="form-label">Category</label>
-                      <input
-                        type="text"
-                        name="category"
-                        className="form-control"
-                        value={formData.category}
-                        onChange={handleChange}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="col-md-6">
-                    <div className="form-group">
-                      <label className="form-label">Date</label>
-                      <input
-                        type="date"
-                        name="date"
-                        className="form-control"
-                        value={formData.date}
-                        onChange={handleChange}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="col-md-6">
-                    <div className="form-group">
-                      <label className="form-label">Status</label>
-                      <select
-                        name="status"
-                        className="form-select form-control"
-                        value={formData.status}
-                        onChange={handleChange}
-                      >
-                        <option value="Active">Active</option>
-                        <option value="Pending">Pending</option>
-                        <option value="Resolved">Resolved</option>
-                        <option value="Closed">Closed</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* File Upload */}
-                  <div className="col-md-12">
-                    <div className="form-group">
-                      <label className="form-label">File Upload</label>
-                      <div className="fileupload">
-                        <input
-                          type="file"
-                          className="form-control d-control"
-                          id="file-1"
-                          onChange={handleFileChange}
-                        />
-                        <label className="fileupload-label" htmlFor="file-1">
-                          <img
-                            src={`/user/images/uploadfile.svg`}
-                            className="img-fluid"
-                            alt="upload icon"
-                          />
-                        </label>
-                      </div>
-                      {formData.file && (
-                        <small>Selected file: {formData.file.name}</small>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Description */}
-                  <div className="col-md-12">
-                    <div className="form-group">
-                      <label className="form-label">Description</label>
-                      <textarea
-                        className="form-control"
-                        rows={6}
-                        name="description"
-                        value={formData.description}
-                        onChange={handleChange}
-                        placeholder="Description"
-                      ></textarea>
-                    </div>
-                  </div>
-
-                </div>
-
-                <div className="addentry-btn">
-                  {canAccess('edit') && (
-                    <button type="submit" className="btn btn-info">
-                      Update
-                    </button>
-                  )}
-                </div>
-              </form>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </DashboardLayout>
-  );
 };
 
-export default SupportTicketEditPage;
+export default SupportTicketUnifiedPage;
