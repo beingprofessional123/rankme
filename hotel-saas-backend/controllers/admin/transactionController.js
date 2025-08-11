@@ -1,4 +1,4 @@
-const { Payment, User, SubscriptionPlan } = require('../../models');
+const { Payment, User, SubscriptionPlan, Country } = require('../../models');
 
 const transactionController = {
   // GET /api/admin/transaction/list
@@ -8,8 +8,16 @@ const transactionController = {
         include: [
           {
             model: User,
-            attributes: ['id', 'name', 'email', 'phone']
+            attributes: ['id', 'name', 'email', 'phone'],
+            include: [
+              {
+                model: Country,
+                as: 'Country',
+                attributes: ['phonecode']
+              }
+            ]
           },
+
           {
             model: SubscriptionPlan,
             attributes: ['id', 'name', 'price']
@@ -22,7 +30,7 @@ const transactionController = {
         id: txn.id,
         userName: txn.User?.name || 'N/A',
         userEmail: txn.User?.email || 'N/A',
-        userPhone: txn.User?.phone || 'N/A',
+        userPhone: txn.User?.Country?.phonecode ? `${txn.User.Country.phonecode} ${txn.User.phone || ''}` : txn.User?.phone || 'N/A',
         subscriptionName: txn.SubscriptionPlan?.name || 'N/A',
         subscriptionPrice: txn.SubscriptionPlan?.price || 'N/A',
         amount: txn.amount,

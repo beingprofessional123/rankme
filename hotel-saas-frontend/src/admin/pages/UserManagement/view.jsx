@@ -65,7 +65,7 @@ const UserManagementView = () => {
                   <img
                     src={user.profile || '/admin/assets/img/90x90.jpg'}
                     alt="profile"
-                    className="rounded-circle mb-3"
+                    className="rounded-circle"
                     width="90"
                     height="90"
                   />
@@ -74,23 +74,23 @@ const UserManagementView = () => {
 
                 <div className="user-info-list">
                   <ul className="contacts-block list-unstyled">
-                    <li><strong>Company:</strong> {user.Company?.name || 'N/A'}</li>
-                    <li><strong>Email:</strong> {user.email}</li>
+                    <li><strong>Company:</strong> <span>{user.Company?.name || 'N/A'}</span></li>
+                    <li><strong>Email:</strong> <span>{user.email}</span></li>
                     <li>
                       <strong>Phone:</strong>{' '}
-                      {user.Country?.phonecode ? `${user.Country.phonecode} ` : ''}
-                      {user.phone || 'N/A'}
+                      <span>{user.Country?.phonecode ? `${user.Country.phonecode} ` : ''}
+                      {user.phone || 'N/A'}</span>
                     </li>
                      <li><strong>Role:</strong> 
-                      {user.Role?.name?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A'}
+                     <span>{user.Role?.name?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A'}</span>
                     </li>
                     <li><strong>Status:</strong> 
                       {user.is_active
                         ? <span className="badge bg-success ml-2">Active</span>
                         : <span className="badge bg-danger ml-2">Inactive</span>}
                     </li>
-                    <li><strong>Created At:</strong> {new Date(user.createdAt).toLocaleString()}</li>
-                    <li><strong>Updated At:</strong> {new Date(user.updatedAt).toLocaleString()}</li>
+                    <li><strong>Created At:</strong> <span>{new Date(user.createdAt).toLocaleString()}</span></li>
+                    <li><strong>Updated At:</strong> <span>{new Date(user.updatedAt).toLocaleString()}</span></li>
                   </ul>
                 </div>
               </div>

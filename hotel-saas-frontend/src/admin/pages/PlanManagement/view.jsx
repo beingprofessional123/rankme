@@ -26,7 +26,7 @@ const PlanManagementView = () => {
 
       if (response.data.status_code === 200) {
         setPlan(response.data.results);
-        toast.success('Plan details fetched successfully!');
+        // toast.success('Plan details fetched successfully!');
       } else {
         toast.error('Failed to fetch plan details');
       }
@@ -82,22 +82,35 @@ const PlanManagementView = () => {
 
                 <div className="user-info-list">
                   <ul className="contacts-block list-unstyled">
-                    <li><strong>Name:</strong> {plan.name}</li>
-                    <li><strong>Price:</strong> ₹{plan.price}</li>
-                    <li><strong>Billing Period:</strong> {plan.billing_period}</li>
-                    <li><strong>Created At:</strong> {new Date(plan.createdAt).toLocaleString()}</li>
-                    <li><strong>Updated At:</strong> {new Date(plan.updatedAt).toLocaleString()}</li>
-                    <li><strong>Plan ID:</strong> {plan.id}</li>
-                    <li>
-                      <strong>Features:</strong>
-                      <ul className="mt-2">
-                        {plan.features && Object.entries(plan.features).map(([key, value], idx) => (
-                          <li key={idx}>
-                            <b>{key}:</b> {value}
-                          </li>
-                        ))}
-                      </ul>
-                    </li>
+                    {/* <li><strong>Name:</strong> <span>{plan.name}</span></li> */}
+                    <li><strong>Price:</strong> <span>₹{plan.price}</span></li>
+                    <li><strong>Billing Period:</strong> <span>{plan.billing_period}</span></li>
+                    <li><strong>Created At:</strong> <span>{new Date(plan.createdAt).toLocaleString()}</span></li>
+                    <li><strong>Updated At:</strong> <span>{new Date(plan.updatedAt).toLocaleString()}</span></li>
+                    <li><strong>Features:</strong></li>
+                    <hr style={{
+                      borderTop: '1px solid #18247f',
+                      marginTop: '0px',
+                      marginBottom: '6px'
+                    }} />
+                    {plan.features && Object.entries(plan.features).map(([key, value], idx) => (
+                      <li key={idx}>
+                        <strong>{key}</strong>{' '}
+                        <span>
+                          {typeof value === 'boolean' ? (
+                            <img
+                              src={value ? '/user/images/check.svg' : '/user/images/close.svg'}
+                              className="img-fluid"
+                              alt={value ? 'Available' : 'Not Available'}
+                              style={{ width: '16px', height: '16px' }}
+                            />
+                          ) : (
+                            value
+                          )}
+                        </span>
+                      </li>
+                    ))}
+
                   </ul>
                 </div>
 
