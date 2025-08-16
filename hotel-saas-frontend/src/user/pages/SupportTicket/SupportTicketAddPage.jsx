@@ -184,11 +184,6 @@ const SupportTicketAddPage = () => {
                                                         className="img-fluid"
                                                         alt="upload icon"
                                                     />
-                                                    {formData.file ? (
-                                                        <span className="file-name ms-2">{formData.file.name}</span>
-                                                    ) : (
-                                                        <span className="ms-2">Choose file</span>
-                                                    )}
                                                 </label>
                                             </div>
                                         </div>
