@@ -8,6 +8,7 @@ const isAdmin = window.location.pathname.startsWith('/admin');
 const cssLinks = isAdmin
   ? [
       'https://fonts.googleapis.com/css?family=Quicksand:400,500,600,700&display=swap',
+      'https://maxst.icons8.com/vue-static/landings/line-awesome/line-awesome/1.3.0/css/line-awesome.min.css',
       '/admin/bootstrap/css/bootstrap.min.css',
       '/admin/assets/css/plugins.css',
       '/admin/assets/css/structure.css',
