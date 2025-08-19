@@ -20,7 +20,6 @@ const ForecastPage = () => {
   const [selectedHotelId, setSelectedHotelId] = useState(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-
   const [forecastData, setForecastData] = useState([]);
   const [occupancyChartData, setOccupancyChartData] = useState({});
   const [revparChartData, setRevparChartData] = useState({});
@@ -37,7 +36,6 @@ const ForecastPage = () => {
       try {
         const token = localStorage.getItem('token');
         const user = JSON.parse(localStorage.getItem('user'));
-
         const res = await fetch(
           `${process.env.REACT_APP_API_BASE_URL}/api/hotels/list?company_id=${user.company_id}`,
           {
@@ -48,7 +46,6 @@ const ForecastPage = () => {
           }
         );
         const data = await res.json();
-
         if (data && Array.isArray(data.hotels)) {
           setHotels(data.hotels);
         } else {
@@ -59,7 +56,6 @@ const ForecastPage = () => {
         setHotels([]);
       }
     };
-
     fetchHotels();
   }, []);
 
@@ -67,7 +63,6 @@ const ForecastPage = () => {
   const handleStartDateChange = (e) => {
     const start = e.target.value;
     setStartDate(start);
-
     if (start) {
       const startObj = new Date(start);
       startObj.setDate(startObj.getDate() + 14);
@@ -83,7 +78,6 @@ const ForecastPage = () => {
     if (!forecasts || forecasts.length === 0) {
       return {};
     }
-
     const labels = forecasts.map((f) => f.date);
     let dataValues;
     switch (type) {
@@ -99,7 +93,6 @@ const ForecastPage = () => {
       default:
         dataValues = [];
     }
-
     return {
       labels,
       datasets: [
@@ -126,17 +119,14 @@ const ForecastPage = () => {
         setLoading(false);
         return;
       }
-
       setLoading(true);
       setError(null);
-
       try {
         const token = localStorage.getItem('token');
         const queryParams = new URLSearchParams();
         queryParams.append('hotelId', selectedHotelId);
         queryParams.append('startDate', startDate);
         queryParams.append('endDate', endDate);
-
         const res = await fetch(
           `${process.env.REACT_APP_API_BASE_URL}/api/forecast/list?${queryParams.toString()}`,
           {
@@ -146,13 +136,10 @@ const ForecastPage = () => {
             },
           }
         );
-
         if (!res.ok) {
           throw new Error('Failed to fetch forecast data.');
         }
-
         const data = await res.json();
-
         setForecastData(data);
         setOccupancyChartData(generateChartData(data, 'occupancy'));
         setRevparChartData(generateChartData(data, 'revpar'));
@@ -164,7 +151,6 @@ const ForecastPage = () => {
         setLoading(false);
       }
     };
-
     fetchForecastData();
   }, [selectedHotelId, startDate, endDate]);
 
@@ -188,9 +174,12 @@ const ForecastPage = () => {
     );
   }
 
+  // UPDATED: Added ADR and RevPAR columns
   const columns = [
     { name: 'date', label: 'Date', options: { filter: false, sort: true } },
     { name: 'forecastedOccupancy', label: 'Forecasted Occupancy', options: { filter: false, sort: false } },
+    { name: 'forecastedADR', label: 'Forecasted ADR', options: { filter: false, sort: false } },
+    { name: 'forecastedRevPAR', label: 'Forecasted RevPAR', options: { filter: false, sort: false } },
   ];
 
   const options = {
