@@ -22,8 +22,7 @@ const ForecastPage = () => {
   const [endDate, setEndDate] = useState('');
   const [forecastData, setForecastData] = useState([]);
   const [occupancyChartData, setOccupancyChartData] = useState({});
-  const [revparChartData, setRevparChartData] = useState({});
-  const [adrChartData, setAdrChartData] = useState({});
+  const [rateChartData, setRateChartData] = useState({}); // Changed from revparChartData and adrChartData
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -84,11 +83,12 @@ const ForecastPage = () => {
       case 'occupancy':
         dataValues = forecasts.map((f) => parseFloat(f.forecastedOccupancy.replace('%', '')));
         break;
-      case 'adr':
-        dataValues = forecasts.map((f) => parseFloat(f.forecastedADR.replace('$', '')));
+      case 'rate': // Changed from adr
+        dataValues = forecasts.map((f) => parseFloat(f.forecastedRate.replace('$', ''))); // Changed from forecastedADR
         break;
       case 'revpar':
-        dataValues = forecasts.map((f) => parseFloat(f.forecastedRevPAR.replace('$', '')));
+        // No longer a chart for RevPAR, this case is not needed
+        dataValues = [];
         break;
       default:
         dataValues = [];
@@ -114,8 +114,7 @@ const ForecastPage = () => {
       if (!selectedHotelId || !startDate) {
         setForecastData([]);
         setOccupancyChartData({});
-        setRevparChartData({});
-        setAdrChartData({});
+        setRateChartData({});
         setLoading(false);
         return;
       }
@@ -142,8 +141,7 @@ const ForecastPage = () => {
         const data = await res.json();
         setForecastData(data);
         setOccupancyChartData(generateChartData(data, 'occupancy'));
-        setRevparChartData(generateChartData(data, 'revpar'));
-        setAdrChartData(generateChartData(data, 'adr'));
+        setRateChartData(generateChartData(data, 'rate')); // Changed from adrChartData
       } catch (err) {
         console.error('Error fetching forecast data:', err);
         setError(err);
@@ -174,12 +172,11 @@ const ForecastPage = () => {
     );
   }
 
-  // UPDATED: Added ADR and RevPAR columns
+  // UPDATED: Added Rate column and removed ADR/RevPAR
   const columns = [
     { name: 'date', label: 'Date', options: { filter: false, sort: true } },
     { name: 'forecastedOccupancy', label: 'Forecasted Occupancy', options: { filter: false, sort: false } },
-    { name: 'forecastedADR', label: 'Forecasted ADR', options: { filter: false, sort: false } },
-    { name: 'forecastedRevPAR', label: 'Forecasted RevPAR', options: { filter: false, sort: false } },
+    { name: 'forecastedRate', label: 'Forecasted Rate', options: { filter: false, sort: false } },
   ];
 
   const options = {
@@ -281,25 +278,12 @@ const ForecastPage = () => {
               </div>
               <div className="col-md-6">
                 <div className="canvas-heading">
-                  <h2>RevPAR</h2>
+                  <h2>Forecasted Rate</h2>
                 </div>
                 <div className="canvasbody">
-                  {revparChartData.labels && revparChartData.labels.length > 0 && (
+                  {rateChartData.labels && rateChartData.labels.length > 0 && (
                     <Line
-                      data={revparChartData}
-                      options={{ responsive: true, plugins: { legend: { position: 'top' } } }}
-                    />
-                  )}
-                </div>
-              </div>
-              <div className="col-md-12">
-                <div className="canvas-heading">
-                  <h2>ADR</h2>
-                </div>
-                <div className="canvasbody">
-                  {adrChartData.labels && adrChartData.labels.length > 0 && (
-                    <Bar
-                      data={adrChartData}
+                      data={rateChartData}
                       options={{ responsive: true, plugins: { legend: { position: 'top' } } }}
                     />
                   )}
