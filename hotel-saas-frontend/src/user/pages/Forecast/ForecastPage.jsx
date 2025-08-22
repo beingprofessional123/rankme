@@ -13,6 +13,10 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+// Import react-toastify
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 const ForecastPage = () => {
@@ -22,8 +26,8 @@ const ForecastPage = () => {
   const [endDate, setEndDate] = useState('');
   const [forecastData, setForecastData] = useState([]);
   const [occupancyChartData, setOccupancyChartData] = useState({});
-  const [rateChartData, setRateChartData] = useState({}); // Changed from revparChartData and adrChartData
-  const [loading, setLoading] = useState(true);
+  const [rateChartData, setRateChartData] = useState({});
+  const [loading, setLoading] = useState(false); // Changed initial state to false
   const [error, setError] = useState(null);
 
   // Get today's date in YYYY-MM-DD format
@@ -83,12 +87,8 @@ const ForecastPage = () => {
       case 'occupancy':
         dataValues = forecasts.map((f) => parseFloat(f.forecastedOccupancy.replace('%', '')));
         break;
-      case 'rate': // Changed from adr
-        dataValues = forecasts.map((f) => parseFloat(f.forecastedRate.replace('$', ''))); // Changed from forecastedADR
-        break;
-      case 'revpar':
-        // No longer a chart for RevPAR, this case is not needed
-        dataValues = [];
+      case 'rate':
+        dataValues = forecasts.map((f) => parseFloat(f.forecastedRate.replace('$', '')));
         break;
       default:
         dataValues = [];
@@ -136,12 +136,25 @@ const ForecastPage = () => {
           }
         );
         if (!res.ok) {
-          throw new Error('Failed to fetch forecast data.');
+          // Attempt to read the error message from the response
+          const errorData = await res.json();
+          if (errorData && errorData.message) {
+            // Display toast with the specific error message from the API
+            toast.info(errorData.message, { autoClose: 5000 });
+          } else {
+            // Generic error toast
+            toast.error('Failed to fetch forecast data.', { autoClose: 5000 });
+          }
+          setForecastData([]); // Clear previous data
+          setOccupancyChartData({});
+          setRateChartData({});
+          throw new Error(errorData.message || 'Failed to fetch forecast data.');
         }
+
         const data = await res.json();
         setForecastData(data);
         setOccupancyChartData(generateChartData(data, 'occupancy'));
-        setRateChartData(generateChartData(data, 'rate')); // Changed from adrChartData
+        setRateChartData(generateChartData(data, 'rate'));
       } catch (err) {
         console.error('Error fetching forecast data:', err);
         setError(err);
@@ -151,26 +164,6 @@ const ForecastPage = () => {
     };
     fetchForecastData();
   }, [selectedHotelId, startDate, endDate]);
-
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="container-fluid text-center py-5">
-          <p>Loading forecast data...</p>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (error) {
-    return (
-      <DashboardLayout>
-        <div className="container-fluid text-danger text-center py-5">
-          <p>Error: {error.message}</p>
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   // UPDATED: Added Rate column and removed ADR/RevPAR
   const columns = [
@@ -261,45 +254,64 @@ const ForecastPage = () => {
               </div>
             </form>
 
-            {/* Charts */}
-            <div className="row forecast-canvas">
-              <div className="col-md-6">
-                <div className="canvas-heading">
-                  <h2>Occupancy Rate</h2>
-                </div>
-                <div className="canvasbody">
-                  {occupancyChartData.labels && occupancyChartData.labels.length > 0 && (
-                    <Line
-                      data={occupancyChartData}
-                      options={{ responsive: true, plugins: { legend: { position: 'top' } } }}
-                    />
-                  )}
-                </div>
+            {/* Display loader inside the container when loading */}
+            {loading ? (
+              <div className="text-center py-5">
+                <p>Loading forecast data...</p>
               </div>
-              <div className="col-md-6">
-                <div className="canvas-heading">
-                  <h2>Forecasted Rate</h2>
-                </div>
-                <div className="canvasbody">
-                  {rateChartData.labels && rateChartData.labels.length > 0 && (
-                    <Line
-                      data={rateChartData}
-                      options={{ responsive: true, plugins: { legend: { position: 'top' } } }}
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
+            ) : (
+              // Hide charts and table if there is an error or no data
+              !error && forecastData.length > 0 && (
+                <>
+                  {/* Charts */}
+                  <div className="row forecast-canvas">
+                    <div className="col-md-6">
+                      <div className="canvas-heading">
+                        <h2>Occupancy Rate</h2>
+                      </div>
+                      <div className="canvasbody">
+                        {occupancyChartData.labels && occupancyChartData.labels.length > 0 && (
+                          <Line
+                            data={occupancyChartData}
+                            options={{ responsive: true, plugins: { legend: { position: 'top' } } }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="canvas-heading">
+                        <h2>Forecasted Rate</h2>
+                      </div>
+                      <div className="canvasbody">
+                        {rateChartData.labels && rateChartData.labels.length > 0 && (
+                          <Line
+                            data={rateChartData}
+                            options={{ responsive: true, plugins: { legend: { position: 'top' } } }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-            {/* Table */}
-            <div className="forecasttable">
-              <MUIDataTable
-                title={'Forecast Data'}
-                data={forecastData}
-                columns={columns}
-                options={options}
-              />
-            </div>
+                  {/* Table */}
+                  <div className="forecasttable">
+                    <MUIDataTable
+                      title={'Forecast Data'}
+                      data={forecastData}
+                      columns={columns}
+                      options={options}
+                    />
+                  </div>
+                </>
+              )
+            )}
+            
+            {/* Display message when there is no data */}
+            {!loading && !error && forecastData.length === 0 && selectedHotelId && startDate && (
+                <div className="text-center py-5">
+                    <p>No forecast data available for the selected period.</p>
+                </div>
+            )}
           </div>
         </div>
       </div>
