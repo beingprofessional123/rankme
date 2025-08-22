@@ -1,6 +1,6 @@
 const { Op } = require('sequelize');
 const db = require('../models');
-const { UploadData, MetaUploadData, UploadedExtractDataFile } = db;
+const { UploadData, MetaUploadData, UploadedExtractDataFile, Hotel } = db;
 const OpenAI = require('openai');
 const dayjs = require('dayjs');
 
@@ -8,105 +8,193 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+const cleanAndParseAIOutput = (rawText, daysToForecast) => {
+  const lines = rawText.trim().split('\n').slice(0, daysToForecast);
+  return lines.map(line => {
+    const [date, value] = line.split(',').map(s => s.trim());
+    return {
+      date: dayjs(date).format("YYYY-MM-DD"),
+      value: parseFloat(value),
+    };
+  }).filter(entry => !isNaN(entry.value));
+};
+
 exports.getHotelForecast = async (req, res) => {
   try {
     const { hotelId, startDate, endDate } = req.query;
     const { user } = req;
     const companyId = user.company_id;
     const userId = user.id;
+    const daysToForecast = dayjs(endDate).diff(dayjs(startDate), 'days') + 1;
 
     if (!hotelId || !startDate || !endDate) {
       return res.status(400).json({ error: 'Hotel ID, start date, and end date are required.' });
     }
 
-    // Calculate the number of days to forecast dynamically
-    const daysToForecast = dayjs(endDate).diff(dayjs(startDate), 'days') + 1; // +1 to include the end date itself
+    // Fetch Hotel Name to use in the query
+    const hotel = await Hotel.findByPk(hotelId);
+    if (!hotel) {
+      return res.status(404).json({ error: 'Hotel not found.' });
+    }
+    const hotelName = hotel.name;
 
-    const metaData = await MetaUploadData.findOne({
+    // --- Fetch Historical Occupancy Data ---
+    const occupancyUploads = await UploadData.findAll({
       where: {
         userId,
-        hotelPropertyId: hotelId,
-        [Op.or]: [
-          { fromDate: { [Op.lte]: startDate } },
-          { toDate: { [Op.gte]: startDate } }
-        ]
+        companyId,
+        fileType: 'booking',
+        status: 'saved',
       },
-      include: [
-        {
-          model: UploadData,
-          required: true,
-          where: { companyId },
+      include: {
+        model: MetaUploadData,
+        as: 'metaData',
+        where: {
+          hotelPropertyId: hotelId,
         },
-      ],
+        required: true,
+      },
     });
 
-    if (!metaData) {
-      return res.status(404).json({ message: 'No historical data found to generate a forecast.' });
-    }
+    const occupancyUploadIds = occupancyUploads.map(upload => upload.id);
 
-    const historicalData = await UploadedExtractDataFile.findAll({
-      where: { uploadDataId: metaData.uploadDataId },
+    const historicalOccupancy = await UploadedExtractDataFile.findAll({
+      where: {
+        uploadDataId: { [Op.in]: occupancyUploadIds },
+        isValid: true,
+        checkIn: {
+          [Op.not]: null
+        }
+      },
       attributes: ['checkIn', 'occupancy'],
       order: [['checkIn', 'ASC']],
     });
 
-    if (!historicalData.length) {
-      return res.status(404).json({ message: 'No specific historical data points found.' });
-    }
-
-    // Prepare historical data for the prompt
-    const historicalDataStr = historicalData
-      .map(d => `${d.checkIn}, ${d.occupancy}`)
-      .join('\n');
-
-    const prompt = `
-      You are an expert in hotel revenue management. Based on the following historical hotel occupancy data, predict the occupancy for the next ${daysToForecast} days after the last date in the provided data.
-      Historical Data:
-      date, occupancy_percentage
-      ${historicalDataStr}
-
-      Rules:
-      - Output exactly ${daysToForecast} lines.
-      - Start the forecast from the day after the last historical date.
-      - Date format: YYYY-MM-DD
-      - Occupancy as a number with a maximum of 2 decimal places (no % sign).
-      - The output should only contain the forecast data in the following format:
-      date, occupancy
-    `;
-
-    const aiResponse = await openai.responses.create({
-      model: "gpt-4.1-mini", // Check if this is the correct model name
-      input: prompt,
+    // --- Fetch Historical Price Data ---
+    const priceUploads = await UploadData.findAll({
+      where: {
+        userId,
+        companyId,
+        fileType: 'property_price_data',
+        status: 'saved',
+      },
+      include: {
+        model: MetaUploadData,
+        as: 'metaData',
+        where: {
+          hotelPropertyId: hotelId,
+        },
+        required: true,
+      },
     });
 
-    const forecastText = aiResponse.output_text.trim();
+    const priceUploadIds = priceUploads.map(upload => upload.id);
 
-    // Parse AI output and include ADR and RevPAR forecast
-    // Note: This is an important change to meet the frontend requirements.
-    // The original code only parsed occupancy. We need to add logic for ADR and RevPAR.
-    const futureForecast = forecastText
-      .split("\n")
-      .map(line => {
-        const [date, occ] = line.split(",").map(s => s.trim());
-        // The API will only give occupancy, so we need to generate dummy data for ADR and RevPAR.
-        // A better approach would be to send a more complex prompt to OpenAI to get all three metrics.
-        // For now, let's create a placeholder to match the frontend's expected output.
-        const forecastedOccupancy = parseFloat(occ);
-        const forecastedADR = Math.random() * 200 + 100; // Example: random ADR between 100 and 300
-        const forecastedRevPAR = (forecastedADR * forecastedOccupancy) / 100;
+    const historicalPrices = await UploadedExtractDataFile.findAll({
+      where: {
+        uploadDataId: { [Op.in]: priceUploadIds },
+        isValid: true,
+        competitorHotel: hotelName,
+        checkIn: {
+          [Op.not]: null
+        },
+        rate: {
+          [Op.not]: null
+        }
+      },
+      attributes: ['checkIn', 'rate'],
+      order: [['checkIn', 'ASC']],
+    });
+    
+    // Check if any data was found for either metric
+    if (!historicalOccupancy.length && !historicalPrices.length) {
+      return res.status(404).json({ message: 'No relevant historical data found to generate a forecast for either occupancy or price.' });
+    }
 
-        return {
-          date: dayjs(date).format("YYYY-MM-DD"),
-          forecastedOccupancy: `${forecastedOccupancy.toFixed(2)}%`,
-          forecastedADR: `$${forecastedADR.toFixed(2)}`,
-          forecastedRevPAR: `$${forecastedRevPAR.toFixed(2)}`,
-        };
-      })
-      .filter(entry => !isNaN(parseFloat(entry.forecastedOccupancy)));
+    console.log(historicalPrices);
+    
+    let occupancyForecast = [];
+    if (historicalOccupancy.length) {
+      const occupancyDataStr = historicalOccupancy
+        .map(d => `${d.checkIn}, ${d.occupancy}`)
+        .join('\n');
 
-    res.status(200).json(futureForecast);
+      const occupancyPrompt = `
+        You are an expert in hotel revenue management. Based on the following historical hotel occupancy data, predict the occupancy for the next ${daysToForecast} days starting from the date ${startDate}.
+        Historical Data:
+        date, occupancy_percentage
+        ${occupancyDataStr}
+
+        Rules:
+        - Output exactly ${daysToForecast} lines.
+        - Start the forecast from the day specified in the start date parameter.
+        - Date format: YYYY-MM-DD
+        - Occupancy as a number with a maximum of 2 decimal places (no % sign).
+        - The output should only contain the forecast data in the following format:
+        date, occupancy
+      `;
+
+      const aiOccupancyResponse = await openai.chat.completions.create({
+        model: "gpt-4.1-mini", // Corrected model name
+        messages: [{ role: "user", content: occupancyPrompt }],
+        temperature: 0.7,
+      });
+
+      const forecastOccupancyText = aiOccupancyResponse.choices[0].message.content;
+      occupancyForecast = cleanAndParseAIOutput(forecastOccupancyText, daysToForecast);
+    }
+    
+    let priceForecast = [];
+    if (historicalPrices.length) {
+      const priceDataStr = historicalPrices
+        .map(d => `${d.checkIn}, ${d.rate}`)
+        .join('\n');
+
+      const pricePrompt = `
+        You are an expert in hotel revenue management. Based on the following historical hotel room rate data, predict the room rate for the next ${daysToForecast} days starting from the date ${startDate}.
+        Historical Data:
+        date, room_rate
+        ${priceDataStr}
+
+        Rules:
+        - Output exactly ${daysToForecast} lines.
+        - Start the forecast from the day specified in the start date parameter.
+        - Date format: YYYY-MM-DD
+        - Room rate as a number with a maximum of 2 decimal places (no $ sign).
+        - The output should only contain the forecast data in the following format:
+        date, rate
+      `;
+
+      const aiPriceResponse = await openai.chat.completions.create({
+        model: "gpt-4.1-mini", // Corrected model name
+        messages: [{ role: "user", content: pricePrompt }],
+        temperature: 0.7,
+      });
+
+      const forecastPriceText = aiPriceResponse.choices[0].message.content;
+        console.log('Raw AI Price Response:', forecastPriceText);
+      priceForecast = cleanAndParseAIOutput(forecastPriceText, daysToForecast);
+    }
+
+    // Combine and format the final output
+    const combinedForecast = [];
+    const dates = new Set([...occupancyForecast.map(d => d.date), ...priceForecast.map(d => d.date)]);
+
+    for (const date of Array.from(dates).sort()) {
+      const occEntry = occupancyForecast.find(d => d.date === date);
+      const priceEntry = priceForecast.find(d => d.date === date);
+
+      combinedForecast.push({
+        date,
+        forecastedOccupancy: occEntry ? `${occEntry.value.toFixed(2)}%` : 'N/A',
+        forecastedRate: priceEntry ? `$${priceEntry.value.toFixed(2)}` : 'N/A',
+      });
+    }
+
+    res.status(200).json(combinedForecast);
+
   } catch (error) {
     console.error('Error fetching hotel forecast:', error);
-    res.status(500).json({ error: 'Internal server error.' });
+    res.status(500).json({ error: 'Internal server error.', message: error });
   }
 };
