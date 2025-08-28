@@ -4,6 +4,9 @@ const { Op } = require('sequelize');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { sendEmail } = require('../utils/mailer'); // Assuming you have this utility
+const getUserSupportTicketEmail = require('../emailTemplate/UserSupportTicket');
+const getAdminSupportTicketEmail = require('../emailTemplate/AdminSupportTicket');
 
 // --- Multer Configuration (remains largely the same) ---
 const uploadDir = path.join(__dirname, '../uploads/support_tickets');
@@ -128,7 +131,7 @@ exports.createSupportTicket = (req, res) => {
 
             const newTicket = await db.SupportTicket.create({
                 userId: user.id,
-                ticketNumber: ticketNumber, // ADDED: The new ticket number
+                ticketNumber: ticketNumber,
                 subject,
                 category,
                 description,
@@ -136,6 +139,23 @@ exports.createSupportTicket = (req, res) => {
                 priority: priority || 'Medium',
                 fileAttachmentPath,
             });
+
+            // --- Email Functionality: Send confirmation emails ---
+            const frontendBaseUrl = process.env.FRONTEND_URL;
+            const userTicketLink = `${frontendBaseUrl}/support-tickets-edit/${newTicket.id}`;
+            const adminTicketLink = `${frontendBaseUrl}/admin/support-ticket-management/${newTicket.id}/edit`; // Assuming an admin-facing route
+
+            // 1. Send email to the user for confirmation
+            const userEmailData = getUserSupportTicketEmail(user.name, newTicket.ticketNumber, newTicket.subject, userTicketLink);
+            await sendEmail(user.email, userEmailData.subject, userEmailData.html);
+
+            // 2. Send email to the admin
+            // Get admin's email from environment variables or a configuration file
+            const adminEmail = process.env.ADMIN_EMAIL || 'vipat51243@evoxury.com'; 
+            const adminEmailData = getAdminSupportTicketEmail(user.name, user.email, newTicket.ticketNumber, newTicket.subject, newTicket.description, adminTicketLink);
+            await sendEmail(adminEmail, adminEmailData.subject, adminEmailData.html);
+
+            // --- End Email Functionality ---
 
             res.status(201).json({ success: true, message: 'Support ticket created successfully.', ticket: newTicket });
         } catch (error) {
@@ -146,6 +166,7 @@ exports.createSupportTicket = (req, res) => {
         }
     });
 };
+
 
 // API 3: Get a single support ticket by ID (with its thread)
 exports.getSupportTicketDetails = async (req, res) => {

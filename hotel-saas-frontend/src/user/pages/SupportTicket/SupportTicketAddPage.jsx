@@ -1,4 +1,5 @@
-import React, { useState, useContext } from 'react';
+// SupportTicketAddPage.js
+import React, { useState, useContext, useRef } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import { Link, useNavigate } from 'react-router-dom';
 import { PermissionContext } from '../../UserPermission';
@@ -26,6 +27,7 @@ const PRIORITY_OPTIONS = [
 
 const SupportTicketAddPage = () => {
     const navigate = useNavigate();
+    const fileInputRef = useRef(null);
     const { permissions, role } = useContext(PermissionContext);
     const isCompanyAdmin = role?.name === 'company_admin';
     const canAccess = (action) => {
@@ -60,14 +62,63 @@ const SupportTicketAddPage = () => {
         setLoading(true);
         setError(null);
 
+        // --- VALIDATION PART ---
+        const { subject, category, description, file } = formData;
+        
+        // Subject validation
+        if (subject.length < 5 || subject.length > 100) {
+            Swal.fire('Error!', 'Subject must be between 5 and 100 characters long.', 'error');
+            setLoading(false);
+            return;
+        }
+
+        // Category validation
+        if (!CATEGORY_OPTIONS.includes(category)) {
+            Swal.fire('Error!', 'Please select a valid category.', 'error');
+            setLoading(false);
+            return;
+        }
+
+        // Description validation
+        if (description.length < 10) {
+            Swal.fire('Error!', 'Description must be at least 10 characters long.', 'error');
+            setLoading(false);
+            return;
+        }
+
+        // File validation
+        if (file) {
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+            const maxSize = 5 * 1024 * 1024; // 5 MB
+
+            if (!allowedTypes.includes(file.type)) {
+                Swal.fire('Error!', 'Invalid file type. Only JPG, JPEG, and PNG are allowed.', 'error');
+                setFormData(prev => ({ ...prev, file: null })); // Clear the file input
+                setLoading(false);
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = ""; // Manually clear the input
+                }
+                return;
+            }
+
+            if (file.size > maxSize) {
+                Swal.fire('Error!', 'File size exceeds the 5MB limit.', 'error');
+                setFormData(prev => ({ ...prev, file: null })); // Clear the file input
+                setLoading(false);
+                
+                return;
+            }
+        }
+        // --- END OF VALIDATION ---
+        
         // Create FormData object to send multipart/form-data
         const data = new FormData();
-        data.append('subject', formData.subject);
-        data.append('category', formData.category);
-        data.append('description', formData.description);
+        data.append('subject', subject);
+        data.append('category', category);
+        data.append('description', description);
         data.append('priority', formData.priority);
-        if (formData.file) {
-            data.append('file', formData.file);
+        if (file) {
+            data.append('file', file);
         }
         
         try {
@@ -75,7 +126,7 @@ const SupportTicketAddPage = () => {
             const response = await axios.post(`${API_BASE_URL}/api/support-ticket/create`, data, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data', // This is crucial for file uploads
+                    'Content-Type': 'multipart/form-data',
                 },
             });
             
@@ -177,6 +228,7 @@ const SupportTicketAddPage = () => {
                                                     id="file-1"
                                                     name="file"
                                                     onChange={handleChange}
+                                                    ref={fileInputRef}
                                                 />
                                                 <label className="fileupload-label" htmlFor="file-1">
                                                     <img

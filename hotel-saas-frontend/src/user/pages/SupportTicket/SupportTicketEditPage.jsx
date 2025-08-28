@@ -1,3 +1,4 @@
+// SupportTicketUnifiedPage.js
 import React, { useEffect, useState, useContext, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
@@ -64,7 +65,9 @@ const SupportTicketUnifiedPage = () => {
             });
 
             const ticketData = response.data.ticket;
-            setTicket(ticketData);
+            // Sort messages by createdAt timestamp
+            const sortedMessages = ticketData.messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            setTicket({ ...ticketData, messages: sortedMessages });
 
             setFormData({
                 subject: ticketData.subject || '',
@@ -82,8 +85,16 @@ const SupportTicketUnifiedPage = () => {
         }
     };
 
+    // Auto-refresh messages every 5 seconds
     useEffect(() => {
         fetchTicket();
+
+        const intervalId = setInterval(() => {
+            fetchTicket();
+        }, 5000);
+
+        // Cleanup function to clear the interval when the component unmounts
+        return () => clearInterval(intervalId);
     }, [id]);
 
     useEffect(() => {
@@ -138,10 +149,41 @@ const SupportTicketUnifiedPage = () => {
         e.preventDefault();
         setMessageSending(true);
 
+        // --- VALIDATION PART ---
+        const { message, file } = messageData;
+
+        // Message length validation
+        if (!message.trim() && !file) {
+            Swal.fire('Error!', 'Please provide a message or attach a file.', 'error');
+            setMessageSending(false);
+            return;
+        }
+
+        // File validation (same as add page)
+        if (file) {
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+            const maxSize = 2 * 1024 * 1024; // 2 MB
+
+            if (!allowedTypes.includes(file.type)) {
+                Swal.fire('Error!', 'Invalid file type. Only JPG, JPEG, and PNG are allowed.', 'error');
+                setMessageData(prev => ({ ...prev, file: null }));
+                setMessageSending(false);
+                return;
+            }
+
+            if (file.size > maxSize) {
+                Swal.fire('Error!', 'File size exceeds the 2MB limit.', 'error');
+                setMessageData(prev => ({ ...prev, file: null }));
+                setMessageSending(false);
+                return;
+            }
+        }
+        // --- END OF VALIDATION ---
+
         const data = new FormData();
-        data.append('message', messageData.message);
-        if (messageData.file) {
-            data.append('threadFile', messageData.file);
+        data.append('message', message);
+        if (file) {
+            data.append('threadFile', file);
         }
         
         try {
@@ -335,7 +377,6 @@ const SupportTicketUnifiedPage = () => {
                                                 name="message"
                                                 value={messageData.message}
                                                 onChange={handleMessageChange}
-                                                required
                                             />
                                             <label className="btn btn-danger">
                                                 <input
