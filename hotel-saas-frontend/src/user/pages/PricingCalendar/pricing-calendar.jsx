@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import DashboardLayout from '../../components/DashboardLayout';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -8,10 +8,8 @@ import interactionPlugin from '@fullcalendar/interaction';
 import { toast } from 'react-toastify';
 import 'tippy.js/dist/tippy.css';
 import Select from 'react-select';
-import Swal from 'sweetalert2';
-import { addDays, startOfMonth, addMonths, format as formatDate } from 'date-fns';
 import tippy from 'tippy.js';
-import 'tippy.js/dist/tippy.css'; // Optional: include default toolti
+import 'tippy.js/dist/tippy.css';
 import { Link } from 'react-router-dom';
 
 const PricingCalendar = () => {
@@ -89,33 +87,32 @@ const PricingCalendar = () => {
         const bookingData = await bookingRes.json();
 
         const allEvents = [];
-        const priceMap = {}; // hotelId => { date => [rates] }
+        const myPropertyPriceMap = {}; // hotelId => { date => [rates] }
+        const competitorRatesMap = {}; // hotelId => { date => [competitor rates] }
         const occupancyMap = {}; // hotelId => { date => occupancy }
 
-        // Step 1: Extract pricing per day per hotel
+        // Step 1: Extract pricing per day per hotel for both my property and competitors
         for (const item of pricingData?.results || []) {
           const hotelPropertyId = item.metaData?.hotelPropertyId;
           const extractedFiles = item.extractedFiles || [];
 
           for (const file of extractedFiles) {
-            const checkIn = new Date(file.checkIn);
-            const checkOut = file.checkOut ? new Date(file.checkOut) : null;
+            const dateStr = new Date(file.checkIn).toISOString().split('T')[0];
             const rate = parseFloat(file.rate) || 0;
+            const property = file.property; // 'myproperty' or 'competitor'
 
-            let current = new Date(checkIn);
-            const end = checkOut ? new Date(checkOut) : new Date(checkIn);
-            end.setDate(end.getDate() + (checkOut ? 0 : 1));
-
-            while (current < end) {
-              const dateStr = current.toISOString().split('T')[0];
-              if (!priceMap[hotelPropertyId]) priceMap[hotelPropertyId] = {};
-              if (!priceMap[hotelPropertyId][dateStr]) priceMap[hotelPropertyId][dateStr] = [];
-              priceMap[hotelPropertyId][dateStr].push(rate);
-              current.setDate(current.getDate() + 1);
+            if (property === 'myproperty') {
+              if (!myPropertyPriceMap[hotelPropertyId]) myPropertyPriceMap[hotelPropertyId] = {};
+              if (!myPropertyPriceMap[hotelPropertyId][dateStr]) myPropertyPriceMap[hotelPropertyId][dateStr] = [];
+              myPropertyPriceMap[hotelPropertyId][dateStr].push(rate);
+            } else if (property === 'competitor') {
+              if (!competitorRatesMap[hotelPropertyId]) competitorRatesMap[hotelPropertyId] = {};
+              if (!competitorRatesMap[hotelPropertyId][dateStr]) competitorRatesMap[hotelPropertyId][dateStr] = [];
+              competitorRatesMap[hotelPropertyId][dateStr].push(rate);
             }
           }
         }
-
+       
         // Step 2: Extract occupancy directly
         for (const item of bookingData?.results || []) {
           const hotelPropertyId = item.metaData?.hotelPropertyId;
@@ -138,14 +135,38 @@ const PricingCalendar = () => {
 
           for (const dateStr of dates) {
             const occupancy = occupancyMap[hotelId]?.[dateStr] ?? null;
-            const ratesForDate = priceMap[hotelId]?.[dateStr] || [];
-            const minRate = ratesForDate.length ? Math.min(...ratesForDate) : 0;
-            const suggestedPrice = minRate + 10;
-            const historicalPrice = Math.max(0, minRate - 10);
+            const myPropertyRatesForDate = myPropertyPriceMap[hotelId]?.[dateStr] || [];
+            const competitorRatesForDate = competitorRatesMap[hotelId]?.[dateStr] || [];
+            
+            // Calculate my property average price
+            const myPropertyAvgPrice = myPropertyRatesForDate.length > 0
+              ? myPropertyRatesForDate.reduce((sum, rate) => sum + rate, 0) / myPropertyRatesForDate.length
+              : 0;
+              
+
+              // Calculate competitor average price
+              const competitorAvgPrice = competitorRatesForDate.length > 0
+              ? competitorRatesForDate.reduce((sum, rate) => sum + rate, 0) / competitorRatesForDate.length
+              : 0;
+              console.log("(myPropertyAvgPrice - competitorAvgPrice) "+myPropertyAvgPrice, competitorAvgPrice);
+
+            let priceAlert = null;
+            if (myPropertyAvgPrice > 0 && competitorAvgPrice > 0) {
+              const difference = ((myPropertyAvgPrice - competitorAvgPrice) / competitorAvgPrice) * 100;
+              // console.log(difference);
+              if (difference > 5) {
+                priceAlert = 'high';
+              } else if (difference < -5) {
+                priceAlert = 'low';
+              }
+            }
+
+            const suggestedPrice = myPropertyAvgPrice + 10;
+            const historicalPrice = Math.max(0, myPropertyAvgPrice - 10);
 
             const backgroundColor = occupancy === 100
               ? '#FF4C4C'
-              : ratesForDate.length
+              : myPropertyRatesForDate.length
                 ? '#2CCDD9'
                 : '#E5E5E5';
 
@@ -161,9 +182,11 @@ const PricingCalendar = () => {
                 hotel_id: hotel.id,
                 hotel_name: hotel.name,
                 predicted_occupancy: occupancy !== null ? `${occupancy}%` : '0%',
-                average_price: minRate,
+                average_price: myPropertyAvgPrice,
                 suggested_price: suggestedPrice,
                 historical_price: historicalPrice,
+                competitor_avg_price: competitorAvgPrice,
+                price_alert: priceAlert,
               },
             });
           }
@@ -186,57 +209,74 @@ const PricingCalendar = () => {
     modal.show();
   };
 
-useEffect(() => {
-  const modalElement = document.getElementById('myModal');
+  useEffect(() => {
+    const modalElement = document.getElementById('myModal');
 
-  const handleHidden = () => {
-    if (calendarRef.current) {
-      calendarRef.current.getApi().refetchEvents(); // Optional if events change
+    const handleHidden = () => {
+      if (calendarRef.current) {
+        setTimeout(() => {
+          const allEvents = document.querySelectorAll('.fc-event');
+          allEvents.forEach((eventEl) => {
+            const roomSpan = eventEl.querySelector('.room-type');
+            const occupancy = eventEl.getAttribute('data-occupancy');
+            const priceSpan = eventEl.querySelector('.price');
+            const priceAlert = eventEl.getAttribute('data-price-alert');
 
-      setTimeout(() => {
-        const allEvents = document.querySelectorAll('.fc-event');
+            if (roomSpan && roomSpan._tippy) {
+              roomSpan._tippy.destroy();
+            }
+            if (priceSpan && priceSpan._tippy) {
+              priceSpan._tippy.destroy();
+            }
 
-        allEvents.forEach((eventEl) => {
-          const roomSpan = eventEl.querySelector('.room-type');
-          const occupancy = eventEl.getAttribute('data-occupancy');
-
-          // Remove any existing tippy instances
-          if (roomSpan && roomSpan._tippy) {
-            roomSpan._tippy.destroy();
-          }
-
-          // Conditionally re-apply tippy only if occupancy display is enabled
-          if (roomSpan && showOccupancy) {
-            tippy(roomSpan, {
-              content: `
-                <div class="">
-                  <div class="mb-2 gap-4 d-flex justify-content-between">
-                    <span>Predicted Occupancy:</span> <strong>${occupancy}</strong>
+            if (roomSpan && showOccupancy) {
+              tippy(roomSpan, {
+                content: `
+                  <div class="">
+                    <div class="mb-2 gap-4 d-flex justify-content-between">
+                      <span>Predicted Occupancy:</span> <strong>${occupancy}</strong>
+                    </div>
                   </div>
-                </div>
-              `,
-              allowHTML: true,
-              placement: 'top',
-              animation: 'shift-away',
-              theme: 'light-border custom-tooltip',
-            });
-          }
-        });
-      }, 100); // Ensure DOM is ready
-    }
-  };
+                `,
+                allowHTML: true,
+                placement: 'top',
+                animation: 'shift-away',
+                theme: 'light-border custom-tooltip',
+              });
+            }
 
-  if (modalElement) {
-    modalElement.addEventListener('hidden.bs.modal', handleHidden);
-  }
+            if (priceSpan && priceAlert) {
+              let alertContent;
+              let alertTheme;
+              if (priceAlert === 'low') {
+                alertContent = 'Your price is more than 5% lower than the competitor average.';
+                alertTheme = 'red-tooltip';
+              } else if (priceAlert === 'high') {
+                alertContent = 'Your price is more than 5% higher than the competitor average.';
+                alertTheme = 'red-tooltip';
+              }
+              tippy(priceSpan, {
+                content: alertContent,
+                placement: 'top',
+                animation: 'shift-away',
+                theme: alertTheme,
+              });
+            }
+          });
+        }, 100);
+      }
+    };
 
-  // Cleanup on unmount
-  return () => {
     if (modalElement) {
-      modalElement.removeEventListener('hidden.bs.modal', handleHidden);
+      modalElement.addEventListener('hidden.bs.modal', handleHidden);
     }
-  };
-}, [showOccupancy]); // Depend on showOccupancy
+
+    return () => {
+      if (modalElement) {
+        modalElement.removeEventListener('hidden.bs.modal', handleHidden);
+      }
+    };
+  }, [showOccupancy]);
 
   return (
     <DashboardLayout>
@@ -279,11 +319,9 @@ useEffect(() => {
                             const ids = selected.map(opt => opt.value);
                             setSelectedHotelIds(ids);
                           }}
-
                           className="basic-multi-select"
                           classNamePrefix="select"
                         />
-
                       </div>
                     </div>
                     <div className="col-md-6">
@@ -310,8 +348,6 @@ useEffect(() => {
                         </div>
                       </div>
                     </div>
-
-
                   </div>
                 </form>
               </div>
@@ -334,7 +370,6 @@ useEffect(() => {
                       <span className="slider round"></span>
                     </label>
                   </h2>
-
                   <div className="help">
                     <img src={`/user/images/help.svg`} className="img-fluid" alt="Help" />
                   </div>
@@ -361,6 +396,7 @@ useEffect(() => {
                         average_price,
                       } = arg.event.extendedProps;
 
+                      
                       const isGray = arg.event.backgroundColor === '#E5E5E5';
 
                       const container = document.createElement('div');
@@ -369,6 +405,7 @@ useEffect(() => {
                       container.setAttribute('data-occupancy', predicted_occupancy);
                       container.setAttribute('data-suggested', suggested_price);
                       container.setAttribute('data-historical', historical_price);
+                      container.setAttribute('data-price-alert', arg.event.extendedProps.price_alert);
 
                       const roomSpan = document.createElement('span');
                       roomSpan.className = isGray ? 'room-type gray-room-type' : 'room-type blue-room-type';
@@ -386,31 +423,31 @@ useEffect(() => {
 
                       return { domNodes: [container] };
                     }}
-
                     eventDidMount={(info) => {
                       const {
                         predicted_occupancy,
                         suggested_price,
                         historical_price,
+                        price_alert,
+                        competitor_avg_price,
                       } = info.event.extendedProps;
 
-                      // ✅ Attach tooltip data directly to the .fc-event root element
                       info.el.setAttribute('data-occupancy', predicted_occupancy);
                       info.el.setAttribute('data-suggested', suggested_price);
                       info.el.setAttribute('data-historical', historical_price);
+                      info.el.setAttribute('data-price-alert', price_alert);
 
                       const roomSpan = info.el.querySelector('.room-type');
                       const priceSpan = info.el.querySelector('.price');
 
-                    if (roomSpan && showOccupancy) {
+                      if (roomSpan && showOccupancy) {
                         let tooltipContent = `
-                                    <div class="p-1">
-                                      <div class="mb-2 gap-4 d-flex justify-content-between">
-                                        <span>Predicted Occupancy:</span> <strong>${predicted_occupancy}</strong>
-                                      </div>
-                                    </div>
-                                  `;
-
+                          <div class="p-1">
+                            <div class="mb-2 gap-4 d-flex justify-content-between">
+                              <span>Predicted Occupancy:</span> <strong>${predicted_occupancy}</strong>
+                            </div>
+                          </div>
+                        `;
                         tippy(roomSpan, {
                           content: tooltipContent,
                           allowHTML: true,
@@ -420,14 +457,28 @@ useEffect(() => {
                         });
                       }
 
-                      // if (priceSpan) {
-                      //   tippy(priceSpan, {
-                      //     content: 'Good Pricing',
-                      //     placement: 'top',
-                      //     animation: 'scale',
-                      //     theme: 'material',
-                      //   });
-                      // }
+                      // New Price Alert Tooltip
+                      if (priceSpan && price_alert) {
+                        console.log('yes price alert');
+                        let alertContent;
+                        let alertTheme;
+                        if (price_alert === 'low') {
+                          alertContent = `Your price is $${info.event.extendedProps.average_price.toFixed(2)}, which is more than 5% lower than the competitor average of $${competitor_avg_price.toFixed(2)}.`;
+                          alertTheme = 'red-tooltip';
+                        } else if (price_alert === 'high') {
+                          alertContent = `Your price is $${info.event.extendedProps.average_price.toFixed(2)}, which is more than 5% higher than the competitor average of $${competitor_avg_price.toFixed(2)}.`;
+                          alertTheme = 'red-tooltip';
+                        }
+
+                        if (alertContent) {
+                          tippy(priceSpan, {
+                            content: alertContent,
+                            placement: 'top',
+                            animation: 'shift-away',
+                            theme: alertTheme,
+                          });
+                        }
+                      }
                     }}
                     dayCellDidMount={(info) => {
                       const el = info.el.querySelector('.fc-daygrid-day-number');
@@ -471,7 +522,6 @@ useEffect(() => {
                       <div id="home" className="tab-pane active">
                         <div className="modal-allroom">
                           <ul>
-
                           </ul>
                         </div>
                       </div>
@@ -487,7 +537,6 @@ useEffect(() => {
                                 </tr>
                               </thead>
                               <tbody>
-
                               </tbody>
                             </table>
                             <div className="calendar-edit-btn">
@@ -497,7 +546,6 @@ useEffect(() => {
                         </div>
                       </div>
                     </div>
-
                   </div>
                 </div>
               </div>

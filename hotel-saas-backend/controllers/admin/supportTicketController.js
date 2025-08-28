@@ -2,6 +2,9 @@ const path = require('path');
 const fs = require('fs');
 const { Op } = require('sequelize');
 const db = require('../../models');
+const { sendEmail } = require('../../utils/mailer'); 
+const getStatusUpdateEmail = require('../../emailTemplate/UserStatusSupportTicket');
+
 
 const supportTicketController = {
     // Controller to get a list of all support tickets
@@ -80,12 +83,21 @@ const supportTicketController = {
         const senderId = req.user.id; // `req.user` is populated by your authentication middleware
 
         try {
-            const ticket = await db.SupportTicket.findByPk(id);
+            const ticket = await db.SupportTicket.findByPk(id, {
+                include: [
+                    {
+                        model: db.User,
+                        as: 'creator',
+                        attributes: ['id', 'name', 'email']
+                    }
+                ]
+            });
 
             if (!ticket) {
                 return res.status(404).json({ status: false, message: 'Ticket not found.' });
             }
 
+            const oldStatus = ticket.status;
             const updateFields = {};
             if (status) updateFields.status = status;
             if (assigneeId) updateFields.assigneeId = assigneeId;
@@ -104,6 +116,22 @@ const supportTicketController = {
                 // CORRECTED: Using the correct model name `SupportTicketThread`
                 await db.SupportTicketThread.create(messageData);
             }
+            // --- Email Functionality: Send status update email if status changed ---
+            if (status && status !== oldStatus) {
+                const frontendBaseUrl = process.env.FRONTEND_URL;
+                const userTicketLink = `${frontendBaseUrl}/support-tickets-edit/${ticket.id}`;
+                
+                const userEmailData = getStatusUpdateEmail(
+                    ticket.creator.name, 
+                    ticket.ticketNumber, 
+                    ticket.subject, 
+                    status, 
+                    userTicketLink
+                );
+
+                await sendEmail(ticket.creator.email, userEmailData.subject, userEmailData.html);
+            }
+
 
             return res.status(200).json({ status: true, message: 'Ticket updated successfully.' });
         } catch (error) {

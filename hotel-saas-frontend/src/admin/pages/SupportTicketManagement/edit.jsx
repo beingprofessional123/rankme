@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef} from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -13,42 +13,56 @@ const SupportTicketEdit = () => {
     const [adminList, setAdminList] = useState([]);
     const [form, setForm] = useState({
         status: '',
-        assigneeId: '',
         newMessage: '',
         fileAttachment: null,
     });
+    const [ticketStatus, setTicketStatus] = useState('');
     const fileInputRef = useRef(null);
+    const chatboxRef = useRef(null);
 
     useEffect(() => {
         fetchTicket();
         fetchAdminList();
-    }, [id]);
+
+        // Set up an interval to refresh the ticket data every 5 seconds
+        const intervalId = setInterval(fetchTicket, 5000);
+
+        // Clean up the interval when the component unmounts
+        return () => clearInterval(intervalId);
+    }, [id, ticketStatus]);
+
+    useEffect(() => {
+        // Scroll to the bottom of the chatbox whenever messages are updated
+        if (chatboxRef.current) {
+            chatboxRef.current.scrollTop = chatboxRef.current.scrollHeight;
+        }
+    }, [ticketData]);
 
     const fetchTicket = async () => {
         try {
             const token = localStorage.getItem('admin_token');
-            const response = await axios.get(
-                `${API_BASE_URL}/api/admin/support-ticket/${id}`,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            const response = await axios.get(
+                `${API_BASE_URL}/api/admin/support-ticket/${id}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
 
-            const ticket = response.data.ticket;
+            const ticket = response.data.ticket;
 
-            if (ticket) {
-                setTicketData(ticket);
-                setForm({
-                    ...form,
-                    status: ticket.status || '',
-                    assigneeId: ticket.assigneeId?._id || '', // Use `_id` to get the assignee's ID
-                    // Ensure the reply form fields are empty when the ticket is loaded
-                    newMessage: '',
-                    fileAttachment: null,
-                });
-            }
+            if (ticket) {
+                // If ticketData is null, this is the initial fetch.
+                // Sync both states.
+                if (!ticketData) {
+                    setTicketStatus(ticket.status || '');
+                }
+                // Always update the ticket data to get new messages.
+                setTicketData(ticket);
+            }
         } catch (err) {
             console.error('Error fetching ticket:', err);
             const message = err.response?.data?.message || 'Failed to fetch ticket details.';
-            toast.error(message);
+            if (err.response?.status !== 404) {
+                toast.error(message);
+            }
         }
     };
 
@@ -56,13 +70,13 @@ const SupportTicketEdit = () => {
         try {
             const token = localStorage.getItem('admin_token');
             const response = await axios.get(
-                `${API_BASE_URL}/api/admin/roles-list`, // Assuming this endpoint returns roles with associated users
+                `${API_BASE_URL}/api/admin/roles-list`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-            const admins = response.data.results.filter(role => 
+            const admins = response.data.results.filter(role =>
                 role.name === 'admin' || role.name === 'super_admin'
             ).flatMap(role => role.Users);
-            
+
             setAdminList(admins || []);
         } catch (err) {
             console.error('Failed to fetch admin list:', err);
@@ -72,8 +86,30 @@ const SupportTicketEdit = () => {
     const handleChange = (e) => {
         const { name, value, files } = e.target;
         if (name === 'fileAttachment') {
-            setForm((prev) => ({ ...prev, [name]: files[0] }));
-        } else {
+            const file = files[0];
+            if (file) {
+                // Check file size (max 2MB)
+                if (file.size > 2 * 1024 * 1024) {
+                    toast.error('File size exceeds the 2MB limit.');
+                    if (fileInputRef.current) {
+                        fileInputRef.current.value = ''; // Clear the input
+                    }
+                    return;
+                }
+                // Check file type
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+                if (!allowedTypes.includes(file.type)) {
+                    toast.error('Only PNG, JPG, and JPEG file types are allowed.');
+                    if (fileInputRef.current) {
+                        fileInputRef.current.value = ''; // Clear the input
+                    }
+                    return;
+                }
+                setForm((prev) => ({ ...prev, [name]: file }));
+            }
+        } else if (name === 'status') {
+            setTicketStatus(value); // Updates the new state variable
+        }else {
             setForm((prev) => ({ ...prev, [name]: value }));
         }
     };
@@ -89,54 +125,51 @@ const SupportTicketEdit = () => {
 
     const handleReply = async (e) => {
         e.preventDefault();
-        const token = localStorage.getItem('admin_token');
-        const formData = new FormData();
+        const token = localStorage.getItem('admin_token');
+        const formData = new FormData();
 
-        // Always append status and assigneeId, even if they haven't changed
-        formData.append('status', form.status);
-        formData.append('assigneeId', form.assigneeId);
-        
-        // Only append newMessage if it exists
-        if (form.newMessage) {
-            formData.append('message', form.newMessage);
-        }
-        
-        // Only append fileAttachment if it exists
-        if (form.fileAttachment) {
-            formData.append('fileAttachment', form.fileAttachment);
-        }
+        // Only append if the status has actually changed
+        if (ticketStatus !== ticketData.status) {
+            formData.append('status', ticketStatus);
+        }
+        if (form.newMessage) {
+            formData.append('message', form.newMessage);
+        }
+        if (form.fileAttachment) {
+            formData.append('fileAttachment', form.fileAttachment);
+        }
 
-        try {
-            const response = await axios.put(
-                `${API_BASE_URL}/api/admin/support-ticket/${id}`,
-                formData,
-                {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
+        // Prevent API call if nothing has changed
+        if (Array.from(formData.entries()).length === 0) {
+            toast.info('No changes to save.');
+            return;
+        }
 
-            if (response.data.status) {
-                toast.success(response.data.message || 'Ticket updated and reply sent successfully');
-                
-                // This is the correct way to reset the form state
-                setForm((prev) => ({
-                    ...prev,
-                    newMessage: '', // Clear the message
-                    fileAttachment: null // Clear the file
-                }));
+        try {
+            const response = await axios.put(
+                `${API_BASE_URL}/api/admin/support-ticket/${id}`,
+                formData,
+                {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
 
-                // This line is crucial for clearing the file input in the DOM.
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = '';
-                }
-
-                fetchTicket(); // Refresh the ticket data to show the new message
-            } else {
-                toast.error(response.data.message || 'Failed to send reply');
-            }
+            if (response.data.status) {
+                toast.success(response.data.message || 'Ticket updated successfully.');
+                setForm({
+                    newMessage: '',
+                    fileAttachment: null,
+                });
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+                fetchTicket(); // Refresh to show the new reply and reflect the status change
+            } else {
+                toast.error(response.data.message || 'Failed to update ticket.');
+            }
         } catch (err) {
             console.error('Error updating ticket:', err);
             toast.error(err.response?.data?.message || 'An unexpected error occurred');
@@ -151,6 +184,9 @@ const SupportTicketEdit = () => {
         );
     }
 
+    // Sort messages by createdAt timestamp before rendering
+    const sortedMessages = ticketData.messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
     return (
         <div className="layout-px-spacing">
             <div className="page-header d-flex justify-content-between">
@@ -158,7 +194,7 @@ const SupportTicketEdit = () => {
                     <h3>Ticket #{ticketData.ticketNumber}: {ticketData.subject}</h3>
                 </div>
                 <div className="page-title page-btn">
-                    <Link className="btn btn-primary" to="/admin/support-ticket">Back to Tickets</Link>
+                    <Link className="btn btn-primary" to="/admin/support-ticket-management">Back to Tickets</Link>
                 </div>
             </div>
             <div className="row layout-top-spacing">
@@ -170,7 +206,7 @@ const SupportTicketEdit = () => {
                                 <div className="white-bg p-4 mb-5">
                                     <div className="form-design">
                                         <div className="supportchat-heading">
-                                            <h2>Chat</h2>
+                                            <h2>Details</h2>
                                         </div>
                                         <div className="row">
                                             {/* Subject */}
@@ -196,7 +232,7 @@ const SupportTicketEdit = () => {
                                                     </p>
                                                 </div>
                                             </div>
-                                            {/* Status and Assignee Controls */}
+                                            {/* Status Controls */}
                                             <div className="col-md-6">
                                                 <div className="form-group">
                                                     <label htmlFor="status" className="form-label">Status</label>
@@ -204,7 +240,7 @@ const SupportTicketEdit = () => {
                                                         id="status"
                                                         name="status"
                                                         className="form-control"
-                                                        value={form.status}
+                                                        value={ticketStatus}
                                                         onChange={handleChange}
                                                         required
                                                     >
@@ -213,23 +249,6 @@ const SupportTicketEdit = () => {
                                                         <option value="Closed">Closed</option>
                                                     </select>
                                                 </div>
-                                                {/* <div className="form-group mt-3">
-                                                    <label htmlFor="assigneeId" className="form-label">Assignee</label>
-                                                    <select
-                                                        id="assigneeId"
-                                                        name="assigneeId"
-                                                        className="form-control"
-                                                        value={form.assigneeId}
-                                                        onChange={handleChange}
-                                                    >
-                                                        <option value="">Unassigned</option>
-                                                        {adminList.map((admin) => (
-                                                            <option key={admin._id} value={admin._id}>
-                                                                {admin.name}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div> */}
                                                 <div className="form-group mt-3">
                                                     <button type="button" onClick={handleReply} className="btn btn-primary w-100">
                                                         Update Ticket Details
@@ -262,19 +281,17 @@ const SupportTicketEdit = () => {
                                         <div className="supportchat-heading">
                                             <h2>Chat</h2>
                                         </div>
-                                        <div className="chatbox">
+                                        <div className="chatbox" ref={chatboxRef}>
                                             <ul className="chatboxul">
-                                                {ticketData.messages && ticketData.messages.length > 0 ? (
-                                                    ticketData.messages.map((message) => {
+                                                {sortedMessages && sortedMessages.length > 0 ? (
+                                                    sortedMessages.map((message) => {
                                                         const formattedTime = new Date(message.createdAt).toLocaleString();
-                                                        
-                                                        // Check if the message sender is the ticket creator
                                                         const isTicketCreator = message.senderId === ticketData.creator.id;
-                                                        
+
                                                         const avatarContent = isTicketCreator ? (
-                                                            <span>{getInitials(ticketData.creator.name)}</span> // User's initials
+                                                            <span>{getInitials(ticketData.creator.name)}</span>
                                                         ) : (
-                                                            <span>Ad</span> // Admin avatar
+                                                            <span>Ad</span>
                                                         );
 
                                                         return (
@@ -318,7 +335,8 @@ const SupportTicketEdit = () => {
                                                             className="form-control"
                                                             onChange={handleChange}
                                                             style={{ display: 'none' }}
-                                                            ref={fileInputRef} 
+                                                            ref={fileInputRef}
+                                                            accept=".png, .jpg, .jpeg"
                                                         />
                                                         <i className="la la-paperclip"></i>
                                                     </label>
@@ -327,6 +345,25 @@ const SupportTicketEdit = () => {
                                                     </button>
                                                 </form>
                                             </div>
+                                            {form.fileAttachment && (
+                                                <div className="d-flex justify-content-between align-items-center mt-2 px-3">
+                                                    <p className="mb-0 text-muted small">
+                                                        Selected file: <strong>{form.fileAttachment.name}</strong>
+                                                    </p>
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-sm btn-outline-danger"
+                                                        onClick={() => {
+                                                            setForm(prev => ({ ...prev, fileAttachment: null }));
+                                                            if (fileInputRef.current) {
+                                                                fileInputRef.current.value = '';
+                                                            }
+                                                        }}
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

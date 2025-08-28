@@ -42,87 +42,115 @@ const userController = {
 
   // GET /api/admin/user-management-list
   getUsers: async (req, res) => {
-  try {
-    const users = await db.User.findAll({
-      where: {
-        '$Role.name$': { [Op.ne]: 'super_admin' },
-      },
-      include: [
-        {
-          model: db.Company,
-          as: 'Company',
-          attributes: ['name'],
-        },
-        {
-          model: db.Role,
-          attributes: ['name'],
-        },
-        {
-          model: db.Country,
-          as: 'Country',
-          attributes: ['phonecode'],
-        },
-        {
-          model: db.UserSubscription,
-          as: 'UserSubscriptions', // ⬅️ Include user subscriptions
-          include: [
-            {
-              model: db.SubscriptionPlan,
-              as: 'subscriptionPlan',
-              attributes: ['id', 'name', 'price', 'billing_period'], // Include needed fields
-            },
+    try {
+      const { search = '', page = 1, limit = 10 } = req.query;
+
+      const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
+      const searchCondition = search.trim() !== ''
+        ? {
+            [Op.or]: [
+              { name: { [Op.iLike]: `%${search.trim()}%` } },
+              { email: { [Op.iLike]: `%${search.trim()}%` } },
+              { phone: { [Op.iLike]: `%${search.trim()}%` } },
+            ],
+          }
+        : {};
+
+      const { count, rows: users } = await db.User.findAndCountAll({
+        where: {
+          [Op.and]: [
+            { '$Role.name$': { [Op.ne]: 'super_admin' } },
+            searchCondition,
           ],
         },
-      ],
-      order: [['id', 'DESC']],
-    });
+        include: [
+          {
+            model: db.Company,
+            as: 'Company',
+            attributes: ['name', 'logo_url'],
+          },
+          {
+            model: db.Role,
+            attributes: ['name'],
+            required: true,
+          },
+          {
+            model: db.Country,
+            as: 'Country',
+            attributes: ['phonecode'],
+          },
+          {
+            model: db.UserSubscription,
+            as: 'UserSubscriptions',
+            include: [
+              {
+                model: db.SubscriptionPlan,
+                as: 'subscriptionPlan',
+                attributes: ['id', 'name', 'price', 'billing_period'],
+              },
+            ],
+          },
+        ],
+        order: [['id', 'DESC']],
+        limit: parseInt(limit, 10),
+        offset: parseInt(offset, 10),
+        // ⭐ ADD THIS LINE to fix the count
+        distinct: true,
+      });
 
-    const formattedUsers = users.map((user) => {
-      const phonecode = user.Country?.phonecode || '';
-      const phone = user.phone || '';
-      const subscription = user.UserSubscriptions?.[0]?.subscriptionPlan; // Assuming latest or first is enough
+      const formattedUsers = users.map((user) => {
+        const phone = user.phone || '';
+        const subscription = user.UserSubscriptions?.[0]?.subscriptionPlan;
+        const nameParts = user.name?.split(' ');
+        const first_name = nameParts?.[0] || '';
+        const last_name = nameParts?.slice(1).join(' ') || '';
 
-      return {
-        id: user.id,
-        first_name: user.name?.split(' ')[0] || '',
-        last_name: user.name?.split(' ')[1] || '',
-        email: user.email,
-        phone: phonecode ? `${phonecode} ${phone}`.trim() : phone,
-        role: user.Role?.name || 'N/A',
-        profile: user.profile,
-        status: user.is_active ? '1' : '0',
-        created_at: user.createdAt,
-        company_id: user.company_id,
-        company_name: user.Company?.name || 'No Company',
-        subscription_plan: subscription
-          ? {
-              id: subscription.id,
-              name: subscription.name,
-              price: subscription.price,
-              billing_period: subscription.billing_period,
-            }
-          : null,
-      };
-    });
+        return {
+          id: user.id,
+          first_name,
+          last_name,
+          email: user.email,
+          phone: user.Country?.phonecode ? `${user.Country.phonecode} ${phone}`.trim() : phone,
+          role: user.Role?.name || 'N/A',
+          profile: user.profile,
+          status: user.is_active ? '1' : '0',
+          created_at: user.createdAt,
+          company_id: user.company_id,
+          company_name: user.Company?.name || 'No Company',
+          company_image: user.Company?.logo_url,
+          subscription_name: subscription ?  subscription.name : 'N/A',
+          subscription_plan: subscription
+            ? {
+                id: subscription.id,
+                name: subscription.name,
+                price: subscription.price,
+                billing_period: subscription.billing_period,
+              }
+            : null,
+        };
+      });
 
-    res.status(200).json({
-      status: 'success',
-      status_code: 200,
-      status_message: 'OK',
-      message: 'Users fetched successfully',
-      results: formattedUsers,
-    });
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({
-      status: 'error',
-      status_code: 500,
-      status_message: 'INTERNAL_SERVER_ERROR',
-      message: 'Error fetching users',
-      results: null,
-    });
-  }
+      res.status(200).json({
+        status: 'success',
+        status_code: 200,
+        status_message: 'OK',
+        message: 'Users fetched successfully',
+        results: formattedUsers,
+        total_count: count,
+      });
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({
+        status: 'error',
+        status_code: 500,
+        status_message: 'INTERNAL_SERVER_ERROR',
+        message: 'Error fetching users',
+        results: null,
+      });
+    }
   },
+
 
   // GET /api/admin/user-management/:id
   getUserById: async (req, res) => {
@@ -357,9 +385,6 @@ const userController = {
       });
     }
   },
-
-
-
 
   // DELETE /api/admin/user-management/:id
   deleteUser: async (req, res) => {

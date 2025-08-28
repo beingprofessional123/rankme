@@ -9,6 +9,7 @@ const {
 
 exports.getPropertyPrice = async (req, res) => {
   try {
+
     const {
       user_id: userId,
       company_id: companyId,
@@ -56,12 +57,15 @@ exports.getPropertyPrice = async (req, res) => {
           as: 'extractedFiles',
           required: false,
           where: {
-            property: 'myproperty',
             checkIn: {
               [Op.between]: [startDate, endDate],
             },
+            // Modify this line to fetch all relevant data
+            property: {
+              [Op.in]: ['myproperty', 'competitor'],
+            },
           },
-          attributes: ['checkIn', 'checkOut', 'rate', 'platform', 'remarks'],
+          attributes: ['checkIn', 'checkOut', 'rate', 'platform', 'remarks', 'property'],
         },
       ],
       order: [['createdAt', 'DESC']],
@@ -70,18 +74,15 @@ exports.getPropertyPrice = async (req, res) => {
     res.status(200).json({
       status: 'success',
       status_code: 200,
-      status_message: 'OK',
       message: 'Property price data fetched successfully',
       count: data.length,
       results: data,
     });
   } catch (error) {
     console.error('Error fetching property prices:', error);
-
     res.status(500).json({
       status: 'error',
       status_code: 500,
-      status_message: 'INTERNAL_SERVER_ERROR',
       message: 'Failed to fetch property price data',
       error: error.message || 'Unknown error',
       results: null,

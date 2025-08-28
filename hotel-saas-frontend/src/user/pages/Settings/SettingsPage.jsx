@@ -4,6 +4,7 @@ import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify'; // For notifications
 import 'react-toastify/dist/ReactToastify.css'; // Toastify CSS
 import Input from '../../components/forms/Input';
+import Number from '../../components/forms/number';
 
 const SettingsPage = () => {
     const [activeTab, setActiveTab] = useState('general'); // 'general' or 'password'
@@ -414,7 +415,7 @@ const SettingsPage = () => {
                                                 </div>
                                             </div>
                                             <div className="col-md-6">
-                                                <Input
+                                                <Number
                                                     label="Phone Number"
                                                     type="text"
                                                     name="phoneNumber"

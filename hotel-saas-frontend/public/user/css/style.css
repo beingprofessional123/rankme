@@ -2058,3 +2058,19 @@ span.room-type {
     color: #ffffff;
 }
 
+.phonenumber .input-group {
+    gap: 0px 6px;
+}
+.phonenumber .input-group select.form-select {
+    max-width: 154px;
+}
+
+.tippy-box[data-theme~='red-tooltip'] {
+  background-color: #ff4c4c;
+  color: #fff;
+  font-weight: bold;
+}
+
+.tippy-box[data-theme~='red-tooltip'] .tippy-arrow {
+  color: #ff4c4c;
+}
