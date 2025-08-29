@@ -508,7 +508,7 @@ a {
 }
 .header-right li.nav-item.dropdown .dropdown-menu a.dropdown-item span {
     font-size: 12px;
-    margin-left: 15px;
+    color: #878787; 
 }
 .welcomeuser {
     font-size: 18px;
@@ -2077,8 +2077,8 @@ span.room-type {
 
 .notification-badge {
   position: absolute;
-  top: 5px; /* Adjust as needed */
-  right: 5px; /* Adjust as needed */
+  top: 1px; /* Adjust as needed */
+  right: 0px; /* Adjust as needed */
   padding: 3px 6px;
   border-radius: 50%;
   background-color: red;
@@ -2087,3 +2087,42 @@ span.room-type {
   line-height: 1;
   text-align: center;
 }
+
+
+.header-right li.nav-item.dropdown .dropdown-menu.notification-list {
+    min-width: 280px;
+    max-width: 280px;
+    min-height: 300px;
+    overflow-y: scroll;
+    max-height: 300px;
+}
+
+.header-right li.nav-item.dropdown .dropdown-menu li.notification-item .dropdown-item {
+    white-space: break-spaces;
+    font-size: 13px;
+    line-height: 18px;
+}
+
+.header-right li.nav-item.dropdown .dropdown-menu a.dropdown-item strong {
+    font-weight: 500;
+    line-height: 13px;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.header-right li.nav-item.dropdown .dropdown-menu a.dropdown-item p {
+    margin-bottom: 4px;
+}
+
+.header-right li.nav-item.dropdown .dropdown-menu li.notification-item.unread .dropdown-item {
+    font-weight: 500;
+    color: #000;
+}
+
+
+.notification-list li.read-all-btn-wrapper .btn-link {
+    font-size: 14px;
+    font-weight: 300;
+    color: #19a51d;
+}
+
