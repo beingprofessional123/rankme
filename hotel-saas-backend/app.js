@@ -14,6 +14,7 @@ const competitorDataRoutes = require('./routes/competitorDataRoutes');
 const strocrReportRoutes = require('./routes/strocrReportRoutes');
 const supportTicketRoutes = require('./routes/supportTicketRoute');
 const forecastRoutes = require('./routes/forecastRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 
 const adminUserRoutes = require('./routes/admin/userRoutes');
@@ -47,6 +48,7 @@ app.use('/api/competitorData', competitorDataRoutes);
 app.use('/api/strocrReport', strocrReportRoutes);
 app.use('/api/forecast', forecastRoutes);
 app.use('/api', supportTicketRoutes);
+app.use('/api', notificationRoutes);
 
 // Admin Routes
 app.use('/api/admin', adminUserRoutes);

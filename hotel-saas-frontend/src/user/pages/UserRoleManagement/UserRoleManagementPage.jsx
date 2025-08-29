@@ -155,7 +155,7 @@ const UserRoleManagementPage = () => {
         ...(showActionColumn ? [
             {
                 name: 'id',
-                label: 'Action',
+                label: 'ACTION',
                 options: {
                     filter: false,
                     sort: false,

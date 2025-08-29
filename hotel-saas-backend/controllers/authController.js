@@ -95,11 +95,113 @@ exports.signup = async (req, res) => {
     }
 };
 
+// USER NOTIFICATION OF PRICE ALERT 
+const checkAndCreatePriceAlerts = async (userId, companyId) => {
+    try {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowDate = tomorrow.toISOString().split('T')[0];
+
+        // Find all hotels associated with the user's company
+        const hotels = await db.Hotel.findAll({
+            where: { company_id: companyId },
+            attributes: ['id', 'name'],
+        });
+
+        if (!hotels.length) {
+            console.log('No hotels found for this company. Skipping price alert check.');
+            return;
+        }
+
+        const hotelIds = hotels.map(hotel => hotel.id);
+
+        // Fetch pricing data by joining through UploadData and MetaUploadData
+        const pricingData = await db.UploadedExtractDataFile.findAll({
+            where: {
+                checkIn: tomorrowDate,
+            },
+            include: [
+                {
+                    model: db.UploadData,
+                    as: 'UploadDatum', // ✅ Corrected alias to match Sequelize's default
+                    required: true,
+                    include: [
+                        {
+                            model: db.MetaUploadData,
+                            as: 'metaData', // This alias is correct based on your UploadData model
+                            required: true,
+                            where: {
+                                hotelPropertyId: {
+                                    [db.Sequelize.Op.in]: hotelIds,
+                                },
+                            },
+                        }
+                    ]
+                }
+            ]
+        });
+
+        const myPropertyPrices = {};
+        const competitorPrices = {};
+        
+        pricingData.forEach(item => {
+            const hotelId = item.UploadDatum.metaData.hotelPropertyId;
+            const rate = parseFloat(item.rate);
+            const propertyType = item.property;
+
+            if (propertyType === 'myproperty') {
+                if (!myPropertyPrices[hotelId]) myPropertyPrices[hotelId] = [];
+                myPropertyPrices[hotelId].push(rate);
+            } else if (propertyType === 'competitor') {
+                if (!competitorPrices[hotelId]) competitorPrices[hotelId] = [];
+                competitorPrices[hotelId].push(rate);
+            }
+        });
+
+        for (const hotel of hotels) {
+            const myAvgPrice = myPropertyPrices[hotel.id] ? 
+                myPropertyPrices[hotel.id].reduce((sum, rate) => sum + rate, 0) / myPropertyPrices[hotel.id].length : 0;
+            
+            const competitorAvgPrice = competitorPrices[hotel.id] ? 
+                competitorPrices[hotel.id].reduce((sum, rate) => sum + rate, 0) / competitorPrices[hotel.id].length : 0;
+
+            let priceAlert = null;
+            if (myAvgPrice > 0 && competitorAvgPrice > 0) {
+                const difference = ((myAvgPrice - competitorAvgPrice) / competitorAvgPrice) * 100;
+
+                let title = '';
+                let message = '';
+                
+                if (difference > 5) {
+                    title = 'Price Alert: Your Price is High!';
+                    message = `For tomorrow, your average price of $${myAvgPrice.toFixed(2)} at ${hotel.name} is more than 5% higher than the competitor average of $${competitorAvgPrice.toFixed(2)}.`;
+                    priceAlert = 'high';
+                } else if (difference < -5) {
+                    title = 'Price Alert: Your Price is Low!';
+                    message = `For tomorrow, your average price of $${myAvgPrice.toFixed(2)} at ${hotel.name} is more than 5% lower than the competitor average of $${competitorAvgPrice.toFixed(2)}.`;
+                    priceAlert = 'low';
+                }
+
+                if (priceAlert) {
+                    await db.Notification.create({
+                        user_id: userId,
+                        title: title,
+                        message: message,
+                        type: 'price_alert',
+                    });
+                }
+            }
+        }
+        console.log('Price alert check completed.');
+    } catch (error) {
+        console.error('Error in price alert check:', error);
+    }
+};
+
 // USER LOGIN
 exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
-
         // Find user by email, and include their Role and Company
         const user = await db.User.findOne({
             where: { email },
@@ -126,6 +228,7 @@ exports.login = async (req, res) => {
         if (!isMatch) {
           return res.status(401).json({ message: 'Incorrect email or password. Please try again.' });
         }
+        checkAndCreatePriceAlerts(user.id, user.company_id); 
 
         // Generate JWT
         const token = jwt.sign(

@@ -2074,3 +2074,16 @@ span.room-type {
 .tippy-box[data-theme~='red-tooltip'] .tippy-arrow {
   color: #ff4c4c;
 }
+
+.notification-badge {
+  position: absolute;
+  top: 5px; /* Adjust as needed */
+  right: 5px; /* Adjust as needed */
+  padding: 3px 6px;
+  border-radius: 50%;
+  background-color: red;
+  color: white;
+  font-size: 10px;
+  line-height: 1;
+  text-align: center;
+}
