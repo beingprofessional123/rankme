@@ -395,7 +395,7 @@ const HotelsAndRoomsList = () => {
     if (showActions) {
         baseColumns.push({
             name: 'Actions',
-            label: 'Actions',
+            label: 'ACTION',
             options: {
                 filter: false,
                 sort: false,

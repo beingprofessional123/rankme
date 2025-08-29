@@ -98,7 +98,7 @@ const SupportTicketPage = () => {
         },
         {
             name: 'id',
-            label: 'Action',
+            label: 'ACTION',
             options: {
                 customBodyRender: (value, tableMeta) => {
                     const rowIndex = tableMeta.rowIndex;
