@@ -2126,3 +2126,13 @@ span.room-type {
     color: #19a51d;
 }
 
+.notification-item .delete-btn {
+    padding: 0px;
+    margin-left: 10px;
+}
+
+.notification-item .delete-btn img {
+    width: 15px;
+    margin-top: -6px;
+}
+
