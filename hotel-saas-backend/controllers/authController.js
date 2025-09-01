@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../models'); // Ensure your db object has User, Company, and Role models
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const { Op } = require('sequelize');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 const getForgotPasswordEmail = require('../emailTemplate/ForgetPassword');
@@ -102,7 +103,6 @@ const checkAndCreatePriceAlerts = async (userId, companyId) => {
         tomorrow.setDate(tomorrow.getDate() + 1);
         const tomorrowDate = tomorrow.toISOString().split('T')[0];
 
-        // Find all hotels associated with the user's company
         const hotels = await db.Hotel.findAll({
             where: { company_id: companyId },
             attributes: ['id', 'name'],
@@ -115,7 +115,6 @@ const checkAndCreatePriceAlerts = async (userId, companyId) => {
 
         const hotelIds = hotels.map(hotel => hotel.id);
 
-        // Fetch pricing data by joining through UploadData and MetaUploadData
         const pricingData = await db.UploadedExtractDataFile.findAll({
             where: {
                 checkIn: tomorrowDate,
@@ -123,12 +122,12 @@ const checkAndCreatePriceAlerts = async (userId, companyId) => {
             include: [
                 {
                     model: db.UploadData,
-                    as: 'UploadDatum', // ✅ Corrected alias to match Sequelize's default
+                    as: 'UploadDatum',
                     required: true,
                     include: [
                         {
                             model: db.MetaUploadData,
-                            as: 'metaData', // This alias is correct based on your UploadData model
+                            as: 'metaData',
                             required: true,
                             where: {
                                 hotelPropertyId: {
@@ -143,7 +142,7 @@ const checkAndCreatePriceAlerts = async (userId, companyId) => {
 
         const myPropertyPrices = {};
         const competitorPrices = {};
-        
+
         pricingData.forEach(item => {
             const hotelId = item.UploadDatum.metaData.hotelPropertyId;
             const rate = parseFloat(item.rate);
@@ -159,10 +158,10 @@ const checkAndCreatePriceAlerts = async (userId, companyId) => {
         });
 
         for (const hotel of hotels) {
-            const myAvgPrice = myPropertyPrices[hotel.id] ? 
+            const myAvgPrice = myPropertyPrices[hotel.id] ?
                 myPropertyPrices[hotel.id].reduce((sum, rate) => sum + rate, 0) / myPropertyPrices[hotel.id].length : 0;
-            
-            const competitorAvgPrice = competitorPrices[hotel.id] ? 
+
+            const competitorAvgPrice = competitorPrices[hotel.id] ?
                 competitorPrices[hotel.id].reduce((sum, rate) => sum + rate, 0) / competitorPrices[hotel.id].length : 0;
 
             let priceAlert = null;
@@ -171,24 +170,43 @@ const checkAndCreatePriceAlerts = async (userId, companyId) => {
 
                 let title = '';
                 let message = '';
-                
+                let alertType = '';
+
                 if (difference > 5) {
                     title = 'Price Alert: Your Price is High!';
                     message = `For tomorrow, your average price of $${myAvgPrice.toFixed(2)} at ${hotel.name} is more than 5% higher than the competitor average of $${competitorAvgPrice.toFixed(2)}.`;
-                    priceAlert = 'high';
+                    alertType = 'price_alert_high';
                 } else if (difference < -5) {
                     title = 'Price Alert: Your Price is Low!';
                     message = `For tomorrow, your average price of $${myAvgPrice.toFixed(2)} at ${hotel.name} is more than 5% lower than the competitor average of $${competitorAvgPrice.toFixed(2)}.`;
-                    priceAlert = 'low';
+                    alertType = 'price_alert_low';
                 }
 
-                if (priceAlert) {
-                    await db.Notification.create({
-                        user_id: userId,
-                        title: title,
-                        message: message,
-                        type: 'price_alert',
+                if (alertType) {
+                    // Check for a similar recent notification
+                    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+                    const existingAlert = await db.Notification.findOne({
+                        where: {
+                            user_id: userId,
+                            title: title,
+                            message: message, // Use the full message for a more specific match
+                            type: alertType,
+                            createdAt: {
+                                [Op.gt]: twentyFourHoursAgo,
+                            },
+                        },
                     });
+
+                    if (!existingAlert) {
+                        // Create a new notification only if a similar one doesn't exist
+                        await db.Notification.create({
+                            user_id: userId,
+                            title: title,
+                            message: message,
+                            type: alertType,
+                        });
+                    }
                 }
             }
         }
