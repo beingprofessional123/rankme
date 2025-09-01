@@ -34,7 +34,7 @@ const Sidebar = () => {
     { path: '/upload-data', label: 'Upload Data', icon: 'upload.svg', key: 'upload_data' },
     // { path: '/competitor-rate', label: 'Competitor Rates', icon: 'competitor.svg', key: 'competitor_rates' },
     { path: '/user-role-management', label: 'User Role Management', icon: 'role.svg', key: 'user_role_management' },
-    { path: '/billing', label: 'Billing', icon: 'billing.svg', key: 'billing' },
+    // { path: '/billing', label: 'Billing', icon: 'billing.svg', key: 'billing' },
     { path: '/support-tickets', label: 'Support', icon: 'support.svg', key: 'support_ticket' },
     { path: '/bookings', label: 'Bookings', icon: 'Bookings.svg', key: 'bookings' },
     { path: '/competitor-data', label: 'Competitor Data', icon: 'CompetitorData.svg', key: 'competitor-data' },

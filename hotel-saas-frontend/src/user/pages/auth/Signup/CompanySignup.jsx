@@ -136,7 +136,9 @@ const CompanySignup = () => {
       
       localStorage.setItem('user', JSON.stringify(data.user));
 
-      navigate('/subscription');
+      // navigate('/subscription');
+      navigate('/dashboard');
+
     } catch (error) {
       setGeneralError('Network error. Please check your internet connection and try again.');
       console.error(error);

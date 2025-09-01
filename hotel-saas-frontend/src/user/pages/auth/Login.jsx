@@ -66,7 +66,8 @@ const Login = () => {
               navigate('/setup/setup-wizard');
             }
           } else {
-            navigate('/subscription');
+            // navigate('/subscription');
+            navigate('/dashboard');
           }
         }
 
@@ -133,7 +134,8 @@ const Login = () => {
       // Redirect based on user role
       switch (data.user.role) {
         case 'company_admin':
-          window.location.href = '/subscription';
+          // window.location.href = '/subscription';
+          window.location.href = '/dashboard';
           break;
         case 'revenue_manager':
         case 'general_manager':
