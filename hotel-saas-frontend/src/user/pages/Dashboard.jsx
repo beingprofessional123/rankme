@@ -1,6 +1,7 @@
 // src/pages/Dashboard/Dashboard.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bar, Line } from 'react-chartjs-2';
+import axios from 'axios';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,7 +14,7 @@ import {
   Legend,
 } from 'chart.js';
 
-import DashboardLayout from '../components/DashboardLayout'; // Corrected path based on typical React project structure
+import DashboardLayout from '../components/DashboardLayout';
 
 ChartJS.register(
   CategoryScale,
@@ -27,44 +28,188 @@ ChartJS.register(
 );
 
 const Dashboard = () => {
-  // Sample data for charts
-  const occupancyData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-    datasets: [{
-      label: 'Occupancy Rate',
-      data: [35.6, 25.5, 50, 45.3, 44.6, 49.9, 70, 63, 67, 24, 40, 57],
-      borderColor: '#3b82f6',
-      backgroundColor: '#3b82f6',
-      fill: false,
-      tension: 0.3,
-    }]
+  const [hotels, setHotels] = useState([]);
+  const [selectedHotelId, setSelectedHotelId] = useState('');
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [latestAlert, setLatestAlert] = useState('No new alerts.'); // ✅ ADDED: State for latest alert
+
+  // Get user and token from local storage
+  const user = JSON.parse(localStorage.getItem('user'));
+  const token = localStorage.getItem('token');
+
+  const config = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
   };
 
-  const revparData = {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    datasets: [{
-      label: 'RevPAR',
-      data: [600, 800, 750, 800, 1000, 600, 1200],
-      backgroundColor: '#facc15', // Corrected class to backgroundColor
-    }]
+  useEffect(() => {
+    // Function to fetch the list of hotels
+    const fetchHotels = async () => {
+      try {
+        const res = await axios.get(
+          `${process.env.REACT_APP_API_BASE_URL}/api/hotels/list?company_id=${user.company_id}`,
+          config
+        );
+        const fetchedHotels = res.data.hotels;
+        setHotels(fetchedHotels);
+        if (fetchedHotels.length > 0) {
+          // Automatically set the first hotel as selected
+          setSelectedHotelId(fetchedHotels[0].id);
+        } else {
+          setLoading(false);
+          setError("No hotels found for your company.");
+        }
+      } catch (err) {
+        setLoading(false);
+        setError("Failed to fetch hotels list.");
+        console.error("Error fetching hotels:", err);
+      }
+    };
+    fetchHotels();
+  }, [user.company_id]);
+
+  useEffect(() => {
+    // Function to fetch dashboard data for the selected hotel
+    const fetchDashboardData = async () => {
+      if (!selectedHotelId) {
+        return; // Don't fetch if no hotel is selected
+      }
+
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await axios.get(
+          `${process.env.REACT_APP_API_BASE_URL}/api/dashboard/data/${selectedHotelId}`,
+          config
+        );
+        setDashboardData(res.data);
+      } catch (err) {
+        setError("Failed to fetch dashboard data.");
+        console.error("Error fetching dashboard data:", err);
+        setDashboardData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboardData();
+  }, [selectedHotelId]);
+
+  // ✅ NEW: Fetch notifications and update the latestAlert state
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const response = await axios.get(
+          `${process.env.REACT_APP_API_BASE_URL}/api/notifications`,
+          config
+        );
+        const notifications = response.data.results;
+        if (notifications && notifications.length > 0) {
+          const latest = notifications[0]; // Assuming the API returns notifications in descending order of creation
+          const message = latest.message;
+          const charLimit = 50; // Set your character limit
+          const truncatedMessage = message.length > charLimit 
+                                 ? `${message.substring(0, charLimit)}...` 
+                                 : message;
+          setLatestAlert(truncatedMessage);
+        } else {
+          setLatestAlert("No new alerts.");
+        }
+      } catch (err) {
+        console.error("Error fetching notifications:", err);
+        setLatestAlert("Failed to fetch alerts.");
+      }
+    };
+    fetchNotifications();
+  }, []); // Empty dependency array means this runs once on component mount
+
+  const handleHotelChange = (e) => {
+    setSelectedHotelId(e.target.value);
   };
+
+  const occupancyOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+      title: {
+        display: false,
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        max: 100,
+      }
+    }
+  };
+
+  const revparOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+      title: {
+        display: false,
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="mainbody p-5 text-center">
+          <h3>Loading dashboard...</h3>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="mainbody p-5 text-center text-danger">
+          <h3>{error}</h3>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
-
       <div className="mainbody">
         <div className="container-fluid">
-
           <div className="row breadcrumbrow">
             <div className="col-md-12">
-              <div className="breadcrumb-sec">
+              <div className="breadcrumb-sec d-flex justify-content-between align-items-center">
                 <h2>Dashboard</h2>
-                <nav aria-label="breadcrumb">
-                  <ol className="breadcrumb">
-                    <li className="breadcrumb-item"><a href="#">Home</a></li>
-                    <li className="breadcrumb-item active" aria-current="page">Dashboard</li>
-                  </ol>
-                </nav>
+                <div className="form-group w-25">
+                  <select
+                    className="form-control"
+                    value={selectedHotelId}
+                    onChange={handleHotelChange}
+                  >
+                    {hotels.length > 0 ? (
+                      hotels.map((hotel) => (
+                        <option key={hotel.id} value={hotel.id}>
+                          {hotel.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option disabled>No Hotels Available</option>
+                    )}
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -76,29 +221,30 @@ const Dashboard = () => {
                   <div className="col-md-3">
                     <div className="carddesign">
                       <span className="card-icon"><img src={`/user/images/card1.svg`} className="img-fluid" alt="" /></span>
-                      <h3>80%</h3>
+                      <h3>{dashboardData?.currentMetrics?.occupancy ? `${Math.round(dashboardData.currentMetrics.occupancy)}%` : '0%'}</h3>
                       <h5>Occupancy</h5>
                     </div>
                   </div>
                   <div className="col-md-3">
                     <div className="carddesign">
                       <span className="card-icon"><img src={`/user/images/card2.svg`} className="img-fluid" alt="" /></span>
-                      <h3>600</h3>
+                      <h3>{dashboardData?.currentMetrics?.adr ? `${Math.round(dashboardData.currentMetrics.adr)}` : '0'}</h3>
                       <h5>ADR</h5>
                     </div>
                   </div>
                   <div className="col-md-3">
                     <div className="carddesign">
                       <span className="card-icon"><img src={`/user/images/card3.svg`} className="img-fluid" alt="" /></span>
-                      <h3>$5,677</h3>
+                      <h3>{dashboardData?.currentMetrics?.revpar ? `$${Math.round(dashboardData.currentMetrics.revpar)}` : '0'}</h3>
                       <h5>RevPAR</h5>
                     </div>
                   </div>
                   <div className="col-md-3">
                     <div className="carddesign">
-                      <span className="card-icon"><img src={`/user/images/card4.svg`}className="img-fluid" alt="" /></span>
-                      <h6>Lorem Ipsum is....</h6>
-                      <h5>Alerts <a href="#" className="alerts-read">Read More</a></h5>
+                      <span className="card-icon"><img src={`/user/images/card4.svg`} className="img-fluid" alt="" /></span>
+                      {/* ✅ UPDATED: Display the latest alert from state */}
+                      <h6>{latestAlert}</h6> 
+                      <h5>Alerts <a href="#" className="alerts-read"></a></h5>
                     </div>
                   </div>
                 </div>
@@ -111,22 +257,13 @@ const Dashboard = () => {
               <div className="white-bg">
                 <div className="canvas-heading">
                   <h2>Occupancy Rate</h2>
-                  <div className="canvas-filter">
-                    <div className="dropdown">
-                      <button type="button" className="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
-                        <img src={`/user/images/filter.svg`} className="img-fluid" alt="" />
-                      </button>
-                      <ul className="dropdown-menu">
-                        <li><a className="dropdown-item" href="#">Months</a></li>
-                        <li><a className="dropdown-item" href="#">Days</a></li>
-                      </ul>
-                    </div>
-                  </div>
                 </div>
                 <div className="canvasbody">
-                  {/* Replace with actual ChartJS Line component */}
-                  {/* <Line data={occupancyData} options={{ responsive: true, plugins: { legend: { position: 'top' }} }} /> */}
-                  <img src={`/user/images/canvas1.png`} className="img-fluid" alt="Occupancy Rate Chart" style={{ width: '100%' }} />
+                  {dashboardData?.occupancyData ? (
+                    <Line data={dashboardData.occupancyData} options={occupancyOptions} />
+                  ) : (
+                    <div className="text-center p-5">No occupancy data available.</div>
+                  )}
                 </div>
               </div>
             </div>
@@ -134,22 +271,13 @@ const Dashboard = () => {
               <div className="white-bg">
                 <div className="canvas-heading">
                   <h2>RevPAR</h2>
-                  <div className="canvas-filter">
-                    <div className="dropdown">
-                      <button type="button" className="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
-                        <img src={`/user/images/filter.svg`} className="img-fluid" alt="" />
-                      </button>
-                      <ul className="dropdown-menu">
-                        <li><a className="dropdown-item" href="#">Months</a></li>
-                        <li><a className="dropdown-item" href="#">Week</a></li>
-                      </ul>
-                    </div>
-                  </div>
                 </div>
                 <div className="canvasbody">
-                  {/* Replace with actual ChartJS Bar component */}
-                  {/* <Bar data={revparData} options={{ responsive: true, plugins: { legend: { position: 'top' }} }} /> */}
-                  <img src={`/user/images/canvas1.png`} className="img-fluid" alt="RevPAR Chart" style={{ width: '100%' }} />
+                  {dashboardData?.revparData ? (
+                    <Bar data={dashboardData.revparData} options={revparOptions} />
+                  ) : (
+                    <div className="text-center p-5">No RevPAR data available.</div>
+                  )}
                 </div>
               </div>
             </div>
