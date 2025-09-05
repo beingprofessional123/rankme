@@ -1,12 +1,13 @@
 const { Op } = require('sequelize');
 const db = require('../models');
-const { UploadData, MetaUploadData, UploadedExtractDataFile, Hotel } = db;
+const { UploadData, MetaUploadData, UploadedExtractDataFile, Hotel, Config } = db;
 const OpenAI = require('openai');
 const dayjs = require('dayjs');
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Remove the hardcoded initialization outside the function
+// const openai = new OpenAI({
+//   apiKey: process.env.OPENAI_API_KEY,
+// });
 
 const cleanAndParseAIOutput = (rawText, daysToForecast) => {
   const lines = rawText.trim().split('\n').slice(0, daysToForecast);
@@ -21,6 +22,19 @@ const cleanAndParseAIOutput = (rawText, daysToForecast) => {
 
 exports.getHotelForecast = async (req, res) => {
   try {
+    // --- Fetch API Key from Database ---
+    const openaiKeyRecord = await Config.findOne({
+      where: { key: 'OPENAI_API_KEY' }
+    });
+
+    if (!openaiKeyRecord) {
+      return res.status(500).json({ error: 'OpenAI API key not found in the database.' });
+    }
+
+    const openai = new OpenAI({
+      apiKey: openaiKeyRecord.value,
+    });
+    
     const { hotelId, startDate, endDate } = req.query;
     const { user } = req;
     const companyId = user.company_id;
@@ -111,7 +125,7 @@ exports.getHotelForecast = async (req, res) => {
       return res.status(404).json({ message: 'No relevant historical data found to generate a forecast for either occupancy or price.' });
     }
 
-    console.log(historicalPrices);
+    console.log(historicalPrices);
     
     let occupancyForecast = [];
     if (historicalOccupancy.length) {
@@ -172,7 +186,7 @@ exports.getHotelForecast = async (req, res) => {
       });
 
       const forecastPriceText = aiPriceResponse.choices[0].message.content;
-        console.log('Raw AI Price Response:', forecastPriceText);
+        console.log('Raw AI Price Response:', forecastPriceText);
       priceForecast = cleanAndParseAIOutput(forecastPriceText, daysToForecast);
     }
 
@@ -195,6 +209,6 @@ exports.getHotelForecast = async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching hotel forecast:', error);
-    res.status(500).json({ error: 'Internal server error.', message: error });
+    res.status(500).json({ error: 'Internal server error.', message: error.message });
   }
 };
