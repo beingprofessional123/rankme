@@ -9,6 +9,7 @@ const DashboardLayout = ({ children }) => {
   const user = JSON.parse(localStorage.getItem('user')) || { name: 'Guest' }; // Ensure 'name' is used
   const username = user.name;
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+  const currentYear = new Date().getFullYear();
 
   let image = null;
   if (user.role === 'company_admin') {
@@ -44,7 +45,7 @@ const DashboardLayout = ({ children }) => {
           <div className="row">
             <div className="col-md-6">
               <div className="copyright-left">
-              <p>Copyright © 2025 <a href="#">RankMeOne.ai</a> - All Rights Reserved.</p>
+              <p>Copyright © {currentYear} <a href="#">RankMeOne.ai</a> - All Rights Reserved.</p>
               </div>
             </div>
             <div className="col-md-6">

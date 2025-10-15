@@ -120,6 +120,17 @@ exports.createSupportTicket = (req, res) => {
             const { subject, category, description, priority } = req.body;
             const { user } = req;
 
+            const superAdminUser = await db.User.findOne({
+                include: [
+                    {
+                        model: db.Role,
+                        as: 'Role', // as defined in User.belongsTo(models.Role, { foreignKey: 'role_id' })
+                        where: { name: 'super_admin' },
+                    }
+                ],
+                attributes: ['id', 'name', 'email']
+            });
+
             if (!subject || !description) {
                 return sendErrorResponse(res, 400, 'Subject and description are required.');
             }
@@ -129,8 +140,10 @@ exports.createSupportTicket = (req, res) => {
 
             const fileAttachmentPath = req.file ? `/uploads/support_tickets/${req.file.filename}` : null;
 
+           
             const newTicket = await db.SupportTicket.create({
                 userId: user.id,
+                assignedTo: superAdminUser.id,
                 ticketNumber: ticketNumber,
                 subject,
                 category,
@@ -139,6 +152,17 @@ exports.createSupportTicket = (req, res) => {
                 priority: priority || 'Medium',
                 fileAttachmentPath,
             });
+
+            if (superAdminUser) {
+                await db.Notification.create({
+                    user_id: superAdminUser.id,
+                    title: 'New Support Ticket Created',
+                    message: `User ${user.name} has created a new support ticket (#${newTicket.ticketNumber}).`,
+                    type: 'ticket_created',
+                    link: `/admin/support-ticket-management/${newTicket.id}/edit`,
+                    is_read: false,
+                });
+            }
 
             // --- Email Functionality: Send confirmation emails ---
             const frontendBaseUrl = process.env.FRONTEND_URL;
@@ -274,6 +298,17 @@ exports.deleteSupportTicketDetails = async (req, res) => {
         }
         await db.SupportTicketThread.destroy({ where: { ticketId: id } });
 
+        if (ticket.assignedTo) {
+            await db.Notification.create({
+                user_id: ticket.assignedTo,
+                title: 'Support Ticket Deleted',
+                message: `User ${user.name} has deleted support ticket (#${ticket.ticketNumber}).`,
+                type: 'ticket_deleted',
+                link: '', // optional
+                is_read: false,
+            });
+        }
+
         await ticket.destroy();
 
         res.status(200).json({ success: true, message: 'Support ticket and all associated threads deleted successfully.' });
@@ -324,6 +359,19 @@ exports.addSupportTicketMessage = (req, res) => {
                 fileAttachmentPath,
             });
 
+            // Inside addSupportTicketMessage, when a user replies
+            if (ticket.assignedTo) {
+                await db.Notification.create({
+                    user_id: ticket.assignedTo,
+                    title: 'User Replied to Support Ticket',
+                    message: `User ${user.name} replied to ticket (#${ticket.ticketNumber}).`,
+                    type: 'ticket_reply',
+                    link: `/admin/support-ticket-management/${ticket.id}/edit`,
+                    is_read: false,
+                });
+            }
+
+            
             if (ticket.status === 'Closed' && user && adminRoles.includes(userRoleName)) {
                 await ticket.update({ status: 'Reopened' });
             }
