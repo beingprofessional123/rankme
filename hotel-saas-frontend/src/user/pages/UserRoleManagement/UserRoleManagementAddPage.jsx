@@ -220,8 +220,12 @@ const UserRoleManagementAddPage = () => {
             errors.role_id = 'Role is required.';
         }
 
+        // Phone
         if (formData.phone) {
             const digitsOnly = formData.phone.replace(/\D/g, '');
+            if (!formData.countryCodeid) {
+                errors.countryCodeid = 'Country code is required when phone number is provided.';
+            }
             if (!/^[0-9\s\-()]+$/.test(formData.phone)) {
                 errors.phone = 'Phone number must contain only numbers, spaces, dashes, or brackets.';
             } else if (digitsOnly.length < 8 || digitsOnly.length > 15) {
@@ -366,17 +370,19 @@ const UserRoleManagementAddPage = () => {
                                                         name="countryCodeid"
                                                         value={formData.countryCodeid}
                                                         onChange={handleChange}
-                                                        className="form-control"
+                                                        className={`form-control ${formErrors.countryCodeid ? 'is-invalid' : ''}`}
                                                     >
                                                         <option value="">Select Country</option>
                                                         {countryList.map((country) => (
                                                             <option key={country.id || country.phonecode} value={country.id}>
-                                                                 {country.phonecode} ({country.short_name})
+                                                                {country.phonecode} ({country.short_name})
                                                             </option>
                                                         ))}
                                                     </select>
+                                                    {formErrors.countryCodeid && <div className="invalid-feedback">{formErrors.countryCodeid}</div>}
                                                 </div>
                                             </div>
+
                                             <div className="col-9">
                                                 <div className="form-group">
                                                     <label className="form-label">Phone Number (Optional)</label>
@@ -475,13 +481,13 @@ const UserRoleManagementAddPage = () => {
 
                                 <div className="addentry-btn mt-4">
                                     {canAccess('add') && (
-                                    <button
-                                        type="submit"
-                                        className="btn btn-info"
-                                        disabled={isSubmitting}
-                                    >
-                                        {isSubmitting ? 'Submitting...' : 'Submit'}
-                                    </button>
+                                        <button
+                                            type="submit"
+                                            className="btn btn-info"
+                                            disabled={isSubmitting}
+                                        >
+                                            {isSubmitting ? 'Submitting...' : 'Submit'}
+                                        </button>
                                     )}
                                 </div>
                             </form>

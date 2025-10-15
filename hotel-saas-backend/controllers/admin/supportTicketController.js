@@ -130,6 +130,16 @@ const supportTicketController = {
                 );
 
                 await sendEmail(ticket.creator.email, userEmailData.subject, userEmailData.html);
+
+                  // Send notification
+                await db.Notification.create({
+                    user_id: ticket.userId,
+                    title: 'Support Ticket Status Updated',
+                    message: `Your support ticket (#${ticket.ticketNumber}) status has been updated to "${status}".`,
+                    type: 'ticket_status_updated',
+                    link: `/support-tickets-edit/${ticket.id}`,
+                    is_read: false
+                });
             }
 
 
@@ -170,6 +180,15 @@ const supportTicketController = {
                 }
                 await msg.destroy();
             }
+
+            await db.Notification.create({
+                user_id: ticket.userId,
+                title: 'Support Ticket Deleted',
+                message: `Your support ticket (#${ticket.ticketNumber}) with subject "${ticket.subject}" has been deleted by the admin.`,
+                type: 'ticket_deleted',
+                link: null, // Optional: link to support page
+                is_read: false
+            });
 
             // Now delete the ticket itself
             await ticket.destroy();

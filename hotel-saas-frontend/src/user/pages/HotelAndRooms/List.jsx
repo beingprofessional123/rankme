@@ -384,7 +384,7 @@ const HotelsAndRoomsList = () => {
         },
         {
             name: 'total_rooms',
-            label: 'Total Room',
+            label: 'Total Rooms',
             options: { filter: false, sort: true },
         },
     ];

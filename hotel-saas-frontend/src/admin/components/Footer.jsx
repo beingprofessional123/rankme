@@ -6,7 +6,7 @@ const Footer = () => {
   return (
     <div className="footer-wrapper">
       <div className="footer-section f-section-1">
-        <p>Copyright © {currentYear} All Rights Reserved by Rank Me Now</p>
+        <p>Copyright © {currentYear} All Rights Reserved by <a href="#">RankMeOne.ai</a></p>
       </div>
     </div>
   );
