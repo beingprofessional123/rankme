@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from '../pages/auth/Login';
 import AdminLayout from '../layouts/AdminLayout';
 import Dashboard from '../pages/Dashboard';
+import MyProfile from '../pages/Myprofile';
+import ChangePassword from '../pages/ChangePassword';
 import UserManagementIndex from '../pages/UserManagement/Index';
 import UserManagementCreate from '../pages/UserManagement/create';
 import UserManagementEdit from '../pages/UserManagement/edit';
@@ -29,6 +31,10 @@ const AdminAppRoutes = () => {
         {/* Login page: only accessible if NOT logged in */}
         <Route path="/admin/login" element={<GuestRoute> <Login /> </GuestRoute>}/>
         <Route path="/admin" element={<GuestRoute> <Login /> </GuestRoute> }/>
+
+
+        <Route path="/admin/profile" element={<ProtectedRoute><AdminLayout><MyProfile /></AdminLayout></ProtectedRoute> }/>
+        <Route path="/admin/change-password" element={<ProtectedRoute><AdminLayout><ChangePassword /></AdminLayout></ProtectedRoute> }/>
 
         {/* Protected Admin Routes Dashborad */}
         <Route path="/admin/dashboard" element={<ProtectedRoute><AdminLayout><Dashboard /></AdminLayout></ProtectedRoute> }/>
