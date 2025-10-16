@@ -416,7 +416,7 @@
                                                                                               <option value="">Select Country</option>
                                                                                               {countryList.map((country) => (
                                                                                                   <option key={country.id} value={country.id}>
-                                                                                                      {country.phonecode} - {country.name}
+                                                                                                     {country.name}
                                                                                                   </option>
                                                                                               ))}
                                                                                           </select>

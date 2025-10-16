@@ -23,6 +23,7 @@ const adminPlanRoutes = require('./routes/admin/planRoutes');
 const adminTransactionRoutes = require('./routes/admin/transactionRoutes');
 const adminSupportTicketRoutes = require('./routes/admin/supportTicketRoutes');
 const adminNotificationRoutes = require('./routes/admin/adminNotificationRoutes');
+const adminProfileRoutes = require('./routes/admin/adminProfileRoutes');
 
 const path = require('path');
 
@@ -59,6 +60,7 @@ app.use('/api/admin', adminPlanRoutes);
 app.use('/api/admin/transaction', adminTransactionRoutes);
 app.use('/api/admin/support-ticket', adminSupportTicketRoutes);
 app.use('/api/admin', adminNotificationRoutes);
+app.use('/api/admin', adminProfileRoutes);
 
 // Import the images
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

@@ -115,6 +115,17 @@ const supportTicketController = {
                 };
                 // CORRECTED: Using the correct model name `SupportTicketThread`
                 await db.SupportTicketThread.create(messageData);
+
+                 const sender = await db.User.findByPk(senderId);
+
+                    await db.Notification.create({
+                        user_id: ticket.userId, // send to ticket creator
+                        title: 'New Reply from Admin',
+                        message: `Your support ticket (#${ticket.ticketNumber}) has a new reply from admin.`,
+                        type: 'ticket_new_reply',
+                        link: `/support-tickets-edit/${ticket.id}`,
+                        is_read: false
+                    });
             }
             // --- Email Functionality: Send status update email if status changed ---
             if (status && status !== oldStatus) {

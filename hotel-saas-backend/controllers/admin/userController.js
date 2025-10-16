@@ -93,10 +93,6 @@ const userController = {
           },
         ],
         order: [['id', 'DESC']],
-        limit: parseInt(limit, 10),
-        offset: parseInt(offset, 10),
-        // ⭐ ADD THIS LINE to fix the count
-        distinct: true,
       });
 
       const formattedUsers = users.map((user) => {
