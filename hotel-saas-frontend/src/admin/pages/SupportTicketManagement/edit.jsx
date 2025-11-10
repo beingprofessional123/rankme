@@ -223,6 +223,13 @@ const SupportTicketEdit = () => {
                                                     <p className="form-control-static">{ticketData.category}</p>
                                                 </div>
                                             </div>
+                                            {/* priority */}
+                                            <div className="col-md-6">
+                                                <div className="form-group">
+                                                    <label className="form-label">Priority</label>
+                                                    <p className="form-control-static">{ticketData.priority}</p>
+                                                </div>
+                                            </div>
                                             {/* Date */}
                                             <div className="col-md-6">
                                                 <div className="form-group">
@@ -230,6 +237,13 @@ const SupportTicketEdit = () => {
                                                     <p className="form-control-static">
                                                         {ticketData.createdAt ? new Date(ticketData.createdAt).toLocaleDateString() : ''}
                                                     </p>
+                                                </div>
+                                            </div>
+                                            {/* Description */}
+                                            <div className="col-md-6">
+                                                <div className="form-group">
+                                                    <label className="form-label">Description</label>
+                                                    <p className="form-control-static">{ticketData.description}</p>
                                                 </div>
                                             </div>
                                             {/* Status Controls */}
@@ -253,13 +267,6 @@ const SupportTicketEdit = () => {
                                                     <button type="button" onClick={handleReply} className="btn btn-primary w-100">
                                                         Update Ticket Details
                                                     </button>
-                                                </div>
-                                            </div>
-                                            {/* Description */}
-                                            <div className="col-md-12">
-                                                <div className="form-group">
-                                                    <label className="form-label">Description</label>
-                                                    <p className="form-control-static">{ticketData.description}</p>
                                                 </div>
                                             </div>
                                         </div>

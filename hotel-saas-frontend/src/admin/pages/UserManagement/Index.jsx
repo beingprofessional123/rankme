@@ -256,10 +256,13 @@ const UserManagementIndex = () => {
     return (
         <div className="layout-px-spacing">
             <div className="page-header d-flex justify-content-between">
-                <h3>User Management</h3>
-                <Link className="btn btn-primary" to="/admin/user-management/create">Create</Link>
-            </div>
-
+                      <div className="page-title">
+                          <h3>User Management</h3>
+                      </div>
+                      <div className="page-title page-btn">
+                          <Link className="btn btn-primary" to="/admin/user-management/create">Create</Link>
+                      </div>
+                  </div>
             <div className="row layout-top-spacing" id="cancel-row">
                 <div className="col-12 layout-spacing">
                     <div className="widget-content widget-content-area br-6">

@@ -315,7 +315,7 @@ const UserManagementEdit = () => {
                 <div className="account-settings-container layout-top-spacing">
                     <div className="layout-spacing">
                         <div className="general-info section general-infomain">
-                            <form onSubmit={handleSubmit} encType="multipart/form-data">
+                            <form onSubmit={handleSubmit} encType="multipart/form-data" autoComplete="off">
                                 <div className="account-content mt-2 mb-2">
                                     <div className="row">
                                         <div className="col-xl-12 col-lg-12 col-md-12 layout-spacing">

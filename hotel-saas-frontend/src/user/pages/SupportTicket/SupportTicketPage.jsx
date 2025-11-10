@@ -85,6 +85,7 @@ const SupportTicketPage = () => {
         // ADDED: New column for the ticketNumber
         { name: 'ticketNumber', label: 'Ticket ID' },
         { name: 'subject', label: 'Subject' },
+        { name: 'priority', label: 'Priority' },
         { name: 'category', label: 'Category' },
         { name: 'date', label: 'Opened Date' },
         {

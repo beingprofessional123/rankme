@@ -2275,7 +2275,8 @@ table .badge-success, table .badge-primary, table .badge-warning, table .badge-d
     background: #d7d7d7 !important;
     outline: none !important;
     box-shadow: none !important;
-    color: #000;
+    padding: 7px 9px !important;
+    color: #000 !important;
 }
 .textareabox .btn.btn-primary {
     width: 52px;
@@ -2283,10 +2284,11 @@ table .badge-success, table .badge-primary, table .badge-warning, table .badge-d
     border-radius: 100px !important;
     font-size: 27px;
     border: none !important;
-    background: #17237e;
+    background: #17237e !important;
     outline: none !important;
     box-shadow: none !important;
-    color: #ffffff;
+    color: #ffffff !important;
+    padding: 7px 9px !important;
 }
 
 /* End Support Ticket detail */

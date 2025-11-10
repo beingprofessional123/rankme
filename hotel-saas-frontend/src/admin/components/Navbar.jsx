@@ -2,10 +2,50 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 
+
 const Navbar = () => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('admin_user') || '{}');
+  const [isMuted, setIsMuted] = useState(
+    localStorage.getItem('NotificationSoundisMutedRankmeAdmin') === 'true'
+  );
+
+  const playNotificationSound = (notif) => {
+    const currentUrl = window.location.href;
+    const isMuted = localStorage.getItem('NotificationSoundisMutedRankme') === 'true';
+
+    // 🔇 Don't play if muted globally
+    if (isMuted) return;
+
+    // 🎯 Extract ticket ID from current URL (if on edit page)
+    const currentMatch = currentUrl.match(/\/admin\/support-ticket-management\/([^/]+)\/edit/);
+    const currentTicketId = currentMatch ? currentMatch[1] : null;
+
+    // 🎯 Extract ticket ID from notification link (if it's a ticket edit page)
+    const notifMatch = notif?.link?.match(/\/admin\/support-ticket-management\/([^/]+)\/edit/);
+    const notifTicketId = notifMatch ? notifMatch[1] : null;
+
+    // 🚫 If notification is "ticket_reply" AND same ticket edit page is open → mute
+    if (
+      notif.type === 'ticket_reply' &&
+      currentTicketId &&
+      notifTicketId &&
+      currentTicketId === notifTicketId
+    ) {
+      console.log('🔇 Skipping sound for same ticket reply');
+      return;
+    }
+
+    // ✅ Otherwise, play notification sound
+    const audio = new Audio('/NotificationSound.mp3');
+    audio.play().catch(err => console.warn('Audio play blocked:', err));
+  };
+
+
+
+
   const handleLogout = () => {
+    clearInterval(window.notificationInterval); // 🛑 stop auto-refresh
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
     navigate('/admin/login', { state: { message: 'Logged out successfully.' } });
@@ -17,11 +57,23 @@ const Navbar = () => {
 
   useEffect(() => {
     fetchNotifications();
-  }, []);
+    const interval = setInterval(fetchNotifications, 5000);
+    return () => clearInterval(interval);
+  }, [isMuted]);
+
+  // 🔇 Toggle mute/unmute
+  const toggleMute = () => {
+    const newMuteState = !isMuted;
+    setIsMuted(newMuteState);
+    localStorage.setItem('NotificationSoundisMutedRankme', newMuteState);
+  };
+
+
 
   const fetchNotifications = async () => {
     const token = localStorage.getItem('admin_token');
     if (!token) return;
+
     try {
       const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/admin/notifications`, {
         headers: {
@@ -29,9 +81,20 @@ const Navbar = () => {
           'Content-Type': 'application/json',
         },
       });
+
       const data = await response.json();
+
       if (response.ok) {
-        setNotifications(data.results);
+        setNotifications((prev) => {
+          const prevIds = new Set(prev.map(n => n.id));
+          const newOnes = data.results.filter(n => !prevIds.has(n.id));
+
+          if (newOnes.length > 0) {
+            newOnes.forEach(notif => playNotificationSound(notif));
+          }
+
+          return data.results;
+        });
       } else {
         console.error('Failed to fetch notifications:', data.message);
       }
@@ -39,6 +102,7 @@ const Navbar = () => {
       console.error('Network error fetching notifications:', error);
     }
   };
+
 
   const markAsRead = async (id) => {
     const token = localStorage.getItem('admin_token');
@@ -113,7 +177,7 @@ const Navbar = () => {
         <header className="header navbar navbar-expand-sm">
           <ul className="navbar-item flex-row">
             <li className="nav-item theme-logo">
-              <Link href="javascript:void(0);" onClick="window.location.reload();">
+              <Link to="#" onClick={() => window.location.reload()}>
                 <img src={`/user/images/logo.png`} className="navbar-logo" alt="logo-static" />
               </Link>
             </li>
@@ -122,12 +186,19 @@ const Navbar = () => {
           <Link href="javascript:void(0);" data-click="1" className="sidebarCollapse sidebar_collapse_btn" id="navbtn" data-placement="bottom"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-list"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3" y2="6"></line><line x1="3" y1="12" x2="3" y2="12"></line><line x1="3" y1="18" x2="3" y2="18"></line></svg></Link>
 
           <ul className="navbar-item flex-row search-ul">
-            <li className="nav-item dropdown notifications" ref={notificationsRef}>
+
+          </ul>
+          <ul className="navbar-item flex-row navbar-dropdown">
+
+            {/* START OF NOTIFICATIONS DROPDOWN */}
+            <li className="nav-item dropdown" ref={notificationsRef}>
+              {/* Notification Bell/Toggle */}
               <Link
-                className="nav-link dropdown-toggle"
-                to=''
+                className="nav-link dropdown-toggle position-relative p-0" // position-relative for badge positioning
+                to='#'
                 role="button"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
                   setIsNotificationsOpen(!isNotificationsOpen);
                   if (!isNotificationsOpen) {
                     fetchNotifications();
@@ -136,60 +207,99 @@ const Navbar = () => {
                 aria-expanded={isNotificationsOpen}
               >
                 <img src={`/user/images/notifications.svg`} className="img-fluid" alt="Notifications" />
-                {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
+                {unreadCount > 0 && (
+                  <span className="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle">
+                    {unreadCount}
+                    <span className="visually-hidden">new notifications</span>
+                  </span>
+                )}
               </Link>
+
+              {/* Notification Dropdown Menu: FIX APPLIED HERE */}
               {isNotificationsOpen && (
-                <ul className="dropdown-menu show notification-list">
-                  {/* ✅ NEW: Read all button */}
-                  <li className="read-all-btn-wrapper">
-                    <button onClick={markAllAsRead} className="btn btn-link w-100 text-end">
+                <ul
+                  className="dropdown-menu show shadow-lg" // ⬅️ ADDED `dropdown-menu-end` to align to the right!
+                  style={{
+                    minWidth: '300px',
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                    right: 0,
+                    left: 'auto'
+                  }}
+
+                >
+                  {/* Header with 'Mark all as read' button */}
+                  <li className="d-flex justify-content-between align-items-center p-3 border-bottom">
+                    <h6 className="mb-0 fw-bold">
+                      <a href='#' onClick={toggleMute}
+                        title={isMuted ? 'Unmute notifications' : 'Mute notifications'}
+                      >
+                        {isMuted ? '🔇' : '🔊'}
+                        Notifications
+                      </a>
+                    </h6>
+                    <button
+                      onClick={markAllAsRead}
+                      className="btn btn-sm btn-link p-0 text-primary"
+                      disabled={unreadCount === 0}
+                    >
                       Mark all as read
                     </button>
                   </li>
+
+                  {/* List of notifications */}
                   {notifications.length > 0 ? (
                     notifications.map(notif => (
-                      <li key={notif.id} className={`notification-item ${notif.is_read ? '' : 'unread'}`}>
+                      <li key={notif.id} className="border-bottom">
                         <Link
-                          className="dropdown-item d-flex justify-content-between align-items-start"
-                          to={notif.link || ''}
+                          className={`dropdown-item d-flex justify-content-between align-items-start py-2 text-decoration-none ${notif.is_read ? 'bg-light' : 'bg-white fw-bold'}`}
+                          to={notif.link || '#'}
                           onClick={(e) => {
-                            // Do not prevent default if a link exists
                             if (!notif.link) {
                               e.preventDefault();
                             }
                             markAsRead(notif.id);
                           }}
                         >
-                          <div>
-                            <strong>{notif.title}</strong>
-                            <p>{notif.message}</p>
-                            <span>{formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}</span>
+                          {/* Notification Content */}
+                          <div className="me-3">
+                            <div className={`${notif.is_read ? 'text-secondary' : 'text-dark'}`}>{notif.title}</div>
+                            <small className="text-muted d-block text-wrap" style={{ fontSize: '0.85rem' }}>
+                              {notif.message.length > 60 ? notif.message.substring(0, 60) + '...' : notif.message}
+                            </small>
+                            <small className="text-info mt-1 d-block" style={{ fontSize: '0.75rem' }}>
+                              {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}
+                            </small>
                           </div>
-                          {/* ✅ NEW: Delete button */}
+
+                          {/* Delete button */}
                           <button
                             onClick={(e) => {
-                              e.preventDefault(); // Prevent navigating when deleting
-                              e.stopPropagation(); // Stop click from bubbling to the parent Link
+                              e.preventDefault();
+                              e.stopPropagation();
                               deleteNotification(notif.id);
                             }}
-                            className="btn btn-sm btn-link delete-btn"
+                            className="btn btn-sm  border-0 p-0 ms-auto flex-shrink-0"
                             title="Delete Notification"
                           >
-                            <img src={`/user/images/close-icon.svg`} alt="Delete" />
+                            {/* Using a standard Bootstrap icon for simplicity */}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-x-circle" viewBox="0 0 16 16">
+                              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
+                              <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
+                            </svg>
                           </button>
                         </Link>
                       </li>
                     ))
                   ) : (
-                    <li className="no-notifications">
-                      <span className="dropdown-item">No new notifications.</span>
+                    <li>
+                      <span className="dropdown-item text-center text-muted">No new notifications.</span>
                     </li>
                   )}
                 </ul>
               )}
             </li>
-          </ul>
-          <ul className="navbar-item flex-row navbar-dropdown">
+            {/* END OF NOTIFICATIONS DROPDOWN */}
 
 
             <li className="nav-item dropdown user-profile-dropdown  order-lg-0 order-1">

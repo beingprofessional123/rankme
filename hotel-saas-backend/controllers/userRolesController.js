@@ -219,7 +219,6 @@ exports.createUser = async (req, res) => {
 
     // --- Store permissions ---
     const flattenedPermissions = [];
-
     for (const module of permissions) {
       const { module_key, permissions: modulePermissions } = module;
       for (const key in modulePermissions) {
@@ -227,7 +226,7 @@ exports.createUser = async (req, res) => {
           user_id: newUser.id,
           module_key,
           permission_key: key,
-          is_allowed: !!modulePermissions[key], // Ensure boolean
+          is_allowed: !!modulePermissions[key],
         });
       }
     }
@@ -236,35 +235,12 @@ exports.createUser = async (req, res) => {
       await db.UserPermission.bulkCreate(flattenedPermissions, { transaction: t });
     }
 
-    // --- Send password email ---
-    try {
-      const loginUrl = process.env.FRONTEND_URL
-        ? `${process.env.FRONTEND_URL}/login`
-        : 'YOUR_FRONTEND_LOGIN_URL';
-
-      const { subject, html } = getNewUserPasswordEmail(
-        newUser.name,
-        newUser.email,
-        tempPassword,
-        loginUrl
-      );
-
-      await transporter.sendMail({
-        from: process.env.MAIL_USERNAME,
-        to: newUser.email,
-        subject,
-        html,
-      });
-
-      console.log(`Temporary password email sent to ${newUser.email}`);
-    } catch (emailError) {
-      console.error('Failed to send email:', emailError);
-    }
-
     await t.commit();
 
-    return res.status(201).json({
-      message: 'User created successfully. A temporary password has been sent to their email.',
+    // ✅ Send success response immediately
+    res.status(201).json({
+      message:
+        'User created successfully. A temporary password email will be sent in the background.',
       user: {
         id: newUser.id,
         name: newUser.name,
@@ -276,10 +252,37 @@ exports.createUser = async (req, res) => {
         permissions: flattenedPermissions,
       },
     });
+
+    // 🔄 Background async email (non-blocking)
+    (async () => {
+      try {
+        const loginUrl = process.env.FRONTEND_URL
+          ? `${process.env.FRONTEND_URL}/login`
+          : 'YOUR_FRONTEND_LOGIN_URL';
+
+        const { subject, html } = getNewUserPasswordEmail(
+          newUser.name,
+          newUser.email,
+          tempPassword,
+          loginUrl
+        );
+
+        await transporter.sendMail({
+          from: process.env.MAIL_USERNAME,
+          to: newUser.email,
+          subject,
+          html,
+        });
+
+        console.log(`Temporary password email sent to ${newUser.email}`);
+      } catch (emailError) {
+        console.error('Background email send failed:', emailError);
+      }
+    })();
   } catch (error) {
     await t.rollback();
-
     console.error('Error creating user:', error);
+
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(400).json({
         message: 'User with this email already exists.',
@@ -293,6 +296,7 @@ exports.createUser = async (req, res) => {
     });
   }
 };
+
 
 
 // API 4: Get a single user by ID (for prefill/edit)

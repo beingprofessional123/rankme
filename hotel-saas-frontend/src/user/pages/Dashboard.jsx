@@ -168,8 +168,10 @@ const Dashboard = () => {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="mainbody p-5 text-center">
-          <h3>Loading dashboard...</h3>
+        <div className="mainbody">
+           <div className="container-fluid">
+              <h3>Loading dashboard...</h3>
+           </div>
         </div>
       </DashboardLayout>
     );
@@ -178,8 +180,10 @@ const Dashboard = () => {
   if (error) {
     return (
       <DashboardLayout>
-        <div className="mainbody p-5 text-center text-danger">
-          <h3>{error}</h3>
+        <div className="mainbody">
+           <div className="container-fluid">
+                  <h3>{error}</h3>
+           </div>
         </div>
       </DashboardLayout>
     );

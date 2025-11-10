@@ -17,12 +17,15 @@ const PricingCalendar = () => {
   const [selectedHotelIds, setSelectedHotelIds] = useState([]);
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [showOccupancy, setShowOccupancy] = useState(true);
+  const [selectedDateEvents, setSelectedDateEvents] = useState([]);
   const [dateRange, setDateRange] = useState({
     start: format(new Date(), 'yyyy-MM-dd'),
     end: format(addDays(new Date(), 14), 'yyyy-MM-dd'),
   });
   const calendarRef = useRef(null);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [editedPrices, setEditedPrices] = useState({});
+
 
   const fetchHotels = useCallback(async () => {
     try {
@@ -51,6 +54,7 @@ const PricingCalendar = () => {
     fetchHotels();
   }, [fetchHotels]);
 
+
   const generateDateRange = (start, end) => {
     const dates = [];
     let current = new Date(start);
@@ -62,152 +66,166 @@ const PricingCalendar = () => {
     return dates;
   };
 
-  useEffect(() => {
-    const fetchCalendarData = async () => {
-      if (!selectedHotelIds.length || !dateRange.start || !dateRange.end) return;
+  const fetchCalendarData = async () => {
+    if (!selectedHotelIds.length || !dateRange.start || !dateRange.end) return;
 
-      const token = localStorage.getItem('token');
-      const user = JSON.parse(localStorage.getItem('user'));
-      const companyId = user?.company_id;
-      const userId = user?.id;
-      const startDate = dateRange.start;
-      const endDate = dateRange.end;
-      const hotelIdsStr = selectedHotelIds.join(',');
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user'));
+    const companyId = user?.company_id;
+    const userId = user?.id;
+    const startDate = dateRange.start;
+    const endDate = dateRange.end;
+    const hotelIdsStr = selectedHotelIds.join(',');
 
-      try {
-        const apiUrlPricing = `${process.env.REACT_APP_API_BASE_URL}/api/pricing-calendar/property-price?company_id=${companyId}&user_id=${userId}&hotel_id=${hotelIdsStr}&start_date=${startDate}&end_date=${endDate}`;
-        const apiUrlBooking = `${process.env.REACT_APP_API_BASE_URL}/api/pricing-calendar/booking-data?company_id=${companyId}&user_id=${userId}&hotel_id=${hotelIdsStr}&start_date=${startDate}&end_date=${endDate}`;
+    try {
+      const apiUrlPricing = `${process.env.REACT_APP_API_BASE_URL}/api/pricing-calendar/property-price?company_id=${companyId}&user_id=${userId}&hotel_id=${hotelIdsStr}&start_date=${startDate}&end_date=${endDate}`;
+      const apiUrlBooking = `${process.env.REACT_APP_API_BASE_URL}/api/pricing-calendar/booking-data?company_id=${companyId}&user_id=${userId}&hotel_id=${hotelIdsStr}&start_date=${startDate}&end_date=${endDate}`;
 
-        const [pricingRes, bookingRes] = await Promise.all([
-          fetch(apiUrlPricing, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(apiUrlBooking, { headers: { Authorization: `Bearer ${token}` } }),
-        ]);
+      const [pricingRes, bookingRes] = await Promise.all([
+        fetch(apiUrlPricing, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(apiUrlBooking, { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
 
-        const pricingData = await pricingRes.json();
-        const bookingData = await bookingRes.json();
+      const pricingData = await pricingRes.json();
+      const bookingData = await bookingRes.json();
 
-        const allEvents = [];
-        const myPropertyPriceMap = {}; // hotelId => { date => [rates] }
-        const competitorRatesMap = {}; // hotelId => { date => [competitor rates] }
-        const occupancyMap = {}; // hotelId => { date => occupancy }
+      const allEvents = [];
+      const myPropertyPriceMap = {}; // hotelId => { date => [rates] }
+      const competitorRatesMap = {}; // hotelId => { date => [competitor rates] }
+      const occupancyMap = {}; // hotelId => { date => occupancy }
 
-        // Step 1: Extract pricing per day per hotel for both my property and competitors
-        for (const item of pricingData?.results || []) {
-          const hotelPropertyId = item.metaData?.hotelPropertyId;
-          const extractedFiles = item.extractedFiles || [];
+      // Step 1: Extract pricing per day per hotel for both my property and competitors
+      for (const item of pricingData?.results || []) {
+        const hotelPropertyId = item.metaData?.hotelPropertyId;
+        const extractedFiles = item.extractedFiles || [];
 
-          for (const file of extractedFiles) {
-            const dateStr = new Date(file.checkIn).toISOString().split('T')[0];
-            const rate = parseFloat(file.rate) || 0;
-            const property = file.property; // 'myproperty' or 'competitor'
+        for (const file of extractedFiles) {
+          const dateStr = new Date(file.checkIn).toISOString().split('T')[0];
+          const rate = parseFloat(file.rate) || 0;
+          const property = file.property; // 'myproperty' or 'competitor'
 
-            if (property === 'myproperty') {
-              if (!myPropertyPriceMap[hotelPropertyId]) myPropertyPriceMap[hotelPropertyId] = {};
-              if (!myPropertyPriceMap[hotelPropertyId][dateStr]) myPropertyPriceMap[hotelPropertyId][dateStr] = [];
-              myPropertyPriceMap[hotelPropertyId][dateStr].push(rate);
-            } else if (property === 'competitor') {
-              if (!competitorRatesMap[hotelPropertyId]) competitorRatesMap[hotelPropertyId] = {};
-              if (!competitorRatesMap[hotelPropertyId][dateStr]) competitorRatesMap[hotelPropertyId][dateStr] = [];
-              competitorRatesMap[hotelPropertyId][dateStr].push(rate);
-            }
+          if (property === 'myproperty') {
+            if (!myPropertyPriceMap[hotelPropertyId]) myPropertyPriceMap[hotelPropertyId] = {};
+            if (!myPropertyPriceMap[hotelPropertyId][dateStr]) myPropertyPriceMap[hotelPropertyId][dateStr] = [];
+            myPropertyPriceMap[hotelPropertyId][dateStr].push(rate);
+          } else if (property === 'competitor') {
+            if (!competitorRatesMap[hotelPropertyId]) competitorRatesMap[hotelPropertyId] = {};
+            if (!competitorRatesMap[hotelPropertyId][dateStr]) competitorRatesMap[hotelPropertyId][dateStr] = [];
+            competitorRatesMap[hotelPropertyId][dateStr].push(rate);
           }
         }
-       
-        // Step 2: Extract occupancy directly
-        for (const item of bookingData?.results || []) {
-          const hotelPropertyId = item.metaData?.hotelPropertyId;
-          const extractedFiles = item.extractedFiles || [];
-
-          for (const file of extractedFiles) {
-            const dateStr = new Date(file.checkIn).toISOString().split('T')[0];
-            const occupancy = Number(file.occupancy);
-            if (!occupancyMap[hotelPropertyId]) occupancyMap[hotelPropertyId] = {};
-            occupancyMap[hotelPropertyId][dateStr] = occupancy;
-          }
-        }
-
-        // Step 3: Create calendar events
-        for (const hotelId of selectedHotelIds) {
-          const hotel = hotels.find(h => h.id === hotelId);
-          if (!hotel) continue;
-
-          const dates = generateDateRange(startDate, endDate);
-
-          for (const dateStr of dates) {
-            const occupancy = occupancyMap[hotelId]?.[dateStr] ?? null;
-            const myPropertyRatesForDate = myPropertyPriceMap[hotelId]?.[dateStr] || [];
-            const competitorRatesForDate = competitorRatesMap[hotelId]?.[dateStr] || [];
-            
-            // Calculate my property average price
-            const myPropertyAvgPrice = myPropertyRatesForDate.length > 0
-              ? myPropertyRatesForDate.reduce((sum, rate) => sum + rate, 0) / myPropertyRatesForDate.length
-              : 0;
-              
-
-              // Calculate competitor average price
-              const competitorAvgPrice = competitorRatesForDate.length > 0
-              ? competitorRatesForDate.reduce((sum, rate) => sum + rate, 0) / competitorRatesForDate.length
-              : 0;
-              console.log("(myPropertyAvgPrice - competitorAvgPrice) "+myPropertyAvgPrice, competitorAvgPrice);
-
-            let priceAlert = null;
-            if (myPropertyAvgPrice > 0 && competitorAvgPrice > 0) {
-              const difference = ((myPropertyAvgPrice - competitorAvgPrice) / competitorAvgPrice) * 100;
-              // console.log(difference);
-              if (difference > 5) {
-                priceAlert = 'high';
-              } else if (difference < -5) {
-                priceAlert = 'low';
-              }
-            }
-
-            const suggestedPrice = myPropertyAvgPrice + 10;
-            const historicalPrice = Math.max(0, myPropertyAvgPrice - 10);
-
-            const backgroundColor = occupancy === 100
-              ? '#FF4C4C'
-              : myPropertyRatesForDate.length
-                ? '#2CCDD9'
-                : '#E5E5E5';
-
-            const textColor = occupancy === 100 ? '#FFFFFF' : '#000000';
-
-            allEvents.push({
-              title: hotel.name,
-              date: dateStr,
-              backgroundColor,
-              borderColor: backgroundColor,
-              textColor,
-              extendedProps: {
-                hotel_id: hotel.id,
-                hotel_name: hotel.name,
-                predicted_occupancy: occupancy !== null ? `${occupancy}%` : '0%',
-                average_price: myPropertyAvgPrice,
-                suggested_price: suggestedPrice,
-                historical_price: historicalPrice,
-                competitor_avg_price: competitorAvgPrice,
-                price_alert: priceAlert,
-              },
-            });
-          }
-        }
-
-        setCalendarEvents(allEvents);
-      } catch (error) {
-        console.error(error);
-        toast.error('Failed to load pricing/booking data');
       }
-    };
 
+      // Step 2: Extract occupancy directly
+      for (const item of bookingData?.results || []) {
+        const hotelPropertyId = item.metaData?.hotelPropertyId;
+        const extractedFiles = item.extractedFiles || [];
+
+        for (const file of extractedFiles) {
+          const dateStr = new Date(file.checkIn).toISOString().split('T')[0];
+          const occupancy = Number(file.occupancy);
+          if (!occupancyMap[hotelPropertyId]) occupancyMap[hotelPropertyId] = {};
+          occupancyMap[hotelPropertyId][dateStr] = occupancy;
+        }
+      }
+
+      // Step 3: Create calendar events
+      for (const hotelId of selectedHotelIds) {
+        const hotel = hotels.find(h => h.id === hotelId);
+        if (!hotel) continue;
+
+        const dates = generateDateRange(startDate, endDate);
+
+        for (const dateStr of dates) {
+          const occupancy = occupancyMap[hotelId]?.[dateStr] ?? null;
+          const myPropertyRatesForDate = myPropertyPriceMap[hotelId]?.[dateStr] || [];
+          const competitorRatesForDate = competitorRatesMap[hotelId]?.[dateStr] || [];
+
+          // Calculate my property average price
+          const myPropertyAvgPrice = myPropertyRatesForDate.length > 0
+            ? myPropertyRatesForDate.reduce((sum, rate) => sum + rate, 0) / myPropertyRatesForDate.length
+            : 0;
+
+
+          // Calculate competitor average price
+          const competitorAvgPrice = competitorRatesForDate.length > 0
+            ? competitorRatesForDate.reduce((sum, rate) => sum + rate, 0) / competitorRatesForDate.length
+            : 0;
+          console.log("(myPropertyAvgPrice - competitorAvgPrice) " + myPropertyAvgPrice, competitorAvgPrice);
+
+          let priceAlert = null;
+          if (myPropertyAvgPrice > 0 && competitorAvgPrice > 0) {
+            const difference = ((myPropertyAvgPrice - competitorAvgPrice) / competitorAvgPrice) * 100;
+            // console.log(difference);
+            if (difference > 5) {
+              priceAlert = 'high';
+            } else if (difference < -5) {
+              priceAlert = 'low';
+            }
+          }
+
+          const suggestedPrice = myPropertyAvgPrice + 10;
+          const historicalPrice = Math.max(0, myPropertyAvgPrice - 10);
+
+          const backgroundColor = occupancy === 100
+            ? '#FF4C4C'
+            : myPropertyRatesForDate.length
+              ? '#2CCDD9'
+              : '#E5E5E5';
+
+          const textColor = occupancy === 100 ? '#FFFFFF' : '#000000';
+
+          allEvents.push({
+            title: hotel.name,
+            date: dateStr,
+            backgroundColor,
+            borderColor: backgroundColor,
+            textColor,
+            extendedProps: {
+              hotel_id: hotel.id,
+              hotel_name: hotel.name,
+              predicted_occupancy: occupancy !== null ? `${occupancy}%` : '0%',
+              average_price: myPropertyAvgPrice,
+              suggested_price: suggestedPrice,
+              historical_price: historicalPrice,
+              competitor_avg_price: competitorAvgPrice,
+              price_alert: priceAlert,
+            },
+          });
+        }
+      }
+
+      setCalendarEvents(allEvents);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load pricing/booking data');
+    }
+  };
+
+  useEffect(() => {
     fetchCalendarData();
   }, [selectedHotelIds, dateRange, hotels]);
 
   const handleEventClick = async (info) => {
+    const clickedDate = format(info.event.start, 'yyyy-MM-dd');
     setSelectedDate(info.event.start);
+
+    // ✅ Filter all events for that date
+    const eventsForDate = calendarEvents.filter(ev => ev.date === clickedDate);
+
+    // ✅ Check data availability
+    const hasData = eventsForDate.some(ev => ev.extendedProps.average_price > 0);
+
+    // ✅ Always set date + events (so modal shows info or "no data" message)
+    setSelectedDateEvents(hasData ? eventsForDate : []);
+
+    // ✅ Show modal only if there are events or at least one hotel selected
     const bootstrap = await import('bootstrap');
     const modal = new bootstrap.Modal(document.getElementById('myModal'));
     modal.show();
   };
+
+
 
   useEffect(() => {
     const modalElement = document.getElementById('myModal');
@@ -277,6 +295,61 @@ const PricingCalendar = () => {
       }
     };
   }, [showOccupancy]);
+
+  const handleSavePrices = async () => {
+    if (Object.keys(editedPrices).length === 0) {
+      toast.warning('No price changes to save.');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user'));
+      const companyId = user?.company_id;
+      const userId = user?.id;
+      const dateStr = format(new Date(selectedDate), 'yyyy-MM-dd');
+
+      const payload = Object.entries(editedPrices).map(([hotelId, price]) => ({
+        hotel_id: hotelId,
+        date: dateStr,
+        edited_price: parseFloat(price),
+      }));
+
+      const response = await fetch(
+        `${process.env.REACT_APP_API_BASE_URL}/api/pricing-calendar/update-price`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ company_id: companyId, user_id: userId, data: payload }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.status === 'success') {
+        toast.success('Prices updated successfully!');
+        await fetchCalendarData();
+        setEditedPrices({});
+
+        // ✅ Properly hide the existing modal instance
+        const modalEl = document.getElementById('myModal');
+        const bootstrap = await import('bootstrap');
+        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (modalInstance) {
+          modalInstance.hide();
+        }
+      } else {
+        toast.error(result.message || 'Failed to update prices.');
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to save prices.');
+    }
+  };
+
 
   return (
     <DashboardLayout>
@@ -396,7 +469,7 @@ const PricingCalendar = () => {
                         average_price,
                       } = arg.event.extendedProps;
 
-                      
+
                       const isGray = arg.event.backgroundColor === '#E5E5E5';
 
                       const container = document.createElement('div');
@@ -509,45 +582,79 @@ const PricingCalendar = () => {
                   <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close">&times;</button>
                 </div>
                 <div className="modal-body">
-                  <div className="calendar-room-price">
-                    <ul className="nav nav-tabs" role="tablist">
-                      <li className="nav-item">
-                        <a className="nav-link active" data-bs-toggle="tab" href="#home">All Room Types</a>
-                      </li>
-                      <li className="nav-item">
-                        <a className="nav-link" data-bs-toggle="tab" href="#menu1">Edit Prices</a>
-                      </li>
-                    </ul>
-                    <div className="tab-content">
-                      <div id="home" className="tab-pane active">
-                        <div className="modal-allroom">
-                          <ul>
-                          </ul>
-                        </div>
-                      </div>
-                      <div id="menu1" className="tab-pane fade">
-                        <div className="calendar-edit-price">
-                          <div className="table-responsive">
-                            <table className="table">
-                              <thead>
-                                <tr>
-                                  <th>Room Types</th>
-                                  <th>Edit Prices</th>
-                                  <th>Recommended Price</th>
+                  {(() => {
+                    const hasData = selectedDateEvents.some(
+                      (ev) => ev.extendedProps?.average_price > 0
+                    );
+
+                    if (selectedDateEvents.length === 0) {
+                      return (
+                        <p className="text-center text-muted m-3">
+                          No data available for this date.
+                        </p>
+                      );
+                    }
+
+                    if (!hasData) {
+                      return (
+                        <p className="text-center text-muted m-3">
+                          No property price data available for this date.
+                        </p>
+                      );
+                    }
+
+                    // ✅ If data exists, show the table
+                    return (
+                      <div className="tab-content">
+                        <div className="table-responsive">
+                          <table className="table">
+                            <thead>
+                              <tr>
+                                <th>Hotel</th>
+                                <th>Prices</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {selectedDateEvents.map((event, index) => (
+                                <tr key={index}>
+                                  <td>{event.extendedProps.hotel_name}</td>
+                                  <td>
+                                    <input
+                                      type="number"
+                                      className="form-control form-control-sm"
+                                      value={
+                                        editedPrices[event.extendedProps.hotel_id] ??
+                                        event.extendedProps.average_price.toFixed(2)
+                                      }
+                                      onChange={(e) =>
+                                        setEditedPrices((prev) => ({
+                                          ...prev,
+                                          [event.extendedProps.hotel_id]: e.target.value,
+                                        }))
+                                      }
+                                      style={{ width: '120px' }}
+                                    />
+                                  </td>
                                 </tr>
-                              </thead>
-                              <tbody>
-                              </tbody>
-                            </table>
-                            <div className="calendar-edit-btn">
-                              <button type="submit" className="btn btn-info">Save</button>
-                            </div>
+                              ))}
+                            </tbody>
+                          </table>
+
+                          <div className="calendar-edit-btn">
+                            <button
+                              type="submit"
+                              onClick={() => handleSavePrices()}
+                              className="btn btn-info"
+                            >
+                              Save
+                            </button>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
+                    );
+                  })()}
                 </div>
+
               </div>
             </div>
           </div>

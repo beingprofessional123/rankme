@@ -6,19 +6,66 @@ const DashboardHeader = ({ username, image }) => {
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
+    const [isMuted, setIsMuted] = useState(
+        localStorage.getItem('NotificationSoundisMutedRankmeUser') === 'true'
+    );
     const notificationsRef = useRef();
     const profileRef = useRef();
+    const lastNotifIdsRef = useRef(new Set());
+    const audioRef = useRef(new Audio('/NotificationSound.mp3'));
 
     const handleLogout = () => {
+        if (window.notificationInterval) {
+            clearInterval(window.notificationInterval);
+            window.notificationInterval = null;
+        }
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         localStorage.removeItem('hotel_info');
         window.location.href = '/login';
     };
 
+    const toggleMute = () => {
+        const newMutedState = !isMuted;
+        setIsMuted(newMutedState);
+        localStorage.setItem('NotificationSoundisMutedRankmeUser', newMutedState);
+    };
+
+    // ✅ Handle notification sound logic with support ticket check
+    const playNotificationSound = (notif) => {
+        const currentUrl = window.location.href;
+        const isMuted = localStorage.getItem('NotificationSoundisMutedRankmeUser') === 'true';
+
+        if (isMuted) return;
+
+        // Extract ticket ID from current URL
+        const currentMatch = currentUrl.match(/\/support-tickets-edit\/([^/]+)/);
+        const currentTicketId = currentMatch ? currentMatch[1] : null;
+
+        // Extract ticket ID from notification link
+        const notifMatch = notif?.link?.match(/\/support-tickets-edit\/([^/]+)/);
+        const notifTicketId = notifMatch ? notifMatch[1] : null;
+
+        // Skip sound if same ticket reply
+        if (
+            notif.type === 'ticket_new_reply' &&
+            currentTicketId &&
+            notifTicketId &&
+            currentTicketId === notifTicketId
+        ) {
+            console.log('🔇 Muted ticket reply for current page');
+            return;
+        }
+
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(err => console.warn('Audio blocked:', err));
+    };
+
     const fetchNotifications = async () => {
         const token = localStorage.getItem('token');
         if (!token) return;
+
         try {
             const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/notifications`, {
                 headers: {
@@ -26,9 +73,24 @@ const DashboardHeader = ({ username, image }) => {
                     'Content-Type': 'application/json',
                 },
             });
+
             const data = await response.json();
+
             if (response.ok) {
-                setNotifications(data.results);
+                setNotifications((prev) => {
+                    const currentIds = new Set(data.results.map(n => n.id));
+                    const prevIds = lastNotifIdsRef.current;
+
+                    const newOnes = data.results.filter(n => !prevIds.has(n.id));
+
+                    // ✅ Only play sound for actual new notifications
+                    if (newOnes.length > 0 && prevIds.size > 0) {
+                        newOnes.forEach(notif => playNotificationSound(notif));
+                    }
+
+                    lastNotifIdsRef.current = currentIds;
+                    return data.results;
+                });
             } else {
                 console.error('Failed to fetch notifications:', data.message);
             }
@@ -57,7 +119,6 @@ const DashboardHeader = ({ username, image }) => {
         }
     };
 
-    // ✅ NEW: Function to delete a notification
     const deleteNotification = async (id) => {
         const token = localStorage.getItem('token');
         try {
@@ -69,7 +130,6 @@ const DashboardHeader = ({ username, image }) => {
                 },
             });
             if (response.ok) {
-                // Remove the notification from state without refetching
                 setNotifications(prevNotifications =>
                     prevNotifications.filter(notif => notif.id !== id)
                 );
@@ -81,7 +141,6 @@ const DashboardHeader = ({ username, image }) => {
         }
     };
 
-    // ✅ NEW: Function to mark all notifications as read
     const markAllAsRead = async () => {
         const token = localStorage.getItem('token');
         try {
@@ -92,7 +151,6 @@ const DashboardHeader = ({ username, image }) => {
                     'Content-Type': 'application/json',
                 },
             });
-            // Update the state to mark all notifications as read
             setNotifications(prevNotifications =>
                 prevNotifications.map(notif => ({ ...notif, is_read: true }))
             );
@@ -114,10 +172,19 @@ const DashboardHeader = ({ username, image }) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Fetch notifications when the component mounts
     useEffect(() => {
+        // ✅ Ensure localStorage key exists
+        const muteKey = 'NotificationSoundisMutedRankmeUser';
+        if (localStorage.getItem(muteKey) === null) {
+            localStorage.setItem(muteKey, 'true'); // Default muted
+        }
+
+        // ✅ Fetch notifications periodically
         fetchNotifications();
-    }, []);
+        const interval = setInterval(fetchNotifications, 5000);
+        return () => clearInterval(interval);
+    }, [isMuted]);
+
 
     const unreadCount = notifications.filter(notif => !notif.is_read).length;
 
@@ -157,11 +224,21 @@ const DashboardHeader = ({ username, image }) => {
                                         </Link>
                                         {isNotificationsOpen && (
                                             <ul className="dropdown-menu show notification-list">
-                                                {/* ✅ NEW: Read all button */}
-                                                <li className="read-all-btn-wrapper">
-                                                    <button onClick={markAllAsRead} className="btn btn-link w-100 text-end">
-                                                        Mark all as read
-                                                    </button>
+                                                <li className="notification-actions d-flex justify-content-between align-items-center  border-bottom">
+                                                    <a href='#'
+                                                        onClick={toggleMute}
+                                                        className="btn btn-link text-dark"
+                                                        title={isMuted ? 'Unmute notifications' : 'Mute notifications'}
+                                                    >
+                                                        {isMuted ? '🔇' : '🔊'}
+                                                        Notifications
+                                                    </a>
+
+                                                    <li className="read-all-btn-wrapper">
+                                                        <button onClick={markAllAsRead} className="btn btn-link w-100 text-end">
+                                                            Mark all as read
+                                                        </button>
+                                                    </li>
                                                 </li>
                                                 {notifications.length > 0 ? (
                                                     notifications.map(notif => (
@@ -198,7 +275,7 @@ const DashboardHeader = ({ username, image }) => {
                                                         </li>
                                                     ))
                                                 ) : (
-                                                    <li className="no-notifications">
+                                                    <li className="no-notifications text-center">
                                                         <span className="dropdown-item">No new notifications.</span>
                                                     </li>
                                                 )}
@@ -215,7 +292,7 @@ const DashboardHeader = ({ username, image }) => {
                                             aria-expanded={isProfileOpen}
                                         >
                                             <img
-                                                src={image ? image : `/user/images/no-image.webp`}
+                                                src={image ? image : `${process.env.REACT_APP_BASE_URL}/user/images/no-image.webp`}
                                                 className="img-fluid rounded-circle"
                                                 alt="User Profile"
                                             />
