@@ -12,4 +12,6 @@ router.use(authorizeRoles('company_admin','revenue_manager','general_manager','a
 router.get('/property-price', PricingCalendarController.getPropertyPrice);
 router.get('/booking-data', PricingCalendarController.getBookingData);
 
+router.post('/update-price', PricingCalendarController.updatePrice);
+
 module.exports = router;

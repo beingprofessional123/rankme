@@ -313,7 +313,7 @@
                   <div className="account-settings-container layout-top-spacing">
                       <div className="layout-spacing">
                           <div className="general-info section general-infomain">
-                              <form onSubmit={handleSubmit} encType="multipart/form-data">
+                              <form onSubmit={handleSubmit} encType="multipart/form-data" autoComplete="off">
                                   <div className="account-content mt-2 mb-2">
                                       <div className="scrollspy-example" data-spy="scroll" data-target="#account-settings-scroll" data-offset="-100">
                                           <div className="row">
@@ -385,6 +385,7 @@
                                                                                               onChange={handleChange}
                                                                                               required
                                                                                               maxLength={MAX_EMAIL_LENGTH}
+                                                                                              autoComplete="off"
                                                                                           />
                                                                                           {errors.email && <div className="text-danger">{errors.email}</div>}
                                                                                       </div>
@@ -400,6 +401,7 @@
                                                                                               onChange={handleChange}
                                                                                               required
                                                                                               maxLength={MAX_PASSWORD_LENGTH}
+                                                                                              autoComplete="off"
                                                                                           />
                                                                                           {errors.password && <div className="text-danger">{errors.password}</div>}
                                                                                       </div>

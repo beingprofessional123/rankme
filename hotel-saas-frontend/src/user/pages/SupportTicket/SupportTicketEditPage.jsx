@@ -135,7 +135,7 @@ const SupportTicketUnifiedPage = () => {
             setSubmitting(false);
         }
     };
-    
+
     const handleMessageChange = (e) => {
         const { name, value, files } = e.target;
         if (name === 'file') {
@@ -185,7 +185,7 @@ const SupportTicketUnifiedPage = () => {
         if (file) {
             data.append('threadFile', file);
         }
-        
+
         try {
             const token = localStorage.getItem('token');
             await axios.post(`${API_BASE_URL}/api/support-ticket/${id}/message`, data, {
@@ -244,7 +244,7 @@ const SupportTicketUnifiedPage = () => {
             </DashboardLayout>
         );
     }
-    
+
     // Check if the ticket is closed
     const isTicketClosed = ticket.status === 'Closed';
 
@@ -288,6 +288,13 @@ const SupportTicketUnifiedPage = () => {
                                         <p className="form-control-static">{ticket.category}</p>
                                     </div>
                                 </div>
+                                {/* Priority */}
+                                <div className="col-md-6">
+                                    <div className="form-group">
+                                        <label className="form-label">Priority</label>
+                                        <p className="form-control-static">{ticket.priority}</p>
+                                    </div>
+                                </div>
                                 {/* Date */}
                                 <div className="col-md-6">
                                     <div className="form-group">
@@ -297,6 +304,13 @@ const SupportTicketUnifiedPage = () => {
                                         </p>
                                     </div>
                                 </div>
+                                 {/* Description */}
+                                <div className="col-md-6">
+                                    <div className="form-group">
+                                        <label className="form-label">Description</label>
+                                        <p className="form-control-static">{ticket.description}</p>
+                                    </div>
+                                </div>
                                 {/* Status */}
                                 <div className="col-md-6">
                                     <div className="form-group">
@@ -304,17 +318,11 @@ const SupportTicketUnifiedPage = () => {
                                         <p className="form-control-static">{ticket.status}</p>
                                     </div>
                                 </div>
-                                {/* Description */}
-                                <div className="col-md-12">
-                                    <div className="form-group">
-                                        <label className="form-label">Description</label>
-                                        <p className="form-control-static">{ticket.description}</p>
-                                    </div>
-                                </div>
+                               
                             </div>
                         </div>
                     </div>
-                    
+
                     {/* --- CHAT SYSTEM SECTION --- */}
                     <div className="white-bg">
                         <div className="supportchat">
@@ -330,7 +338,7 @@ const SupportTicketUnifiedPage = () => {
                                             const senderName = message.sender.name || 'User';
                                             const senderInitials = getInitials(senderName);
                                             const formattedTime = new Date(message.createdAt).toLocaleString();
-                                            
+
                                             // Avatar logic
                                             let avatarContent;
                                             const avatarUrl = senderData?.company?.logo_url || senderData?.profile_image;
@@ -348,9 +356,12 @@ const SupportTicketUnifiedPage = () => {
                                                     <div className="chatbox-message">
                                                         <p>{message.message}</p>
                                                         {message.fileAttachmentPath && (
-                                                            <a href={`${API_BASE_URL}${message.fileAttachmentPath}`} target="_blank" rel="noopener noreferrer" className="attachment-link">
-                                                                <i className="la la-paperclip"></i> Attachment
-                                                            </a>
+                                                            <>
+                                                                <a href={`${API_BASE_URL}${message.fileAttachmentPath}`} target="_blank" rel="noopener noreferrer" className="attachment-link">
+                                                                    <i className="la la-paperclip"></i> Attachment
+                                                                </a>
+                                                                <br />
+                                                            </>
                                                         )}
                                                         <span className="chat-timestamp">{formattedTime}</span>
                                                     </div>

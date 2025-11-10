@@ -81,8 +81,8 @@ const STROCRReportPage = () => {
 
             setReportData(response.data?.results || []);
         } catch (err) {
-            console.error('Error fetching STROCR data:', err);
-            setError('Failed to fetch STROCR report data.');
+            console.error('Error fetching STR/OCR data:', err);
+            setError('Failed to fetch STR/OCR report data.');
         } finally {
             setLoading(false);
         }
@@ -178,12 +178,12 @@ const STROCRReportPage = () => {
             body: {
                 noMatch:
                     !selectedHotelId
-                        ? '👉 Please select a hotel to view STROCR report.'
+                        ? '👉 Please select a hotel to view STR/OCR report.'
                         : loading
-                        ? '🔄 Loading STROCR report...'
+                        ? '🔄 Loading STR/OCR report...'
                         : error
                         ? `❌ Error: ${error}`
-                        : '📭 No STROCR data found for the selected filters.',
+                        : '📭 No STR/OCR data found for the selected filters.',
             },
         },
     };
@@ -216,7 +216,7 @@ const STROCRReportPage = () => {
                                             <Link to="">Home</Link>
                                         </li>
                                         <li className="breadcrumb-item active" aria-current="page">
-                                            STROCR Report
+                                            STR/OCR Report
                                         </li>
                                     </ol>
                                 </nav>
@@ -282,7 +282,7 @@ const STROCRReportPage = () => {
                         <div className="tabledesign">
                             <div className="table-responsive">
                                 <MUIDataTable
-                                    title="STROCR Report Data"
+                                    title="STR/OCR Report Data"
                                     data={reportData}
                                     columns={columns}
                                     options={options}

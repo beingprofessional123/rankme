@@ -93,8 +93,8 @@ const SupportTicketList = () => {
             name: 'creator',
             label: 'User Name',
             options: {
-                filter: true,
-                sort: true,
+                filter: false,
+                sort: false,
                 customBodyRender: (value) => {
                     const userName = value?.name || 'N/A';
                     const userEmail = value?.email || 'N/A';
@@ -114,6 +114,14 @@ const SupportTicketList = () => {
             label: 'Subject',
             options: {
                 filter: false,
+                sort: false,
+            },
+        },
+        {
+            name: 'priority',
+            label: 'Priority',
+            options: {
+                filter: true,
                 sort: true,
             },
         },
@@ -167,8 +175,8 @@ const SupportTicketList = () => {
             name: 'createdAt',
             label: 'Opened Date',
             options: {
-                filter: true,
-                sort: true,
+                filter: false,
+                sort: false,
                 customBodyRender: (value) =>
                     value ? new Date(value).toLocaleDateString() : 'N/A',
             },

@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const { Op } = require('sequelize');
 const db = require('../../models');
-const { sendEmail } = require('../../utils/mailer'); 
+const {  } = require('../../utils/mailer');
 const getStatusUpdateEmail = require('../../emailTemplate/UserStatusSupportTicket');
 
 
@@ -80,7 +80,7 @@ const supportTicketController = {
         const { id } = req.params;
         const { message, status, assigneeId } = req.body;
         const file = req.file;
-        const senderId = req.user.id; // `req.user` is populated by your authentication middleware
+        const senderId = req.user.id;
 
         try {
             const ticket = await db.SupportTicket.findByPk(id, {
@@ -104,57 +104,60 @@ const supportTicketController = {
 
             await ticket.update(updateFields);
 
-            // If a new message is provided, create a new message entry in the thread
+            // --- Add new message if provided ---
             if (message || file) {
                 const messageData = {
-                    // CORRECTED: Using the correct foreign key name `ticketId`
                     ticketId: id,
-                    senderId: senderId,
+                    senderId,
                     message: message || '',
                     fileAttachmentPath: file ? `/uploads/support_tickets/${file.filename}` : null
                 };
-                // CORRECTED: Using the correct model name `SupportTicketThread`
                 await db.SupportTicketThread.create(messageData);
 
-                 const sender = await db.User.findByPk(senderId);
-
-                    await db.Notification.create({
-                        user_id: ticket.userId, // send to ticket creator
-                        title: 'New Reply from Admin',
-                        message: `Your support ticket (#${ticket.ticketNumber}) has a new reply from admin.`,
-                        type: 'ticket_new_reply',
-                        link: `/support-tickets-edit/${ticket.id}`,
-                        is_read: false
-                    });
-            }
-            // --- Email Functionality: Send status update email if status changed ---
-            if (status && status !== oldStatus) {
-                const frontendBaseUrl = process.env.FRONTEND_URL;
-                const userTicketLink = `${frontendBaseUrl}/support-tickets-edit/${ticket.id}`;
-                
-                const userEmailData = getStatusUpdateEmail(
-                    ticket.creator.name, 
-                    ticket.ticketNumber, 
-                    ticket.subject, 
-                    status, 
-                    userTicketLink
-                );
-
-                await sendEmail(ticket.creator.email, userEmailData.subject, userEmailData.html);
-
-                  // Send notification
                 await db.Notification.create({
                     user_id: ticket.userId,
-                    title: 'Support Ticket Status Updated',
-                    message: `Your support ticket (#${ticket.ticketNumber}) status has been updated to "${status}".`,
-                    type: 'ticket_status_updated',
+                    title: 'New Reply from Admin',
+                    message: `Your support ticket (#${ticket.ticketNumber}) has a new reply from admin.`,
+                    type: 'ticket_new_reply',
                     link: `/support-tickets-edit/${ticket.id}`,
                     is_read: false
                 });
             }
 
+            // ✅ Send immediate response to frontend first
+            res.status(200).json({ status: true, message: 'Ticket updated successfully.' });
 
-            return res.status(200).json({ status: true, message: 'Ticket updated successfully.' });
+            // 🔄 Background async operations start here (non-blocking)
+            (async () => {
+                try {
+                    // If status changed → send status update email
+                    if (status && status !== oldStatus) {
+                        const frontendBaseUrl = process.env.FRONTEND_URL;
+                        const userTicketLink = `${frontendBaseUrl}/support-tickets-edit/${ticket.id}`;
+                        const userEmailData = getStatusUpdateEmail(
+                            ticket.creator.name,
+                            ticket.ticketNumber,
+                            ticket.subject,
+                            status,
+                            userTicketLink
+                        );
+
+                        await (ticket.creator.email, userEmailData.subject, userEmailData.html);
+
+                        await db.Notification.create({
+                            user_id: ticket.userId,
+                            title: 'Support Ticket Status Updated',
+                            message: `Your support ticket (#${ticket.ticketNumber}) status has been updated to "${status}".`,
+                            type: 'ticket_status_updated',
+                            link: `/support-tickets-edit/${ticket.id}`,
+                            is_read: false
+                        });
+                    }
+                } catch (emailErr) {
+                    console.error('Background email or notification error:', emailErr);
+                }
+            })();
+
         } catch (error) {
             console.error('Error updating support ticket:', error);
             return res.status(500).json({ status: false, message: 'Failed to update ticket.' });
