@@ -6,26 +6,33 @@ import { formatDistanceToNow } from 'date-fns';
 const Navbar = () => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('admin_user') || '{}');
-  const [isMuted, setIsMuted] = useState(
-    localStorage.getItem('NotificationSoundisMutedRankmeAdmin') === 'true'
-  );
+  const muteKey = 'NotificationSoundisMutedRankmeAdmin';
 
+  const [isMuted, setIsMuted] = useState(() => {
+    const stored = localStorage.getItem(muteKey);
+    if (stored === null) {
+      localStorage.setItem(muteKey, 'true'); // Default muted
+      return true;
+    }
+    return stored === 'true';
+  });
+
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const notificationsRef = useRef();
+
+  // ✅ Play notification sound if allowed
   const playNotificationSound = (notif) => {
     const currentUrl = window.location.href;
-    const isMuted = localStorage.getItem('NotificationSoundisMutedRankme') === 'true';
+    if (isMuted) return; // 🔇 Don’t play if muted
 
-    // 🔇 Don't play if muted globally
-    if (isMuted) return;
-
-    // 🎯 Extract ticket ID from current URL (if on edit page)
+    // 🎯 Extract ticket IDs
     const currentMatch = currentUrl.match(/\/admin\/support-ticket-management\/([^/]+)\/edit/);
     const currentTicketId = currentMatch ? currentMatch[1] : null;
-
-    // 🎯 Extract ticket ID from notification link (if it's a ticket edit page)
     const notifMatch = notif?.link?.match(/\/admin\/support-ticket-management\/([^/]+)\/edit/);
     const notifTicketId = notifMatch ? notifMatch[1] : null;
 
-    // 🚫 If notification is "ticket_reply" AND same ticket edit page is open → mute
+    // 🚫 Skip sound if same ticket reply
     if (
       notif.type === 'ticket_reply' &&
       currentTicketId &&
@@ -36,12 +43,10 @@ const Navbar = () => {
       return;
     }
 
-    // ✅ Otherwise, play notification sound
+    // ✅ Otherwise play
     const audio = new Audio('/NotificationSound.mp3');
-    audio.play().catch(err => console.warn('Audio play blocked:', err));
+    audio.play().catch((err) => console.warn('Audio play blocked:', err));
   };
-
-
 
 
   const handleLogout = () => {
@@ -51,21 +56,20 @@ const Navbar = () => {
     navigate('/admin/login', { state: { message: 'Logged out successfully.' } });
   };
 
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const notificationsRef = useRef();
 
-  useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 5000);
-    return () => clearInterval(interval);
-  }, [isMuted]);
+    useEffect(() => {
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 5000);
+      window.notificationInterval = interval;
+      return () => clearInterval(interval);
+    }, [isMuted]);
 
-  // 🔇 Toggle mute/unmute
+
+  // ✅ Toggle mute/unmute
   const toggleMute = () => {
     const newMuteState = !isMuted;
     setIsMuted(newMuteState);
-    localStorage.setItem('NotificationSoundisMutedRankme', newMuteState);
+    localStorage.setItem(muteKey, newMuteState);
   };
 
 
