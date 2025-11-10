@@ -6,9 +6,17 @@ const DashboardHeader = ({ username, image }) => {
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
-    const [isMuted, setIsMuted] = useState(
-        localStorage.getItem('NotificationSoundisMutedRankmeUser') === 'true'
-    );
+    const [isMuted, setIsMuted] = useState(() => {
+        const muteKey = 'NotificationSoundisMutedRankmeUser';
+        const stored = localStorage.getItem(muteKey);
+
+        if (stored === null) {
+            localStorage.setItem(muteKey, 'true'); // Default to muted
+            return true;
+        }
+        return stored === 'true';
+    });
+
     const notificationsRef = useRef();
     const profileRef = useRef();
     const lastNotifIdsRef = useRef(new Set());
@@ -292,10 +300,21 @@ const DashboardHeader = ({ username, image }) => {
                                             aria-expanded={isProfileOpen}
                                         >
                                             <img
-                                                src={image ? image : `${process.env.REACT_APP_BASE_URL}/user/images/no-image.webp`}
+                                                src={
+                                                    image
+                                                        ? image.startsWith('http')
+                                                            ? image
+                                                            : `${process.env.REACT_APP_BASE_URL}/${image}`
+                                                        : `${process.env.REACT_APP_BASE_URL}/user/images/no-image.webp`
+                                                }
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.src = `${process.env.REACT_APP_BASE_URL}/user/images/no-image.webp`;
+                                                }}
                                                 className="img-fluid rounded-circle"
                                                 alt="User Profile"
                                             />
+
                                         </Link>
                                         {isProfileOpen && (
                                             <ul className="dropdown-menu show">

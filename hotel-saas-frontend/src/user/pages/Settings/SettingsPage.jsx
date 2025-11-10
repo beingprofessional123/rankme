@@ -189,7 +189,7 @@ const SettingsPage = () => {
             if (user) {
                 if (user.role === 'company_admin') {
                     user.company.logo_url = updatedData.companyLogoUrl;
-                }else{
+                } else {
                     user.profile_image = updatedData.profileImage;
                 }
 
@@ -330,45 +330,62 @@ const SettingsPage = () => {
                                 <div className="form-design">
                                     <form onSubmit={handleGeneralSettingsSubmit}>
                                         <div className="row">
-                                           <div className="col-md-12">
+                                            <div className="col-md-12">
                                                 <div className="form-group">
                                                     <label className="form-label">
-                                                    {(generalSettings.roleName == 'company_admin') ? 'Company Logo' : 'Profile Image'}
+                                                        {(generalSettings.roleName == 'company_admin') ? 'Company Logo' : 'Profile Image'}
                                                     </label>
                                                     <div className="profile-img">
-                                                    <div className="circle">
-                                                        <img
-                                                        className="profile-pic"
-                                                        src={
-                                                            (generalSettings.roleName == 'company_admin' && generalSettings.companyLogoUrl)
-                                                            ? generalSettings.companyLogoUrl
-                                                            : generalSettings.profileImage || '/user/images/no-image.webp'
-                                                        }
-                                                        alt="Display"
+                                                        <div className="circle">
+                                                            <img
+                                                                className="profile-pic"
+                                                                src={
+                                                                    generalSettings.roleName === 'company_admin'
+                                                                        ? generalSettings.companyLogoUrl
+                                                                            ? generalSettings.companyLogoUrl.startsWith('http')
+                                                                                ? generalSettings.companyLogoUrl
+                                                                                : generalSettings.companyLogoUrl.startsWith('data:')
+                                                                                    ? generalSettings.companyLogoUrl // <- show chosen image (base64)
+                                                                                    : `${process.env.REACT_APP_BASE_URL}/${generalSettings.companyLogoUrl}`
+                                                                            : `${process.env.REACT_APP_BASE_URL}/user/images/no-image.webp`
+                                                                        : generalSettings.profileImage
+                                                                            ? generalSettings.profileImage.startsWith('http')
+                                                                                ? generalSettings.profileImage
+                                                                                : generalSettings.profileImage.startsWith('data:')
+                                                                                    ? generalSettings.profileImage // <- show chosen image (base64)
+                                                                                    : `${process.env.REACT_APP_BASE_URL}/${generalSettings.profileImage}`
+                                                                            : `${process.env.REACT_APP_BASE_URL}/user/images/no-image.webp`
+                                                                }
+                                                                onError={(e) => {
+                                                                    e.target.onerror = null;
+                                                                    e.target.src = `${process.env.REACT_APP_BASE_URL}/user/images/no-image.webp`;
+                                                                }}
+                                                                alt="Display"
+                                                            />
+
+                                                        </div>
+                                                        <div
+                                                            className="p-image"
+                                                            onClick={() => {
+                                                                document.getElementById('uploadInput')?.click();
+                                                            }}
+                                                            style={{ cursor: 'pointer' }}
+                                                        >
+                                                            <img
+                                                                src="/user/images/uploadfile.svg"
+                                                                className="img-fluid upload-buttons"
+                                                                alt="Upload"
+                                                            />
+                                                        </div>
+                                                        <input
+                                                            id="uploadInput"
+                                                            className="file-upload"
+                                                            type="file"
+                                                            accept="image/*"
+                                                            name={(generalSettings.roleName == 'company_admin') ? 'companyLogoUrl' : 'profileImage'}
+                                                            onChange={handleGeneralSettingsFileChange}
+                                                            style={{ display: 'none' }}
                                                         />
-                                                    </div>
-                                                    <div
-                                                        className="p-image"
-                                                        onClick={() => {
-                                                        document.getElementById('uploadInput')?.click();
-                                                        }}
-                                                        style={{ cursor: 'pointer' }}
-                                                    >
-                                                        <img
-                                                        src="/user/images/uploadfile.svg"
-                                                        className="img-fluid upload-buttons"
-                                                        alt="Upload"
-                                                        />
-                                                    </div>
-                                                    <input
-                                                        id="uploadInput"
-                                                        className="file-upload"
-                                                        type="file"
-                                                        accept="image/*"
-                                                        name={(generalSettings.roleName == 'company_admin') ? 'companyLogoUrl' : 'profileImage'}
-                                                        onChange={handleGeneralSettingsFileChange}
-                                                        style={{ display: 'none' }}
-                                                    />
                                                     </div>
                                                 </div>
                                             </div>
