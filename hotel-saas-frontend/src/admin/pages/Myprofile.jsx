@@ -66,6 +66,8 @@ const Myprofile = () => {
                 countryCodeid: user.countryCodeid || '', 
             });
 
+            localStorage.setItem('admin_user', JSON.stringify(user));
+
             // Add timestamp to force browser to fetch new image
             setExistingImageUrl(user.profile ? `${user.profile}?t=${Date.now()}` : '');
 
@@ -110,6 +112,7 @@ const Myprofile = () => {
             );
 
             if (response.data.status === 'success') {
+                 localStorage.setItem('admin_user', JSON.stringify(response.data.user));
                 fetchProfileData()
                 toast.success('Profile updated successfully');
             } else {

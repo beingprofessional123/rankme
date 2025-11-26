@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const { Op } = require('sequelize');
 const db = require('../../models');
-const {  } = require('../../utils/mailer');
+const { } = require('../../utils/mailer');
 const getStatusUpdateEmail = require('../../emailTemplate/UserStatusSupportTicket');
 
 
@@ -15,12 +15,24 @@ const supportTicketController = {
                     {
                         model: db.User,
                         as: 'creator',
-                        attributes: ['id', 'name', 'email']
+                        attributes: ['id', 'name', 'email', 'profile'],
+                        include: [
+                            {
+                                model: db.Company,
+                                attributes: ['id', 'logo_url'], // adjust fields as per your Company model
+                            }
+                        ]
                     },
                     {
                         model: db.User,
                         as: 'assignee',
-                        attributes: ['id', 'name', 'email']
+                        attributes: ['id', 'name', 'email', 'profile'],
+                        include: [
+                            {
+                                model: db.Company,
+                                attributes: ['id', 'logo_url'], // adjust fields as per your Company model
+                            }
+                        ]
                     }
                 ],
                 order: [['createdAt', 'DESC']]
@@ -41,12 +53,24 @@ const supportTicketController = {
                     {
                         model: db.User,
                         as: 'creator',
-                        attributes: ['id', 'name', 'email']
+                        attributes: ['id', 'name', 'email', 'profile'],
+                        include: [
+                            {
+                                model: db.Company,
+                                attributes: ['id', 'logo_url'], // adjust fields as per your Company model
+                            }
+                        ]
                     },
                     {
                         model: db.User,
                         as: 'assignee',
-                        attributes: ['id', 'name', 'email']
+                        attributes: ['id', 'name', 'email', 'profile'],
+                        include: [
+                            {
+                                model: db.Company,
+                                attributes: ['id', 'logo_url'], // adjust fields as per your Company model
+                            }
+                        ]
                     },
                     {
                         // CORRECTED: Using the correct model name `SupportTicketThread`
@@ -56,7 +80,7 @@ const supportTicketController = {
                             {
                                 model: db.User,
                                 as: 'sender',
-                                attributes: ['id', 'name', 'email']
+                                attributes: ['id', 'name', 'email', 'profile']
                             }
                         ],
                         order: [['createdAt', 'ASC']]
@@ -88,7 +112,7 @@ const supportTicketController = {
                     {
                         model: db.User,
                         as: 'creator',
-                        attributes: ['id', 'name', 'email']
+                        attributes: ['id', 'name', 'email', 'profile']
                     }
                 ]
             });

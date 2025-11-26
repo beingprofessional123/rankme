@@ -63,6 +63,17 @@ module.exports = (sequelize, DataTypes) => {
     User.hasMany(models.UserPermission, { foreignKey: 'user_id', as: 'permissions'});
     User.hasMany(models.UserSubscription, { foreignKey: 'user_id' });
     User.hasMany(models.Payment, { foreignKey: 'user_id' });
+User.hasMany(models.SupportTicket, {
+      foreignKey: 'userId',
+      as: 'createdTickets', // Tickets the user created
+    });
+
+    User.hasMany(models.SupportTicket, {
+      foreignKey: 'assignedTo',
+      as: 'assignedTickets', // Tickets assigned to this user (agent/admin)
+    });
+    
+    
   };
 
   return User;

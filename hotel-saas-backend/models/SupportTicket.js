@@ -61,11 +61,8 @@ module.exports = (sequelize) => {
     });
 
     SupportTicket.associate = (models) => {
-        // A SupportTicket belongs to a User (who created it)
         SupportTicket.belongsTo(models.User, { foreignKey: 'userId', as: 'creator' });
-        // A SupportTicket can be assigned to another User (admin/agent)
         SupportTicket.belongsTo(models.User, { foreignKey: 'assignedTo', as: 'assignee' });
-        // A SupportTicket has many SupportTicketThreads (messages)
         SupportTicket.hasMany(models.SupportTicketThread, { foreignKey: 'ticketId', as: 'messages' });
     };
 
