@@ -29,6 +29,8 @@ exports.getDashboardData = async (req, res) => {
         const last30DaysStart = getStartOfDay(new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000)));
         const nextMonthEnd = getEndOfDay(new Date(new Date().setMonth(today.getMonth() + 1)));
         const yearStart = getStartOfDay(new Date(new Date().getFullYear(), 0, 1));
+        const lastMonthStart = getStartOfDay(new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000)));
+
 
         // 🛑 REMOVED baseWhere (as it caused the scope error).
         // The filtering must now be done entirely within the include statements.
@@ -125,17 +127,17 @@ exports.getDashboardData = async (req, res) => {
                 [literal('CAST("revParUsd" AS NUMERIC)'), 'revParUsd']
             ],
             where: {
-                checkIn: { [Op.between]: [todayStart, nextMonthEnd] },
-                // 🛑 NO baseWhere HERE
+                checkIn: { [Op.between]: [lastMonthStart, todayStart] },
             },
             include: [uploadJoinConfig('str_ocr_report')],
             order: [['checkIn', 'ASC']],
             raw: true,
         });
 
+         // 🔥 FIXED: Convert "days" → "date"
         const revparChartData = revparChartDataRaw.map(row => ({
-            checkIn: row.checkIn,
-            revParUsd: parseFloat(row.revParUsd),
+            date: row.checkIn,      // ⬅️ FINAL OUTPUT uses date
+            revParUsd: parseFloat(row.revParUsd)
         }));
 
 
@@ -163,7 +165,7 @@ exports.getDashboardData = async (req, res) => {
             },
             revparData: {
                 labels: revparChartData.map(d =>
-                    new Date(d.checkIn).toLocaleString('default', { weekday: 'short' })
+                    new Date(d.date).toLocaleDateString('en-US')
                 ),
                 datasets: [{
                     label: 'RevPAR (USD)',
