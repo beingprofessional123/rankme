@@ -4,7 +4,7 @@ const { Op } = require('sequelize');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const {  } = require('../utils/mailer'); // Assuming you have this utility
+const { } = require('../utils/mailer'); // Assuming you have this utility
 const getUserSupportTicketEmail = require('../emailTemplate/UserSupportTicket');
 const getAdminSupportTicketEmail = require('../emailTemplate/AdminSupportTicket');
 
@@ -95,8 +95,8 @@ exports.getSupportTickets = async (req, res) => {
         const tickets = await db.SupportTicket.findAll({
             where: whereClause,
             include: [
-                { model: db.User, as: 'creator', attributes: ['id', 'name', 'email'] },
-                { model: db.User, as: 'assignee', attributes: ['id', 'name', 'email'] },
+                { model: db.User, as: 'creator', attributes: ['id', 'name', 'email', 'profile'] },
+                { model: db.User, as: 'assignee', attributes: ['id', 'name', 'email', 'profile'] },
             ],
             order: [['createdAt', 'DESC']],
         });
@@ -128,7 +128,7 @@ exports.createSupportTicket = (req, res) => {
                         where: { name: 'super_admin' },
                     },
                 ],
-                attributes: ['id', 'name', 'email'],
+                attributes: ['id', 'name', 'email', 'profile'],
             });
 
             if (!subject || !description) {
@@ -225,13 +225,36 @@ exports.getSupportTicketDetails = async (req, res) => {
 
         const ticket = await db.SupportTicket.findByPk(id, {
             include: [
-                { model: db.User, as: 'creator', attributes: ['id', 'name', 'email'] },
-                { model: db.User, as: 'assignee', attributes: ['id', 'name', 'email'] },
+                {
+                    model: db.User, as: 'creator', attributes: ['id', 'name', 'email', 'profile'],
+                    include: [
+                        {
+                            model: db.Company,
+                            attributes: ['id', 'logo_url'], // adjust fields as per your Company model
+                        }
+                    ]
+                },
+                {
+                    model: db.User, as: 'assignee', attributes: ['id', 'name', 'email', 'profile'],
+                    include: [
+                        {
+                            model: db.Company,
+                            attributes: ['id', 'logo_url'], // adjust fields as per your Company model
+                        }
+                    ]
+                },
                 {
                     model: db.SupportTicketThread,
                     as: 'messages',
                     include: [
-                        { model: db.User, as: 'sender', attributes: ['id', 'name', 'email'] }
+                        {
+                            model: db.User, as: 'sender', attributes: ['id', 'name', 'email', 'profile'], include: [
+                                {
+                                    model: db.Company,
+                                    attributes: ['id', 'logo_url'], // adjust fields as per your Company model
+                                }
+                            ]
+                        }
                     ],
                     order: [['createdAt', 'ASC']],
                 }
@@ -396,7 +419,7 @@ exports.addSupportTicketMessage = (req, res) => {
                 });
             }
 
-            
+
             if (ticket.status === 'Closed' && user && adminRoles.includes(userRoleName)) {
                 await ticket.update({ status: 'Reopened' });
             }

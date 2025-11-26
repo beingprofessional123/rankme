@@ -57,12 +57,12 @@ const Navbar = () => {
   };
 
 
-    useEffect(() => {
-      fetchNotifications();
-      const interval = setInterval(fetchNotifications, 5000);
-      window.notificationInterval = interval;
-      return () => clearInterval(interval);
-    }, [isMuted]);
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 5000);
+    window.notificationInterval = interval;
+    return () => clearInterval(interval);
+  }, [isMuted]);
 
 
   // ✅ Toggle mute/unmute
@@ -308,12 +308,36 @@ const Navbar = () => {
 
             <li className="nav-item dropdown user-profile-dropdown  order-lg-0 order-1">
               <Link href="javascript:void(0);" className="nav-link dropdown-toggle user" id="userProfileDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <img src={`/admin/assets/img/90x90.jpg`} alt="admin-profile" className="img-fluid" />
+                <img
+                  src={
+                    user?.profile
+                      ? user.profile.startsWith('http')
+                        ? user.profile
+                        : `${process.env.REACT_APP_BASE_URL}/${user.profile}`
+                      : `${process.env.REACT_APP_BASE_URL}/user/images/no-image.webp`
+                  }
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = `${process.env.REACT_APP_BASE_URL}/user/images/no-image.webp`;
+                  }}
+                  className="img-fluid rounded-circle"
+                  alt="User Profile"
+                />
               </Link>
               <div className="dropdown-menu position-absolute animated fadeInUp" aria-labelledby="userProfileDropdown">
                 <div className="user-profile-section">
                   <div className="media mx-auto">
-                    <img src={`/admin/assets/img/90x90.jpg`} className="img-fluid mr-2" alt="avatar" />
+                    <img src={
+                      user?.profile
+                        ? user.profile.startsWith('http')
+                          ? user.profile
+                          : `${process.env.REACT_APP_BASE_URL}/${user.profile}`
+                        : `${process.env.REACT_APP_BASE_URL}/user/images/no-image.webp`
+                    }
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = `${process.env.REACT_APP_BASE_URL}/user/images/no-image.webp`;
+                      }} className="img-fluid mr-2" alt="avatar" />
                     <div className="media-body">
                       <h5>{user.name || 'Admin'}</h5>
                       <p>{user.role || 'Admin'}</p>

@@ -41,22 +41,22 @@ const SupportTicketEdit = () => {
     const fetchTicket = async () => {
         try {
             const token = localStorage.getItem('admin_token');
-            const response = await axios.get(
-                `${API_BASE_URL}/api/admin/support-ticket/${id}`,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            const response = await axios.get(
+                `${API_BASE_URL}/api/admin/support-ticket/${id}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
 
-            const ticket = response.data.ticket;
+            const ticket = response.data.ticket;
 
-            if (ticket) {
-                // If ticketData is null, this is the initial fetch.
-                // Sync both states.
-                if (!ticketData) {
-                    setTicketStatus(ticket.status || '');
-                }
-                // Always update the ticket data to get new messages.
-                setTicketData(ticket);
-            }
+            if (ticket) {
+                // If ticketData is null, this is the initial fetch.
+                // Sync both states.
+                if (!ticketData) {
+                    setTicketStatus(ticket.status || '');
+                }
+                // Always update the ticket data to get new messages.
+                setTicketData(ticket);
+            }
         } catch (err) {
             console.error('Error fetching ticket:', err);
             const message = err.response?.data?.message || 'Failed to fetch ticket details.';
@@ -108,68 +108,109 @@ const SupportTicketEdit = () => {
                 setForm((prev) => ({ ...prev, [name]: file }));
             }
         } else if (name === 'status') {
-            setTicketStatus(value); // Updates the new state variable
-        }else {
+            setTicketStatus(value); // Updates the new state variable
+        } else {
             setForm((prev) => ({ ...prev, [name]: value }));
         }
     };
-
     const getInitials = (name) => {
         if (!name) return '??';
-        const parts = name.split(' ');
-        if (parts.length > 1) {
-            return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-        }
-        return parts[0][0].toUpperCase();
+        const parts = name.trim().split(' ');
+        return parts.length > 1
+            ? `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+            : parts[0][0].toUpperCase();
     };
+
+    const renderAvatar = (name, profile, companyLogo) => {
+        const baseUrl = process.env.REACT_APP_BASE_URL;
+        const apiBaseUrl = process.env.REACT_APP_API_BASE_URL;
+
+        // Step 1: Determine image source priority: profile > companyLogo
+        let imageSrc = companyLogo
+            ? (companyLogo.startsWith('http') ? companyLogo : `${apiBaseUrl}/${companyLogo}`)
+            : (profile?.startsWith('http') ? profile : `${baseUrl}/${profile}`);
+
+        // Step 2: Return <img> if an image source exists
+        if (imageSrc) {
+            return (
+                <img
+                    src={imageSrc}
+                    onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = `${baseUrl}/user/images/no-image.webp`;
+                    }}
+                    alt={name || 'User Avatar'}
+                    className="img-fluid rounded-circle"
+                    style={{ width: 45, height: 45, objectFit: 'cover' }}
+                />
+            );
+        }
+
+        // Step 3: Fallback to initials if both images are missing
+        return (
+            <span
+                className="avatar-initials d-flex align-items-center justify-content-center bg-secondary text-white rounded-circle"
+                style={{
+                    width: 45,
+                    height: 45,
+                    fontWeight: 600,
+                    fontSize: 16,
+                }}
+            >
+                {getInitials(name)}
+            </span>
+        );
+    };
+
+
 
     const handleReply = async (e) => {
         e.preventDefault();
-        const token = localStorage.getItem('admin_token');
-        const formData = new FormData();
+        const token = localStorage.getItem('admin_token');
+        const formData = new FormData();
 
-        // Only append if the status has actually changed
-        if (ticketStatus !== ticketData.status) {
-            formData.append('status', ticketStatus);
-        }
-        if (form.newMessage) {
-            formData.append('message', form.newMessage);
-        }
-        if (form.fileAttachment) {
-            formData.append('fileAttachment', form.fileAttachment);
-        }
+        // Only append if the status has actually changed
+        if (ticketStatus !== ticketData.status) {
+            formData.append('status', ticketStatus);
+        }
+        if (form.newMessage) {
+            formData.append('message', form.newMessage);
+        }
+        if (form.fileAttachment) {
+            formData.append('fileAttachment', form.fileAttachment);
+        }
 
-        // Prevent API call if nothing has changed
-        if (Array.from(formData.entries()).length === 0) {
-            toast.info('No changes to save.');
-            return;
-        }
+        // Prevent API call if nothing has changed
+        if (Array.from(formData.entries()).length === 0) {
+            toast.info('No changes to save.');
+            return;
+        }
 
-        try {
-            const response = await axios.put(
-                `${API_BASE_URL}/api/admin/support-ticket/${id}`,
-                formData,
-                {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
+        try {
+            const response = await axios.put(
+                `${API_BASE_URL}/api/admin/support-ticket/${id}`,
+                formData,
+                {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
 
-            if (response.data.status) {
-                toast.success(response.data.message || 'Ticket updated successfully.');
-                setForm({
-                    newMessage: '',
-                    fileAttachment: null,
-                });
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = '';
-                }
-                fetchTicket(); // Refresh to show the new reply and reflect the status change
-            } else {
-                toast.error(response.data.message || 'Failed to update ticket.');
-            }
+            if (response.data.status) {
+                toast.success(response.data.message || 'Ticket updated successfully.');
+                setForm({
+                    newMessage: '',
+                    fileAttachment: null,
+                });
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+                fetchTicket(); // Refresh to show the new reply and reflect the status change
+            } else {
+                toast.error(response.data.message || 'Failed to update ticket.');
+            }
         } catch (err) {
             console.error('Error updating ticket:', err);
             toast.error(err.response?.data?.message || 'An unexpected error occurred');
@@ -295,11 +336,24 @@ const SupportTicketEdit = () => {
                                                         const formattedTime = new Date(message.createdAt).toLocaleString();
                                                         const isTicketCreator = message.senderId === ticketData.creator.id;
 
-                                                        const avatarContent = isTicketCreator ? (
-                                                            <span>{getInitials(ticketData.creator.name)}</span>
-                                                        ) : (
-                                                            <span>Ad</span>
-                                                        );
+                                                        // const avatarContent = isTicketCreator ? (
+                                                        //     <span>{getInitials(ticketData.creator.name,ticketData.creator.profile)}</span>
+                                                        // ) : (
+                                                        //     <span>{getInitials(ticketData.assignee.name,ticketData.assignee.profile)}</span>
+                                                        // );
+
+                                                        const avatarContent = isTicketCreator
+                                                            ? renderAvatar(
+                                                                ticketData.creator?.name,
+                                                                ticketData.creator?.profile,
+                                                                ticketData.creator?.Company?.logo_url
+                                                            )
+                                                            : renderAvatar(
+                                                                ticketData.assignee?.name,
+                                                                ticketData.assignee?.profile,
+                                                                ticketData.assignee?.Company?.logo_url
+                                                            );
+
 
                                                         return (
                                                             <li key={message.id} className={`chatbox-li ${!isTicketCreator ? 'chatbox-li-right' : ''}`}>
