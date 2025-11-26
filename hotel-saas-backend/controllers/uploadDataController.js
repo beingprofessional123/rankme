@@ -1,6 +1,7 @@
 // src/controllers/uploadDataController.js
 
 const db = require('../models');
+const { Op, Sequelize } = require('sequelize');
 const UploadData = db.UploadData;
 const MetaUploadData = db.MetaUploadData;
 const UploadedExtractDataFile = db.UploadedExtractDataFile;
@@ -227,6 +228,20 @@ exports.extractAndPreviewData = async (req, res) => {
                         continue;
                     }
 
+                    // ======================================================
+                    // 🧹 NEW LOGIC — delete old rows for this date & booking
+                    // ======================================================
+                    await deleteOldRowsSameDateAndType(
+                        formattedDate,
+                        user.id,
+                        'booking', // ensure only booking old data is deleted
+                        t
+                    );
+
+
+                    // ==============================
+                    // ADD NEW CLEAN ROW
+                    // ==============================
                     bookingData.push({
                         uploadDataId: uploadDataRecord.id,
                         userId: user.id,
@@ -357,6 +372,11 @@ exports.extractAndPreviewData = async (req, res) => {
 
                     // Only proceed to process rates if the date itself is valid
                     if (isDateRowValid) {
+
+                        // 🧹 DELETE OLD DATA for this date before saving new row
+                        await deleteOldRowsSameDateAndType(formattedDate, user.id, 'property_price_data', t);
+
+
                         const myRate = parseFloat(row[1]);
                         if (!isNaN(myRate) && myRate >= 0) {
                             finalData.push({
@@ -591,6 +611,10 @@ exports.extractAndPreviewData = async (req, res) => {
 
                         // Only add to extractedDataRows if the row is valid
                         if (isValidRow) {
+
+                            // 🧹 DELETE OLD DATA for this date before saving new row
+                            await deleteOldRowsSameDateAndType(rowData.checkIn, user.id, 'str_ocr_report', t);
+
                             extractedDataRows.push({
                                 ...rowData,
                                 isValid: true,
@@ -857,3 +881,19 @@ exports.confirmAndSaveData = async (req, res) => {
         });
     }
 };
+
+
+async function deleteOldRowsSameDateAndType(date, userId, fileType, t) {
+    await UploadedExtractDataFile.destroy({
+        where: {
+            checkIn: date,
+            userId: userId,
+            uploadDataId: {
+                [Op.in]: Sequelize.literal(
+                    `(SELECT "id" FROM "UploadData" WHERE "fileType" = '${fileType}')`
+                )
+            }
+        },
+        transaction: t
+    });
+}
